@@ -1,322 +1,514 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Editor de Posters</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
-    .container { max-width: 1400px; margin: 0 auto; padding: 2rem 1rem; }
-    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-    @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
-    .panel { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    h2 { margin-top: 0; font-size: 18px; color: #333; }
-    .section { margin-bottom: 1.5rem; }
-    .section-title { font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-    input[type="text"], input[type="file"], input[type="color"] { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; color: #333; background: #fafafa; margin-bottom: 8px; font-family: inherit; }
-    input[type="text"]:focus, input[type="file"]:focus { outline: none; border-color: #2563eb; background: white; }
-    button { padding: 8px 16px; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5; color: #333; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-    button:hover { background: white; border-color: #999; }
-    button:active { transform: scale(0.98); }
-    .row-item { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; margin-bottom: 10px; }
-    .row-item input { margin-bottom: 6px; }
-    .row-item-controls { display: flex; gap: 6px; }
-    .row-item-controls button { flex: 1; padding: 6px 8px; font-size: 12px; }
-    .preview { border: 2px solid #ddd; border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 16/9; width: 100%; }
-    canvas { display: block; width: 100%; height: 100%; }
-    .download-btn { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 1rem; }
-    .download-btn:hover { background: #1d4ed8; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-    .tab { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5; color: #333; cursor: pointer; font-size: 12px; font-weight: 500; }
-    .tab.active { background: #2563eb; color: white; border-color: #2563eb; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Plantilla editable - Formación compartida</title>
+<style>
+  :root{
+    --navy:#061a3a;
+    --navy-2:#082553;
+    --blue:#1557c8;
+    --line:#d6dfef;
+    --soft:#eef4fb;
+    --text:#071a3a;
+    --muted:#65748b;
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    margin:0;
+    background:#1f2937;
+    font-family: Aptos, "Segoe UI", Arial, Helvetica, sans-serif;
+    color:var(--text);
+  }
+
+  .toolbar{
+    position:sticky;
+    top:0;
+    z-index:20;
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    padding:10px 14px;
+    background:#111827;
+    color:white;
+    box-shadow:0 4px 18px rgba(0,0,0,.25);
+  }
+
+  .toolbar button,
+  .toolbar label{
+    border:1px solid rgba(255,255,255,.22);
+    background:#1f2937;
+    color:white;
+    border-radius:10px;
+    padding:8px 11px;
+    font-size:13px;
+    cursor:pointer;
+  }
+
+  .toolbar button:hover,
+  .toolbar label:hover{background:#374151}
+  .toolbar small{opacity:.72;margin-left:auto;font-size:12px}
+  input[type="file"]{display:none}
+
+  .poster-wrap{
+    padding:24px;
+    overflow:auto;
+  }
+
+  .poster{
+    position:relative;
+    width:210mm;
+    height:297mm;
+    margin:0 auto;
+    background:#fff;
+    overflow:hidden;
+    box-shadow:0 20px 55px rgba(0,0,0,.35);
+  }
+
+  .hero{
+    position:relative;
+    height:92mm;
+    padding:13mm 12mm 0 12mm;
+    color:white;
+    overflow:hidden;
+    background:
+      linear-gradient(90deg, rgba(2,15,37,.98) 0%, rgba(4,26,63,.94) 42%, rgba(4,26,63,.72) 100%),
+      radial-gradient(circle at 85% 20%, rgba(255,255,255,.18), transparent 20%),
+      linear-gradient(135deg, #1d355e 0%, #09224f 50%, #041936 100%);
+  }
+
+  .hero::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    opacity:.22;
+    background-image:
+      linear-gradient(8deg, transparent 0 54%, rgba(255,255,255,.28) 55% 56%, transparent 57%),
+      linear-gradient(172deg, transparent 0 58%, rgba(255,255,255,.22) 59% 60%, transparent 61%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 1px, transparent 1px 86px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.08) 0 1px, transparent 1px 72px);
+    transform:skewY(-2deg) scale(1.1);
+  }
+
+  .hero::after{
+    content:"";
+    position:absolute;
+    right:-1mm;
+    bottom:-1mm;
+    border-style:solid;
+    border-width:0 0 43mm 47mm;
+    border-color:transparent transparent white transparent;
+  }
+
+  .top-grid{
+    position:relative;
+    z-index:2;
+    display:grid;
+    grid-template-columns:31mm 1fr;
+    column-gap:11mm;
+    align-items:start;
+  }
+
+  .brand-col{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10mm;
+    padding-top:2mm;
+  }
+
+  .brand-line{
+    position:absolute;
+    left:40mm;
+    top:13mm;
+    width:1px;
+    height:58mm;
+    background:rgba(255,255,255,.65);
+  }
+
+  .logo-box{
+    width:24mm;
+    height:24mm;
+    border-radius:50%;
+    background:white;
+    display:grid;
+    place-items:center;
+    box-shadow:0 8px 20px rgba(0,0,0,.3);
+    overflow:hidden;
+  }
+
+  .logo-box img{width:100%;height:100%;object-fit:contain}
+
+  .tactics-icon{
+    width:20mm;
+    height:20mm;
+    border:1.7px solid rgba(255,255,255,.8);
+    border-radius:3mm;
+    display:grid;
+    place-items:center;
+  }
+
+  .tactics-icon svg{width:15mm;height:15mm;stroke:white}
+
+  .title-block{padding-top:1mm;max-width:132mm}
+
+  .main-title{
+    margin:0;
+    font-size:19mm;
+    line-height:.98;
+    letter-spacing:1.6mm;
+    font-weight:900;
+    text-transform:uppercase;
+  }
+
+  .over-title{
+    margin-top:5mm;
+    font-size:6.2mm;
+    line-height:1;
+    letter-spacing:2.8mm;
+    font-weight:500;
+    color:rgba(255,255,255,.72);
+    text-transform:uppercase;
+  }
+
+  .short-rule{
+    width:26mm;
+    height:1px;
+    background:rgba(255,255,255,.5);
+    margin:4.8mm 0 8.5mm;
+  }
+
+  .session-title{
+    font-size:6.8mm;
+    line-height:1.22;
+    font-weight:800;
+    margin:0 0 1.5mm;
+  }
+
+  .session-subtitle{
+    font-size:5.7mm;
+    line-height:1.25;
+    font-weight:400;
+    color:rgba(255,255,255,.92);
+    margin:0;
+  }
+
+  .meta-bar{
+    height:12mm;
+    margin:7.5mm 12mm 4mm;
+    display:inline-flex;
+    align-items:center;
+    overflow:hidden;
+    background:var(--navy);
+    color:white;
+    border-radius:1.7mm;
+    font-weight:800;
+    letter-spacing:1.1mm;
+    text-transform:uppercase;
+  }
+
+  .meta-part{
+    height:100%;
+    display:flex;
+    align-items:center;
+    gap:3mm;
+    padding:0 6mm;
+    white-space:nowrap;
+    font-size:4.1mm;
+  }
+
+  .meta-sep{width:1px;height:7mm;background:rgba(255,255,255,.45)}
+  .meta-part svg{width:5mm;height:5mm;stroke:white;stroke-width:2;fill:none}
+
+  .schedule{
+    margin:0 12mm;
+    display:grid;
+    grid-template-columns:30mm 32mm 1fr;
+    grid-template-rows:repeat(10, 15.8mm);
+    border:1px solid var(--line);
+    border-radius:2mm;
+    overflow:hidden;
+    background:white;
+  }
+
+  .cell{
+    min-height:15.8mm;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+  }
+
+  .schedule .cell:nth-last-child(-n+3){border-bottom:none}
+
+  .time{
+    justify-content:center;
+    background:linear-gradient(135deg, var(--navy), #031226);
+    color:white;
+    font-size:5.9mm;
+    font-weight:800;
+    letter-spacing:.2mm;
+  }
+
+  .speaker{
+    justify-content:center;
+    border-left:1px solid var(--line);
+    border-right:1px solid var(--line);
+    background:#fbfdff;
+  }
+
+  .badge{
+    min-width:14mm;
+    height:10mm;
+    padding:0 2mm;
+    display:grid;
+    place-items:center;
+    border-radius:1.7mm;
+    background:#e9f0f8;
+    color:var(--navy);
+    font-size:6.4mm;
+    font-weight:900;
+    letter-spacing:.5mm;
+  }
+
+  .speaker svg{width:12mm;height:12mm;stroke:var(--navy);stroke-width:1.9;fill:none}
+
+  .topic{
+    padding:2mm 8mm;
+    font-size:4.25mm;
+    line-height:1.24;
+    color:var(--text);
+    overflow:hidden;
+  }
+
+  .topic strong{
+    font-weight:900;
+    color:var(--navy);
+  }
+
+  .footer-event{
+    position:absolute;
+    left:12mm;
+    right:12mm;
+    bottom:8mm;
+    height:20mm;
+    border:1.4px solid var(--navy);
+    border-radius:2.2mm;
+    display:grid;
+    grid-template-columns:25mm 34mm 1fr 44mm;
+    align-items:center;
+    overflow:hidden;
+    color:var(--navy);
+  }
+
+  .footer-icon{
+    display:grid;
+    place-items:center;
+    height:100%;
+  }
+
+  .footer-icon svg{width:14mm;height:14mm;stroke:var(--navy);stroke-width:1.5;fill:none}
+  .footer-time{font-size:7.2mm;font-weight:900;border-left:1px solid var(--navy);height:12mm;display:flex;align-items:center;justify-content:center}
+  .footer-text{border-left:1px solid var(--navy);padding-left:8mm;line-height:1.1}
+  .footer-text .bbq{font-size:6mm;font-weight:900;letter-spacing:1.2mm;text-transform:uppercase}
+  .footer-text .place{font-size:4.2mm;margin-top:1mm;color:#102247}
+  .footer-building{display:grid;place-items:center;height:100%}
+  .footer-building svg{width:32mm;height:13mm;stroke:var(--navy);stroke-width:1.2;fill:none}
+
+  .editable{
+    cursor:text;
+    border-radius:1mm;
+  }
+
+  .editable:hover{outline:1px dashed rgba(21,87,200,.45);outline-offset:1mm}
+  .editable:focus{outline:2px solid var(--blue);outline-offset:1mm;background:rgba(21,87,200,.06)}
+
+  .hint{
+    position:absolute;
+    right:10mm;
+    top:4mm;
+    z-index:3;
+    color:rgba(255,255,255,.55);
+    font-size:3mm;
+    display:none;
+  }
+
+  body.show-hints .hint{display:block}
+
+  @media print{
+    body{background:white}
+    .toolbar{display:none!important}
+    .poster-wrap{padding:0}
+    .poster{box-shadow:none;margin:0;width:210mm;height:297mm}
+    .editable:hover,.editable:focus{outline:none;background:transparent}
+    @page{size:A4 portrait;margin:0}
+  }
+
+  @media (max-width: 850px){
+    .poster{transform-origin:top left}
+    .poster-wrap{padding:12px}
+    .toolbar small{width:100%;margin-left:0}
+  }
+</style>
 </head>
 <body>
-
-<div class="container">
-  <div class="layout">
-    <div class="panel">
-      <h2>Editor de Poster</h2>
-
-      <div class="section">
-        <div class="section-title">Fondo</div>
-        <div class="tabs">
-          <button class="tab active" onclick="switchTab('bg', 'upload')">Subir</button>
-          <button class="tab" onclick="switchTab('bg', 'url')">URL</button>
-        </div>
-        <div id="bg-upload" style="display: block;">
-          <input type="file" id="bgFile" accept="image/*" onchange="loadBgImage()">
-        </div>
-        <div id="bg-url" style="display: none;">
-          <input type="text" id="bgUrl" placeholder="https://ejemplo.com/imagen.jpg" onchange="loadBgFromUrl()">
-          <button onclick="loadBgFromUrl()" style="width: 100%;">Cargar</button>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Logo</div>
-        <div class="tabs">
-          <button class="tab active" onclick="switchTab('logo', 'upload')">Subir</button>
-          <button class="tab" onclick="switchTab('logo', 'url')">URL</button>
-        </div>
-        <div id="logo-upload" style="display: block;">
-          <input type="file" id="logoFile" accept="image/*" onchange="loadLogoImage()">
-        </div>
-        <div id="logo-url" style="display: none;">
-          <input type="text" id="logoUrl" placeholder="https://ejemplo.com/logo.png" onchange="loadLogoFromUrl()">
-          <button onclick="loadLogoFromUrl()" style="width: 100%;">Cargar</button>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Título Principal</div>
-        <input type="text" id="mainTitle" value="FORMACIÓN COMPARTIDA" onchange="updatePreview()">
-      </div>
-
-      <div class="section">
-        <div class="section-title">Subtítulo</div>
-        <input type="text" id="subtitle" value="SOBRE METODOLOGÍA" onchange="updatePreview()">
-      </div>
-
-      <div class="section">
-        <div class="section-title">Filas del Evento</div>
-        <div id="rowsList" style="max-height: 400px; overflow-y: auto;"></div>
-        <button onclick="addRow()" style="width: 100%; margin-top: 8px;">+ Agregar Fila</button>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>Preview</h2>
-      <div class="preview">
-        <canvas id="posterCanvas"></canvas>
-      </div>
-      <button class="download-btn" onclick="downloadPoster()">📥 Descargar PNG</button>
-    </div>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()">Imprimir / guardar PDF</button>
+    <button type="button" onclick="downloadCurrentHtml()">Descargar HTML editado</button>
+    <button type="button" onclick="resetTemplate()">Restaurar textos</button>
+    <label for="logoInput">Cambiar logo</label>
+    <input id="logoInput" type="file" accept="image/*" />
+    <button type="button" onclick="document.body.classList.toggle('show-hints')">Mostrar/ocultar guía</button>
+    <small>Haz clic sobre cualquier texto para editarlo. Todas las filas de la agenda tienen el mismo alto.</small>
   </div>
-</div>
+
+  <div class="poster-wrap">
+    <main class="poster" id="poster">
+      <section class="hero">
+        <div class="hint">Campos editables activados</div>
+        <div class="brand-line"></div>
+        <div class="top-grid">
+          <aside class="brand-col">
+            <div class="logo-box">
+              <img id="logoImg" alt="Logo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='92' fill='%23fff' stroke='%23d5a400' stroke-width='8'/%3E%3Ccircle cx='100' cy='100' r='73' fill='%23f7fbff' stroke='%23061a3a' stroke-width='6'/%3E%3Ctext x='100' y='118' text-anchor='middle' font-family='Arial' font-size='58' font-weight='900' fill='%23061a3a'%3ERM%3C/text%3E%3Cpath d='M50 54h100' stroke='%23d5a400' stroke-width='10' stroke-linecap='round'/%3E%3C/svg%3E" />
+            </div>
+            <div class="tactics-icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64"><rect x="9" y="7" width="46" height="50" rx="4"/><path d="M24 7v-3h16v3"/><circle cx="22" cy="25" r="3"/><circle cx="42" cy="20" r="3"/><circle cx="20" cy="43" r="3"/><circle cx="45" cy="43" r="3"/><path d="M25 38c6-1 9-5 13-11"/><path d="M18 18l8 8M26 18l-8 8"/></svg>
+            </div>
+          </aside>
+
+          <div class="title-block">
+            <h1 class="main-title editable" contenteditable="true" data-key="main-title">FORMACIÓN<br>COMPARTIDA</h1>
+            <div class="over-title editable" contenteditable="true" data-key="over-title">SOBRE METODOLOGÍA</div>
+            <div class="short-rule"></div>
+            <p class="session-title editable" contenteditable="true" data-key="session-title">Entrenamiento técnico individual:</p>
+            <p class="session-subtitle editable" contenteditable="true" data-key="session-subtitle">ejemplos reales de aplicación.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="meta-bar">
+        <div class="meta-part">
+          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+          <span class="editable" contenteditable="true" data-key="date">LUNES 25 DE MAYO</span>
+        </div>
+        <div class="meta-sep"></div>
+        <div class="meta-part">
+          <svg viewBox="0 0 24 24"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg>
+          <span class="editable" contenteditable="true" data-key="room">AULA 3</span>
+        </div>
+      </section>
+
+      <section class="schedule" aria-label="Agenda editable">
+        <div class="cell time editable" contenteditable="true" data-key="time-1">17:10</div>
+        <div class="cell speaker"><svg viewBox="0 0 64 64"><circle cx="22" cy="22" r="7"/><circle cx="42" cy="22" r="7"/><circle cx="32" cy="17" r="8"/><path d="M10 50c1-12 8-18 20-18M54 50c-1-12-8-18-20-18M18 50c1-10 7-15 14-15s13 5 14 15"/></svg></div>
+        <div class="cell topic editable" contenteditable="true" data-key="topic-1"><strong>Bienvenida y presentación</strong></div>
+
+        <div class="cell time editable" contenteditable="true" data-key="time-2">17:15</div>
+        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-2">JB</span></div>
+        <div class="cell topic editable" contenteditable="true" data-key="topic-2"><strong>Entrenamiento técnico-posicional</strong><br>en contextos sectoriales de juego.</div>
+
+        <div class="cell time editable" contenteditable="true" data-key="time-3">17:30</div>
+        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-3">JC</span></div>
+        <div class="cell topic editable" contenteditable="true" data-key="topic-3"><strong>Del jugador al sistema:</strong> posición, percepción y orientación<br>para la superación de líneas.</div>
+
+        <div class="cell time editable" contenteditable="true" data-key="time-4">17:45</div>
+        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-4">CA</span></div>
+        <div class="cell topic editable" contenteditable="true" data-key="topic-4"><strong>Entrenamiento técnico individual</strong> para ofrecer soluciones<br>ofensivas en el último tercio.</div>
+
+        <div class="cell time editable" contenteditable="true" data-key="time-5">18:00</div>
+        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-5">CB</span></div>
+        <div class="cell topic editable" contenteditable="true" data-key="topic-5"><strong>Planificación y organización del entrenamiento técnico-posicional</strong><br>en grupos de jugadores durante la sesión.</div>
+
+        <div class="cell time editable" contenteditable="true" data-key="time-6">18:15</div>
+        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-6">IA</span></div>
+        <div class="cell topic editable" contenteditable="true" data-key="topic-6"><strong>Desarrollo individualizado del futbolista:</strong> transferencia del<br>entrenamiento al rendimiento competitivo.</div>
+
+        <div class="cell time editable" contenteditable="true" data-key="time-7">18:30</div>
+        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-7">IB</span></div>
+        <div class="cell topic editable" contenteditable="true" data-key="topic-7"><strong>Optimización de acciones técnicas determinantes</strong><br>en la etapa Infantil B.</div>
+
+        <div class="cell time editable" contenteditable="true" data-key="time-8">18:45</div>
+        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-8">AA</span></div>
+        <div class="cell topic editable" contenteditable="true" data-key="topic-8"><strong>Planificación y organización del entrenamiento técnico-posicional</strong><br>en grupos de jugadores durante la sesión.</div>
+
+        <div class="cell time editable" contenteditable="true" data-key="time-9">19:00</div>
+        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-9">F7</span></div>
+        <div class="cell topic editable" contenteditable="true" data-key="topic-9"><strong>Bases para el desarrollo integral del jugador.</strong></div>
+
+        <div class="cell time editable" contenteditable="true" data-key="time-10">19:15</div>
+        <div class="cell speaker"><svg viewBox="0 0 64 64"><path d="M17 38c7-10 18-15 31-12l4 2-3 13-5 1c-12 1-21 4-27 9-5-4-5-9 0-13Z"/><path d="M49 28l7-4M50 35h9M46 23l3-7M16 33l-5-7M22 30l-2-9"/><circle cx="18" cy="45" r="5"/></svg></div>
+        <div class="cell topic editable" contenteditable="true" data-key="topic-10"><strong>Clausura y debate final.</strong></div>
+      </section>
+
+      <section class="footer-event">
+        <div class="footer-icon"><svg viewBox="0 0 64 64"><path d="M21 10v44M15 10v18c0 5 12 5 12 0V10M47 10v44M41 10h6c7 0 10 7 7 15-2 5-7 8-13 8"/></svg></div>
+        <div class="footer-time editable" contenteditable="true" data-key="bbq-time">19:45</div>
+        <div class="footer-text">
+          <div class="bbq editable" contenteditable="true" data-key="bbq-title">BBQ</div>
+          <div class="place editable" contenteditable="true" data-key="bbq-place">en el bajo grada del campo 7.</div>
+        </div>
+        <div class="footer-building"><svg viewBox="0 0 160 60"><path d="M15 45h130M25 35h110M35 25h90M45 15h70M36 15v30M64 15v30M96 15v30M124 15v30M30 48h100"/></svg></div>
+      </section>
+    </main>
+  </div>
 
 <script>
-const state = {
-  bgImage: null,
-  logoImage: null,
-  mainTitle: 'FORMACIÓN COMPARTIDA',
-  subtitle: 'SOBRE METODOLOGÍA',
-  rows: [
-    { time: '17:10', icon: '👥', text: 'Bienvenida y presentación' },
-    { time: '17:15', icon: 'JB', text: 'Entrenamiento técnico-posicional' },
-    { time: '17:30', icon: 'JC', text: 'Del jugador al sistema' },
-    { time: '17:45', icon: 'CA', text: 'Entrenamiento técnico individual' },
-    { time: '18:00', icon: 'CB', text: 'Planificación y organización' }
-  ]
-};
+  const STORAGE_PREFIX = 'formacion-metodologia-editable-v1:';
 
-function switchTab(group, tab) {
-  const uploadEl = document.getElementById(`${group}-upload`);
-  const urlEl = document.getElementById(`${group}-url`);
-  const tabs = event.target.parentElement.querySelectorAll('.tab');
-  
-  if (tab === 'upload') {
-    uploadEl.style.display = 'block';
-    urlEl.style.display = 'none';
-    tabs[0].classList.add('active');
-    tabs[1].classList.remove('active');
-  } else {
-    uploadEl.style.display = 'none';
-    urlEl.style.display = 'block';
-    tabs[0].classList.remove('active');
-    tabs[1].classList.add('active');
+  function initEditable() {
+    document.querySelectorAll('.editable[data-key]').forEach(el => {
+      if (!el.dataset.default) el.dataset.default = el.innerHTML;
+      const saved = localStorage.getItem(STORAGE_PREFIX + el.dataset.key);
+      if (saved !== null) el.innerHTML = saved;
+      el.addEventListener('input', () => {
+        localStorage.setItem(STORAGE_PREFIX + el.dataset.key, el.innerHTML);
+      });
+    });
   }
-}
 
-function loadImageFile(input, key) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      state[key] = img;
-      updatePreview();
+  function resetTemplate() {
+    if (!confirm('¿Restaurar los textos originales de la plantilla?')) return;
+    document.querySelectorAll('.editable[data-key]').forEach(el => {
+      localStorage.removeItem(STORAGE_PREFIX + el.dataset.key);
+      el.innerHTML = el.dataset.default || el.innerHTML;
+    });
+  }
+
+  function downloadCurrentHtml() {
+    document.querySelectorAll('.editable[data-key]').forEach(el => {
+      el.setAttribute('data-default', el.dataset.default || el.innerHTML);
+    });
+    const html = '<!doctype html>\n' + document.documentElement.outerHTML;
+    const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'plantilla_formacion_metodologia_editada.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  }
+
+  document.getElementById('logoInput').addEventListener('change', event => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const src = e.target.result;
+      document.getElementById('logoImg').src = src;
+      localStorage.setItem(STORAGE_PREFIX + 'logo', src);
     };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-function loadBgImage() {
-  loadImageFile(document.getElementById('bgFile'), 'bgImage');
-}
-
-function loadLogoImage() {
-  loadImageFile(document.getElementById('logoFile'), 'logoImage');
-}
-
-function loadBgFromUrl() {
-  const url = document.getElementById('bgUrl').value;
-  if (!url) return;
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    state.bgImage = img;
-    updatePreview();
-  };
-  img.onerror = () => alert('No se pudo cargar la imagen. Revisa la URL.');
-  img.src = url;
-}
-
-function loadLogoFromUrl() {
-  const url = document.getElementById('logoUrl').value;
-  if (!url) return;
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    state.logoImage = img;
-    updatePreview();
-  };
-  img.onerror = () => alert('No se pudo cargar el logo. Revisa la URL.');
-  img.src = url;
-}
-
-function addRow() {
-  state.rows.push({ time: '18:15', icon: '📌', text: 'Nuevo evento' });
-  renderRows();
-  updatePreview();
-}
-
-function deleteRow(idx) {
-  state.rows.splice(idx, 1);
-  renderRows();
-  updatePreview();
-}
-
-function updateRowField(idx, field, value) {
-  state.rows[idx][field] = value;
-  updatePreview();
-}
-
-function renderRows() {
-  const list = document.getElementById('rowsList');
-  list.innerHTML = state.rows.map((row, idx) => `
-    <div class="row-item">
-      <input type="text" placeholder="Hora" value="${row.time}" onchange="updateRowField(${idx}, 'time', this.value)">
-      <input type="text" placeholder="Ícono/Emoji" value="${row.icon}" onchange="updateRowField(${idx}, 'icon', this.value)" style="max-width: 80px;">
-      <input type="text" placeholder="Descripción" value="${row.text}" onchange="updateRowField(${idx}, 'text', this.value)">
-      <div class="row-item-controls">
-        <button onclick="deleteRow(${idx})">Eliminar</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function updatePreview() {
-  const canvas = document.getElementById('posterCanvas');
-  const ctx = canvas.getContext('2d');
-  
-  canvas.width = 1920;
-  canvas.height = 1080;
-  
-  if (state.bgImage) {
-    const aspectRatio = state.bgImage.width / state.bgImage.height;
-    let drawWidth = canvas.width;
-    let drawHeight = canvas.height;
-    let offsetX = 0;
-    let offsetY = 0;
-    
-    if (aspectRatio > canvas.width / canvas.height) {
-      drawHeight = canvas.width / aspectRatio;
-      offsetY = (canvas.height - drawHeight) / 2;
-    } else {
-      drawWidth = canvas.height * aspectRatio;
-      offsetX = (canvas.width - drawWidth) / 2;
-    }
-    
-    ctx.drawImage(state.bgImage, offsetX, offsetY, drawWidth, drawHeight);
-    ctx.fillStyle = 'rgba(10, 26, 58, 0.7)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  } else {
-    ctx.fillStyle = '#0a1a3a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
-  
-  const padding = 40;
-  const headerHeight = 240;
-  
-  ctx.fillStyle = 'white';
-  ctx.font = 'bold 72px "Segoe UI", sans-serif';
-  ctx.textAlign = 'left';
-  const title = document.getElementById('mainTitle').value;
-  const titleLines = title.split('\n');
-  let titleY = padding + 60;
-  titleLines.forEach((line) => {
-    ctx.fillText(line, padding + 100, titleY);
-    titleY += 90;
+    reader.readAsDataURL(file);
   });
-  
-  ctx.font = '16px "Segoe UI", sans-serif';
-  ctx.fillStyle = '#90aad4';
-  ctx.fillText(document.getElementById('subtitle').value, padding + 100, titleY + 20);
-  
-  if (state.logoImage) {
-    const logoSize = 100;
-    ctx.beginPath();
-    ctx.arc(padding + 50, padding + 50, logoSize / 2, 0, Math.PI * 2);
-    ctx.fillStyle = 'white';
-    ctx.fill();
-    ctx.drawImage(state.logoImage, padding + 10, padding + 10, logoSize, logoSize);
-  }
-  
-  const rowsStartY = headerHeight + 60;
-  const rowHeight = 72;
-  const timeWidth = 100;
-  const iconWidth = 80;
-  
-  state.rows.forEach((row, idx) => {
-    const rowY = rowsStartY + idx * rowHeight;
-    
-    ctx.fillStyle = '#0a1a3a';
-    ctx.fillRect(padding, rowY, timeWidth, rowHeight);
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 32px "Segoe UI", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(row.time, padding + timeWidth / 2, rowY + 50);
-    
-    ctx.fillStyle = '#dde6f5';
-    ctx.fillRect(padding + timeWidth, rowY, iconWidth, rowHeight);
-    ctx.font = '36px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(row.icon, padding + timeWidth + iconWidth / 2, rowY + 48);
-    
-    ctx.fillStyle = 'white';
-    ctx.fillRect(padding + timeWidth + iconWidth, rowY, canvas.width - padding * 2 - timeWidth - iconWidth, rowHeight);
-    ctx.fillStyle = '#1a2540';
-    ctx.font = '20px "Segoe UI", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(row.text, padding + timeWidth + iconWidth + 20, rowY + 50);
-  });
-}
 
-function downloadPoster() {
-  const canvas = document.getElementById('posterCanvas');
-  const link = document.createElement('a');
-  link.href = canvas.toDataURL('image/png');
-  link.download = `poster-${new Date().toISOString().slice(0,10)}.png`;
-  link.click();
-}
+  const savedLogo = localStorage.getItem(STORAGE_PREFIX + 'logo');
+  if (savedLogo) document.getElementById('logoImg').src = savedLogo;
 
-document.getElementById('mainTitle').addEventListener('input', (e) => {
-  state.mainTitle = e.target.value;
-  updatePreview();
-});
-
-document.getElementById('subtitle').addEventListener('input', (e) => {
-  state.subtitle = e.target.value;
-  updatePreview();
-});
-
-renderRows();
-updatePreview();
+  initEditable();
 </script>
-
 </body>
 </html>

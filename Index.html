@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor de Posters</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 2rem 1rem; }
+    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
+    .panel { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; font-size: 18px; color: #333; }
+    .section { margin-bottom: 1.5rem; }
+    .section-title { font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    input[type="text"], input[type="file"], input[type="color"] { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; color: #333; background: #fafafa; margin-bottom: 8px; font-family: inherit; }
+    input[type="text"]:focus, input[type="file"]:focus { outline: none; border-color: #2563eb; background: white; }
+    button { padding: 8px 16px; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5; color: #333; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    button:hover { background: white; border-color: #999; }
+    button:active { transform: scale(0.98); }
+    .row-item { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; margin-bottom: 10px; }
+    .row-item input { margin-bottom: 6px; }
+    .row-item-controls { display: flex; gap: 6px; }
+    .row-item-controls button { flex: 1; padding: 6px 8px; font-size: 12px; }
+    .preview { border: 2px solid #ddd; border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 16/9; width: 100%; }
+    canvas { display: block; width: 100%; height: 100%; }
+    .download-btn { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 1rem; }
+    .download-btn:hover { background: #1d4ed8; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5; color: #333; cursor: pointer; font-size: 12px; font-weight: 500; }
+    .tab.active { background: #2563eb; color: white; border-color: #2563eb; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="layout">
+    <div class="panel">
+      <h2>Editor de Poster</h2>
+
+      <div class="section">
+        <div class="section-title">Fondo</div>
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('bg', 'upload')">Subir</button>
+          <button class="tab" onclick="switchTab('bg', 'url')">URL</button>
+        </div>
+        <div id="bg-upload" style="display: block;">
+          <input type="file" id="bgFile" accept="image/*" onchange="loadBgImage()">
+        </div>
+        <div id="bg-url" style="display: none;">
+          <input type="text" id="bgUrl" placeholder="https://ejemplo.com/imagen.jpg" onchange="loadBgFromUrl()">
+          <button onclick="loadBgFromUrl()" style="width: 100%;">Cargar</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Logo</div>
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('logo', 'upload')">Subir</button>
+          <button class="tab" onclick="switchTab('logo', 'url')">URL</button>
+        </div>
+        <div id="logo-upload" style="display: block;">
+          <input type="file" id="logoFile" accept="image/*" onchange="loadLogoImage()">
+        </div>
+        <div id="logo-url" style="display: none;">
+          <input type="text" id="logoUrl" placeholder="https://ejemplo.com/logo.png" onchange="loadLogoFromUrl()">
+          <button onclick="loadLogoFromUrl()" style="width: 100%;">Cargar</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Título Principal</div>
+        <input type="text" id="mainTitle" value="FORMACIÓN COMPARTIDA" onchange="updatePreview()">
+      </div>
+
+      <div class="section">
+        <div class="section-title">Subtítulo</div>
+        <input type="text" id="subtitle" value="SOBRE METODOLOGÍA" onchange="updatePreview()">
+      </div>
+
+      <div class="section">
+        <div class="section-title">Filas del Evento</div>
+        <div id="rowsList" style="max-height: 400px; overflow-y: auto;"></div>
+        <button onclick="addRow()" style="width: 100%; margin-top: 8px;">+ Agregar Fila</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Preview</h2>
+      <div class="preview">
+        <canvas id="posterCanvas"></canvas>
+      </div>
+      <button class="download-btn" onclick="downloadPoster()">📥 Descargar PNG</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const state = {
+  bgImage: null,
+  logoImage: null,
+  mainTitle: 'FORMACIÓN COMPARTIDA',
+  subtitle: 'SOBRE METODOLOGÍA',
+  rows: [
+    { time: '17:10', icon: '👥', text: 'Bienvenida y presentación' },
+    { time: '17:15', icon: 'JB', text: 'Entrenamiento técnico-posicional' },
+    { time: '17:30', icon: 'JC', text: 'Del jugador al sistema' },
+    { time: '17:45', icon: 'CA', text: 'Entrenamiento técnico individual' },
+    { time: '18:00', icon: 'CB', text: 'Planificación y organización' }
+  ]
+};
+
+function switchTab(group, tab) {
+  const uploadEl = document.getElementById(`${group}-upload`);
+  const urlEl = document.getElementById(`${group}-url`);
+  const tabs = event.target.parentElement.querySelectorAll('.tab');
+  
+  if (tab === 'upload') {
+    uploadEl.style.display = 'block';
+    urlEl.style.display = 'none';
+    tabs[0].classList.add('active');
+    tabs[1].classList.remove('active');
+  } else {
+    uploadEl.style.display = 'none';
+    urlEl.style.display = 'block';
+    tabs[0].classList.remove('active');
+    tabs[1].classList.add('active');
+  }
+}
+
+function loadImageFile(input, key) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      state[key] = img;
+      updatePreview();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function loadBgImage() {
+  loadImageFile(document.getElementById('bgFile'), 'bgImage');
+}
+
+function loadLogoImage() {
+  loadImageFile(document.getElementById('logoFile'), 'logoImage');
+}
+
+function loadBgFromUrl() {
+  const url = document.getElementById('bgUrl').value;
+  if (!url) return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    state.bgImage = img;
+    updatePreview();
+  };
+  img.onerror = () => alert('No se pudo cargar la imagen. Revisa la URL.');
+  img.src = url;
+}
+
+function loadLogoFromUrl() {
+  const url = document.getElementById('logoUrl').value;
+  if (!url) return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    state.logoImage = img;
+    updatePreview();
+  };
+  img.onerror = () => alert('No se pudo cargar el logo. Revisa la URL.');
+  img.src = url;
+}
+
+function addRow() {
+  state.rows.push({ time: '18:15', icon: '📌', text: 'Nuevo evento' });
+  renderRows();
+  updatePreview();
+}
+
+function deleteRow(idx) {
+  state.rows.splice(idx, 1);
+  renderRows();
+  updatePreview();
+}
+
+function updateRowField(idx, field, value) {
+  state.rows[idx][field] = value;
+  updatePreview();
+}
+
+function renderRows() {
+  const list = document.getElementById('rowsList');
+  list.innerHTML = state.rows.map((row, idx) => `
+    <div class="row-item">
+      <input type="text" placeholder="Hora" value="${row.time}" onchange="updateRowField(${idx}, 'time', this.value)">
+      <input type="text" placeholder="Ícono/Emoji" value="${row.icon}" onchange="updateRowField(${idx}, 'icon', this.value)" style="max-width: 80px;">
+      <input type="text" placeholder="Descripción" value="${row.text}" onchange="updateRowField(${idx}, 'text', this.value)">
+      <div class="row-item-controls">
+        <button onclick="deleteRow(${idx})">Eliminar</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updatePreview() {
+  const canvas = document.getElementById('posterCanvas');
+  const ctx = canvas.getContext('2d');
+  
+  canvas.width = 1920;
+  canvas.height = 1080;
+  
+  if (state.bgImage) {
+    const aspectRatio = state.bgImage.width / state.bgImage.height;
+    let drawWidth = canvas.width;
+    let drawHeight = canvas.height;
+    let offsetX = 0;
+    let offsetY = 0;
+    
+    if (aspectRatio > canvas.width / canvas.height) {
+      drawHeight = canvas.width / aspectRatio;
+      offsetY = (canvas.height - drawHeight) / 2;
+    } else {
+      drawWidth = canvas.height * aspectRatio;
+      offsetX = (canvas.width - drawWidth) / 2;
+    }
+    
+    ctx.drawImage(state.bgImage, offsetX, offsetY, drawWidth, drawHeight);
+    ctx.fillStyle = 'rgba(10, 26, 58, 0.7)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  } else {
+    ctx.fillStyle = '#0a1a3a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  
+  const padding = 40;
+  const headerHeight = 240;
+  
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 72px "Segoe UI", sans-serif';
+  ctx.textAlign = 'left';
+  const title = document.getElementById('mainTitle').value;
+  const titleLines = title.split('\n');
+  let titleY = padding + 60;
+  titleLines.forEach((line) => {
+    ctx.fillText(line, padding + 100, titleY);
+    titleY += 90;
+  });
+  
+  ctx.font = '16px "Segoe UI", sans-serif';
+  ctx.fillStyle = '#90aad4';
+  ctx.fillText(document.getElementById('subtitle').value, padding + 100, titleY + 20);
+  
+  if (state.logoImage) {
+    const logoSize = 100;
+    ctx.beginPath();
+    ctx.arc(padding + 50, padding + 50, logoSize / 2, 0, Math.PI * 2);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+    ctx.drawImage(state.logoImage, padding + 10, padding + 10, logoSize, logoSize);
+  }
+  
+  const rowsStartY = headerHeight + 60;
+  const rowHeight = 72;
+  const timeWidth = 100;
+  const iconWidth = 80;
+  
+  state.rows.forEach((row, idx) => {
+    const rowY = rowsStartY + idx * rowHeight;
+    
+    ctx.fillStyle = '#0a1a3a';
+    ctx.fillRect(padding, rowY, timeWidth, rowHeight);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 32px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(row.time, padding + timeWidth / 2, rowY + 50);
+    
+    ctx.fillStyle = '#dde6f5';
+    ctx.fillRect(padding + timeWidth, rowY, iconWidth, rowHeight);
+    ctx.font = '36px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(row.icon, padding + timeWidth + iconWidth / 2, rowY + 48);
+    
+    ctx.fillStyle = 'white';
+    ctx.fillRect(padding + timeWidth + iconWidth, rowY, canvas.width - padding * 2 - timeWidth - iconWidth, rowHeight);
+    ctx.fillStyle = '#1a2540';
+    ctx.font = '20px "Segoe UI", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(row.text, padding + timeWidth + iconWidth + 20, rowY + 50);
+  });
+}
+
+function downloadPoster() {
+  const canvas = document.getElementById('posterCanvas');
+  const link = document.createElement('a');
+  link.href = canvas.toDataURL('image/png');
+  link.download = `poster-${new Date().toISOString().slice(0,10)}.png`;
+  link.click();
+}
+
+document.getElementById('mainTitle').addEventListener('input', (e) => {
+  state.mainTitle = e.target.value;
+  updatePreview();
+});
+
+document.getElementById('subtitle').addEventListener('input', (e) => {
+  state.subtitle = e.target.value;
+  updatePreview();
+});
+
+renderRows();
+updatePreview();
+</script>
+
+</body>
+</html>

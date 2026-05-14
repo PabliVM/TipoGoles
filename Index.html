@@ -1,514 +1,1816 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Plantilla editable - Formación compartida</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipología de Goles — Castilla 25/26</title>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- PapaParse -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
 <style>
-  :root{
-    --navy:#061a3a;
-    --navy-2:#082553;
-    --blue:#1557c8;
-    --line:#d6dfef;
-    --soft:#eef4fb;
-    --text:#071a3a;
-    --muted:#65748b;
-  }
+/* =====================================================
+   DESIGN TOKENS — MAESTRO CORPORATIVO RM
+   Para cambiar colores: editar las variables --rm-* aquí
+   ===================================================== */
+:root {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --surface-alt: #fafbfc;
+  --border: #dfe1e6;
+  --border-light: #eaecf0;
+  --text: #1a1d23;
+  --text-sec: #5a6170;
+  --text-mut: #8b919e;
+  --text-faint: #b4b9c4;
+  --rm-blue: #2563eb;
+  --rm-blue-lt: #3b7cf5;
+  --rm-blue-bg: #edf1fc;
+  --rm-blue-dark: #1d4ed8;
+  --green: #16a34a;
+  --green-bg: #dcfce7;
+  --orange: #ea580c;
+  --orange-bg: #fff7ed;
+  --red: #dc2626;
+  --red-bg: #fef2f2;
+  --sh-sm: 0 1px 3px rgba(0,0,0,.06);
+  --sh-md: 0 2px 8px rgba(0,0,0,.08);
+  --sh-lg: 0 4px 16px rgba(0,0,0,.12);
+  --r: 8px;
+  --rs: 5px;
+  --rl: 12px;
+  /* Para cambiar fuente: editar --font aquí */
+  --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  --tr: .2s ease;
+}
 
-  *{box-sizing:border-box}
+body.dark {
+  --bg: #111318;
+  --surface: #1c1f26;
+  --surface-alt: #22262e;
+  --border: #2e3340;
+  --border-light: #272b34;
+  --text: #e4e6ea;
+  --text-sec: #9095a0;
+  --text-mut: #60656e;
+  --text-faint: #404550;
+  --rm-blue-bg: #162040;
+  --green-bg: #0a2e18;
+  --orange-bg: #2a1800;
+  --red-bg: #2a0a0a;
+}
 
-  body{
-    margin:0;
-    background:#1f2937;
-    font-family: Aptos, "Segoe UI", Arial, Helvetica, sans-serif;
-    color:var(--text);
-  }
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-  .toolbar{
-    position:sticky;
-    top:0;
-    z-index:20;
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    align-items:center;
-    padding:10px 14px;
-    background:#111827;
-    color:white;
-    box-shadow:0 4px 18px rgba(0,0,0,.25);
-  }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+  padding-bottom: 52px;
+  transition: background var(--tr), color var(--tr);
+}
 
-  .toolbar button,
-  .toolbar label{
-    border:1px solid rgba(255,255,255,.22);
-    background:#1f2937;
-    color:white;
-    border-radius:10px;
-    padding:8px 11px;
-    font-size:13px;
-    cursor:pointer;
-  }
+/* =====================================================
+   HEADER
+   Para cambiar escudo: editar src en .header-logo img
+   Para cambiar temporada: editar .doc-season texto
+   ===================================================== */
+.header {
+  background: var(--rm-blue);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 2px 12px rgba(37,99,235,.35);
+}
 
-  .toolbar button:hover,
-  .toolbar label:hover{background:#374151}
-  .toolbar small{opacity:.72;margin-left:auto;font-size:12px}
-  input[type="file"]{display:none}
+.header-logo {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.25);
+}
 
-  .poster-wrap{
-    padding:24px;
-    overflow:auto;
-  }
+/* Para cambiar escudo: editar esta URL */
+.header-logo img { width: 100%; height: 100%; object-fit: contain; }
 
-  .poster{
-    position:relative;
-    width:210mm;
-    height:297mm;
-    margin:0 auto;
-    background:#fff;
-    overflow:hidden;
-    box-shadow:0 20px 55px rgba(0,0,0,.35);
-  }
+.header-title-wrap { flex: 1; display: flex; align-items: baseline; gap: 10px; }
+.doc-title { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
+/* Para cambiar temporada: editar texto aquí */
+.doc-season { font-size: 12px; color: rgba(255,255,255,.65); }
 
-  .hero{
-    position:relative;
-    height:92mm;
-    padding:13mm 12mm 0 12mm;
-    color:white;
-    overflow:hidden;
-    background:
-      linear-gradient(90deg, rgba(2,15,37,.98) 0%, rgba(4,26,63,.94) 42%, rgba(4,26,63,.72) 100%),
-      radial-gradient(circle at 85% 20%, rgba(255,255,255,.18), transparent 20%),
-      linear-gradient(135deg, #1d355e 0%, #09224f 50%, #041936 100%);
-  }
+.header-right { display: flex; gap: 8px; align-items: center; }
 
-  .hero::before{
-    content:"";
-    position:absolute;
-    inset:0;
-    opacity:.22;
-    background-image:
-      linear-gradient(8deg, transparent 0 54%, rgba(255,255,255,.28) 55% 56%, transparent 57%),
-      linear-gradient(172deg, transparent 0 58%, rgba(255,255,255,.22) 59% 60%, transparent 61%),
-      repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 1px, transparent 1px 86px),
-      repeating-linear-gradient(0deg, rgba(255,255,255,.08) 0 1px, transparent 1px 72px);
-    transform:skewY(-2deg) scale(1.1);
-  }
+.btn-icon {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  transition: background var(--tr);
+}
+.btn-icon:hover { background: rgba(255,255,255,.22); }
 
-  .hero::after{
-    content:"";
-    position:absolute;
-    right:-1mm;
-    bottom:-1mm;
-    border-style:solid;
-    border-width:0 0 43mm 47mm;
-    border-color:transparent transparent white transparent;
-  }
+/* NAV TABS */
+.nav-tabs {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.nav-tabs::-webkit-scrollbar { display: none; }
 
-  .top-grid{
-    position:relative;
-    z-index:2;
-    display:grid;
-    grid-template-columns:31mm 1fr;
-    column-gap:11mm;
-    align-items:start;
-  }
+.nav-tab {
+  padding: 10px 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-mut);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color var(--tr), border-color var(--tr);
+  display: flex; align-items: center; gap: 6px;
+}
+.nav-tab:hover { color: var(--rm-blue); }
+.nav-tab.active {
+  color: var(--rm-blue);
+  border-bottom-color: var(--rm-blue);
+}
+.tab-badge {
+  background: var(--rm-blue-bg);
+  color: var(--rm-blue);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
 
-  .brand-col{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:10mm;
-    padding-top:2mm;
-  }
+/* MAIN */
+.main { max-width: 1400px; margin: 0 auto; padding: 16px 20px; }
 
-  .brand-line{
-    position:absolute;
-    left:40mm;
-    top:13mm;
-    width:1px;
-    height:58mm;
-    background:rgba(255,255,255,.65);
-  }
+/* PANEL */
+.panel { display: none; }
+.panel.active { display: block; }
 
-  .logo-box{
-    width:24mm;
-    height:24mm;
-    border-radius:50%;
-    background:white;
-    display:grid;
-    place-items:center;
-    box-shadow:0 8px 20px rgba(0,0,0,.3);
-    overflow:hidden;
-  }
+/* CARDS */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  box-shadow: var(--sh-sm);
+  overflow: hidden;
+}
 
-  .logo-box img{width:100%;height:100%;object-fit:contain}
+.card-header {
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 
-  .tactics-icon{
-    width:20mm;
-    height:20mm;
-    border:1.7px solid rgba(255,255,255,.8);
-    border-radius:3mm;
-    display:grid;
-    place-items:center;
-  }
+.card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+}
 
-  .tactics-icon svg{width:15mm;height:15mm;stroke:white}
+.card-title .icon {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  background: var(--rm-blue-bg);
+  color: var(--rm-blue);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+}
 
-  .title-block{padding-top:1mm;max-width:132mm}
+.card-body { padding: 16px 18px; }
 
-  .main-title{
-    margin:0;
-    font-size:19mm;
-    line-height:.98;
-    letter-spacing:1.6mm;
-    font-weight:900;
-    text-transform:uppercase;
-  }
+/* GRID LAYOUTS */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
 
-  .over-title{
-    margin-top:5mm;
-    font-size:6.2mm;
-    line-height:1;
-    letter-spacing:2.8mm;
-    font-weight:500;
-    color:rgba(255,255,255,.72);
-    text-transform:uppercase;
-  }
+/* =====================================================
+   PANEL 1 — IMPORTAR CSV
+   ===================================================== */
+.import-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--rl);
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--tr), background var(--tr);
+  background: var(--surface-alt);
+  position: relative;
+}
+.import-zone:hover, .import-zone.drag-over {
+  border-color: var(--rm-blue);
+  background: var(--rm-blue-bg);
+}
+.import-zone input[type=file] {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.import-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+  display: block;
+}
+.import-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.import-sub { font-size: 12px; color: var(--text-mut); }
 
-  .short-rule{
-    width:26mm;
-    height:1px;
-    background:rgba(255,255,255,.5);
-    margin:4.8mm 0 8.5mm;
-  }
+.import-status {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: var(--r);
+  font-size: 12.5px;
+  font-weight: 600;
+  display: none;
+}
+.import-status.ok { background: var(--green-bg); color: var(--green); display: flex; align-items: center; gap: 8px; }
+.import-status.err { background: var(--red-bg); color: var(--red); display: flex; align-items: center; gap: 8px; }
 
-  .session-title{
-    font-size:6.8mm;
-    line-height:1.22;
-    font-weight:800;
-    margin:0 0 1.5mm;
-  }
+.import-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
 
-  .session-subtitle{
-    font-size:5.7mm;
-    line-height:1.25;
-    font-weight:400;
-    color:rgba(255,255,255,.92);
-    margin:0;
-  }
+.info-chip {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  text-align: center;
+}
+.info-chip .val { font-size: 20px; font-weight: 800; color: var(--rm-blue); }
+.info-chip .lbl { font-size: 11px; color: var(--text-mut); margin-top: 2px; }
 
-  .meta-bar{
-    height:12mm;
-    margin:7.5mm 12mm 4mm;
-    display:inline-flex;
-    align-items:center;
-    overflow:hidden;
-    background:var(--navy);
-    color:white;
-    border-radius:1.7mm;
-    font-weight:800;
-    letter-spacing:1.1mm;
-    text-transform:uppercase;
-  }
+/* =====================================================
+   PANEL 2 — REGISTRO MANUAL
+   ===================================================== */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
 
-  .meta-part{
-    height:100%;
-    display:flex;
-    align-items:center;
-    gap:3mm;
-    padding:0 6mm;
-    white-space:nowrap;
-    font-size:4.1mm;
-  }
+.field-group { display: flex; flex-direction: column; gap: 5px; }
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-sec);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
 
-  .meta-sep{width:1px;height:7mm;background:rgba(255,255,255,.45)}
-  .meta-part svg{width:5mm;height:5mm;stroke:white;stroke-width:2;fill:none}
+.field-select, .field-input {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font);
+  outline: none;
+  transition: border-color var(--tr), box-shadow var(--tr);
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.field-select:focus, .field-input:focus {
+  border-color: var(--rm-blue);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+.field-input[type=number] { cursor: text; }
 
-  .schedule{
-    margin:0 12mm;
-    display:grid;
-    grid-template-columns:30mm 32mm 1fr;
-    grid-template-rows:repeat(10, 15.8mm);
-    border:1px solid var(--line);
-    border-radius:2mm;
-    overflow:hidden;
-    background:white;
-  }
+.select-wrap { position: relative; }
+.select-wrap::after {
+  content: '▾';
+  position: absolute;
+  right: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-mut);
+  pointer-events: none;
+  font-size: 11px;
+}
 
-  .cell{
-    min-height:15.8mm;
-    border-bottom:1px solid var(--line);
-    display:flex;
-    align-items:center;
-  }
+/* CHIPS LOCALES/VISITANTE */
+.chip-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--tr);
+  background: var(--surface);
+  color: var(--text-sec);
+  user-select: none;
+}
+.chip:hover { border-color: var(--rm-blue); color: var(--rm-blue); }
+.chip.selected {
+  background: var(--rm-blue);
+  border-color: var(--rm-blue);
+  color: #fff;
+}
+.chip.green.selected { background: var(--green); border-color: var(--green); }
+.chip.red.selected { background: var(--red); border-color: var(--red); }
 
-  .schedule .cell:nth-last-child(-n+3){border-bottom:none}
+.form-actions {
+  display: flex; gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
 
-  .time{
-    justify-content:center;
-    background:linear-gradient(135deg, var(--navy), #031226);
-    color:white;
-    font-size:5.9mm;
-    font-weight:800;
-    letter-spacing:.2mm;
-  }
+.btn {
+  height: 36px;
+  padding: 0 18px;
+  border-radius: var(--r);
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all var(--tr);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary { background: var(--rm-blue); color: #fff; }
+.btn-primary:hover { background: var(--rm-blue-dark); }
+.btn-secondary {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text-sec);
+}
+.btn-secondary:hover { border-color: var(--rm-blue); color: var(--rm-blue); }
+.btn-danger { background: var(--red-bg); color: var(--red); }
+.btn-danger:hover { background: var(--red); color: #fff; }
 
-  .speaker{
-    justify-content:center;
-    border-left:1px solid var(--line);
-    border-right:1px solid var(--line);
-    background:#fbfdff;
-  }
+.form-divider {
+  height: 1px;
+  background: var(--border-light);
+  margin: 16px 0;
+}
 
-  .badge{
-    min-width:14mm;
-    height:10mm;
-    padding:0 2mm;
-    display:grid;
-    place-items:center;
-    border-radius:1.7mm;
-    background:#e9f0f8;
-    color:var(--navy);
-    font-size:6.4mm;
-    font-weight:900;
-    letter-spacing:.5mm;
-  }
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rm-blue);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.section-label::before {
+  content: '';
+  display: inline-block;
+  width: 3px; height: 12px;
+  background: var(--rm-blue);
+  border-radius: 2px;
+}
 
-  .speaker svg{width:12mm;height:12mm;stroke:var(--navy);stroke-width:1.9;fill:none}
+/* SUCCESS TOAST */
+.toast {
+  position: fixed;
+  bottom: 64px; right: 20px;
+  background: var(--green);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: var(--r);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--sh-lg);
+  transform: translateY(20px);
+  opacity: 0;
+  transition: all .25s ease;
+  z-index: 300;
+  display: flex; align-items: center; gap: 8px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
 
-  .topic{
-    padding:2mm 8mm;
-    font-size:4.25mm;
-    line-height:1.24;
-    color:var(--text);
-    overflow:hidden;
-  }
+/* =====================================================
+   PANEL 3 — TABLA
+   ===================================================== */
+.table-toolbar {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-light);
+  align-items: center;
+}
 
-  .topic strong{
-    font-weight:900;
-    color:var(--navy);
-  }
+.search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 160px;
+}
+.search-wrap::before {
+  content: '🔍';
+  position: absolute;
+  left: 9px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  pointer-events: none;
+}
+.search-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px 0 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: var(--font);
+  outline: none;
+  transition: border-color var(--tr);
+}
+.search-input:focus { border-color: var(--rm-blue); }
 
-  .footer-event{
-    position:absolute;
-    left:12mm;
-    right:12mm;
-    bottom:8mm;
-    height:20mm;
-    border:1.4px solid var(--navy);
-    border-radius:2.2mm;
-    display:grid;
-    grid-template-columns:25mm 34mm 1fr 44mm;
-    align-items:center;
-    overflow:hidden;
-    color:var(--navy);
-  }
+.filter-select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--font);
+  outline: none;
+  cursor: pointer;
+}
 
-  .footer-icon{
-    display:grid;
-    place-items:center;
-    height:100%;
-  }
+.table-count {
+  font-size: 12px;
+  color: var(--text-mut);
+  white-space: nowrap;
+  margin-left: auto;
+}
 
-  .footer-icon svg{width:14mm;height:14mm;stroke:var(--navy);stroke-width:1.5;fill:none}
-  .footer-time{font-size:7.2mm;font-weight:900;border-left:1px solid var(--navy);height:12mm;display:flex;align-items:center;justify-content:center}
-  .footer-text{border-left:1px solid var(--navy);padding-left:8mm;line-height:1.1}
-  .footer-text .bbq{font-size:6mm;font-weight:900;letter-spacing:1.2mm;text-transform:uppercase}
-  .footer-text .place{font-size:4.2mm;margin-top:1mm;color:#102247}
-  .footer-building{display:grid;place-items:center;height:100%}
-  .footer-building svg{width:32mm;height:13mm;stroke:var(--navy);stroke-width:1.2;fill:none}
+.table-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 480px;
+}
+.table-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
+.table-wrap::-webkit-scrollbar-track { background: var(--surface-alt); }
+.table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-  .editable{
-    cursor:text;
-    border-radius:1mm;
-  }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.data-table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-alt);
+  border-bottom: 2px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--text-sec);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.data-table th:hover { color: var(--rm-blue); }
+.data-table th.sort-asc::after { content: ' ↑'; color: var(--rm-blue); }
+.data-table th.sort-desc::after { content: ' ↓'; color: var(--rm-blue); }
+.data-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text);
+}
+.data-table tr:hover td { background: var(--rm-blue-bg); }
 
-  .editable:hover{outline:1px dashed rgba(21,87,200,.45);outline-offset:1mm}
-  .editable:focus{outline:2px solid var(--blue);outline-offset:1mm;background:rgba(21,87,200,.06)}
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.badge-green { background: var(--green-bg); color: var(--green); }
+.badge-red { background: var(--red-bg); color: var(--red); }
+.badge-blue { background: var(--rm-blue-bg); color: var(--rm-blue); }
+.badge-orange { background: var(--orange-bg); color: var(--orange); }
 
-  .hint{
-    position:absolute;
-    right:10mm;
-    top:4mm;
-    z-index:3;
-    color:rgba(255,255,255,.55);
-    font-size:3mm;
-    display:none;
-  }
+.btn-del {
+  width: 22px; height: 22px;
+  border-radius: 4px;
+  border: none;
+  background: var(--red-bg);
+  color: var(--red);
+  cursor: pointer;
+  font-size: 11px;
+  display: inline-flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity var(--tr);
+}
+tr:hover .btn-del { opacity: 1; }
 
-  body.show-hints .hint{display:block}
+/* =====================================================
+   PANEL 4 — DASHBOARD
+   ===================================================== */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
 
-  @media print{
-    body{background:white}
-    .toolbar{display:none!important}
-    .poster-wrap{padding:0}
-    .poster{box-shadow:none;margin:0;width:210mm;height:297mm}
-    .editable:hover,.editable:focus{outline:none;background:transparent}
-    @page{size:A4 portrait;margin:0}
-  }
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--rm-blue);
+}
+.kpi-card.green::before { background: var(--green); }
+.kpi-card.red::before { background: var(--red); }
+.kpi-card.orange::before { background: var(--orange); }
 
-  @media (max-width: 850px){
-    .poster{transform-origin:top left}
-    .poster-wrap{padding:12px}
-    .toolbar small{width:100%;margin-left:0}
-  }
+.kpi-label { font-size: 10.5px; font-weight: 700; color: var(--text-mut); text-transform: uppercase; letter-spacing: .4px; }
+.kpi-value { font-size: 28px; font-weight: 800; color: var(--text); margin: 4px 0 2px; line-height: 1; }
+.kpi-sub { font-size: 11px; color: var(--text-mut); }
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  overflow: hidden;
+}
+.chart-card.full { grid-column: 1 / -1; }
+
+.chart-head {
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.chart-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+.chart-body {
+  padding: 14px 16px;
+  position: relative;
+}
+.chart-body canvas { max-height: 220px; }
+.chart-body.tall canvas { max-height: 280px; }
+
+/* RANKING LIST */
+.rank-list { display: flex; flex-direction: column; gap: 6px; }
+.rank-item {
+  display: flex; align-items: center; gap: 10px;
+}
+.rank-pos {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--rm-blue-bg);
+  color: var(--rm-blue);
+  font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.rank-bar-wrap { flex: 1; }
+.rank-name { font-size: 12px; color: var(--text); margin-bottom: 3px; }
+.rank-bar-bg { height: 5px; background: var(--border-light); border-radius: 3px; overflow: hidden; }
+.rank-bar-fill { height: 100%; background: var(--rm-blue); border-radius: 3px; transition: width .6s ease; }
+.rank-val { font-size: 12px; font-weight: 700; color: var(--text); min-width: 28px; text-align: right; }
+
+/* DASHBOARD FILTER BAR */
+.dash-filters {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 12px 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.dash-filter-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-mut);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  white-space: nowrap;
+}
+.dash-filter-select {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--font);
+  outline: none;
+  cursor: pointer;
+}
+.dash-filter-select:focus { border-color: var(--rm-blue); }
+
+/* FOOTER */
+.app-footer {
+  background: var(--rm-blue);
+  color: rgba(255,255,255,.55);
+  font-size: 10px;
+  text-align: center;
+  padding: 10px;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 100;
+}
+
+/* EMPTY STATE */
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text-mut);
+}
+.empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state p { font-size: 13px; }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .main { padding: 10px 12px; }
+  .charts-grid { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-grid { grid-template-columns: 1fr 1fr; }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .header { padding: 8px 12px; }
+  .doc-title { font-size: 14px; }
+}
+@media (max-width: 480px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+}
 </style>
 </head>
+
 <body>
-  <div class="toolbar">
-    <button type="button" onclick="window.print()">Imprimir / guardar PDF</button>
-    <button type="button" onclick="downloadCurrentHtml()">Descargar HTML editado</button>
-    <button type="button" onclick="resetTemplate()">Restaurar textos</button>
-    <label for="logoInput">Cambiar logo</label>
-    <input id="logoInput" type="file" accept="image/*" />
-    <button type="button" onclick="document.body.classList.toggle('show-hints')">Mostrar/ocultar guía</button>
-    <small>Haz clic sobre cualquier texto para editarlo. Todas las filas de la agenda tienen el mismo alto.</small>
+
+<!-- HEADER — Para cambiar escudo: reemplazar src del img -->
+<header class="header">
+  <div class="header-logo">
+    <!-- Para cambiar escudo: reemplazar esta URL -->
+    <img src="https://raw.githubusercontent.com/PabliVM/Promociones/main/rm__.png"
+         crossorigin="anonymous" alt="RM" onerror="this.parentNode.innerHTML='⚽'">
   </div>
+  <div class="header-title-wrap">
+    <h1 class="doc-title">Tipología de Goles</h1>
+    <!-- Para cambiar temporada: editar este texto -->
+    <span class="doc-season">Castilla · 25/26</span>
+  </div>
+  <div class="header-right">
+    <button class="btn-icon" onclick="toggleDark()" id="darkBtn" title="Modo oscuro">☾</button>
+  </div>
+</header>
 
-  <div class="poster-wrap">
-    <main class="poster" id="poster">
-      <section class="hero">
-        <div class="hint">Campos editables activados</div>
-        <div class="brand-line"></div>
-        <div class="top-grid">
-          <aside class="brand-col">
-            <div class="logo-box">
-              <img id="logoImg" alt="Logo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='92' fill='%23fff' stroke='%23d5a400' stroke-width='8'/%3E%3Ccircle cx='100' cy='100' r='73' fill='%23f7fbff' stroke='%23061a3a' stroke-width='6'/%3E%3Ctext x='100' y='118' text-anchor='middle' font-family='Arial' font-size='58' font-weight='900' fill='%23061a3a'%3ERM%3C/text%3E%3Cpath d='M50 54h100' stroke='%23d5a400' stroke-width='10' stroke-linecap='round'/%3E%3C/svg%3E" />
-            </div>
-            <div class="tactics-icon" aria-hidden="true">
-              <svg viewBox="0 0 64 64"><rect x="9" y="7" width="46" height="50" rx="4"/><path d="M24 7v-3h16v3"/><circle cx="22" cy="25" r="3"/><circle cx="42" cy="20" r="3"/><circle cx="20" cy="43" r="3"/><circle cx="45" cy="43" r="3"/><path d="M25 38c6-1 9-5 13-11"/><path d="M18 18l8 8M26 18l-8 8"/></svg>
-            </div>
-          </aside>
+<!-- NAV TABS -->
+<nav class="nav-tabs" role="tablist">
+  <button class="nav-tab active" onclick="showPanel('import',this)" role="tab">
+    📥 Importar
+  </button>
+  <button class="nav-tab" onclick="showPanel('manual',this)" role="tab">
+    ✏️ Registrar
+  </button>
+  <button class="nav-tab" onclick="showPanel('tabla',this)" role="tab">
+    📋 Registros <span class="tab-badge" id="badge-count">0</span>
+  </button>
+  <button class="nav-tab" onclick="showPanel('dashboard',this)" role="tab">
+    📊 Dashboard
+  </button>
+</nav>
 
-          <div class="title-block">
-            <h1 class="main-title editable" contenteditable="true" data-key="main-title">FORMACIÓN<br>COMPARTIDA</h1>
-            <div class="over-title editable" contenteditable="true" data-key="over-title">SOBRE METODOLOGÍA</div>
-            <div class="short-rule"></div>
-            <p class="session-title editable" contenteditable="true" data-key="session-title">Entrenamiento técnico individual:</p>
-            <p class="session-subtitle editable" contenteditable="true" data-key="session-subtitle">ejemplos reales de aplicación.</p>
+<main class="main">
+
+  <!-- ===================================================
+       PANEL 1: IMPORTAR CSV
+       =================================================== -->
+  <div id="panel-import" class="panel active">
+    <div class="card" style="max-width:640px;margin:0 auto;">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">📥</span> Importar CSV</div>
+      </div>
+      <div class="card-body">
+        <div class="import-zone" id="dropZone">
+          <input type="file" accept=".csv" id="csvInput" onchange="handleFileSelect(event)">
+          <span class="import-icon">📂</span>
+          <div class="import-title">Arrastra tu CSV aquí</div>
+          <div class="import-sub">o haz clic para seleccionar archivo · Formato: UTF-8, separador coma</div>
+        </div>
+
+        <div class="import-status" id="importStatus"></div>
+
+        <div class="import-info-grid" id="importInfo" style="display:none">
+          <div class="info-chip">
+            <div class="val" id="infoRegistros">—</div>
+            <div class="lbl">Registros</div>
+          </div>
+          <div class="info-chip">
+            <div class="val" id="infoCols">—</div>
+            <div class="lbl">Columnas</div>
+          </div>
+          <div class="info-chip">
+            <div class="val" id="infoFile">—</div>
+            <div class="lbl">Archivo</div>
           </div>
         </div>
-      </section>
 
-      <section class="meta-bar">
-        <div class="meta-part">
-          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
-          <span class="editable" contenteditable="true" data-key="date">LUNES 25 DE MAYO</span>
+        <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="loadSeedData()">⚽ Cargar datos de ejemplo (50 goles reales)</button>
+          <button class="btn btn-secondary" onclick="exportCSV()">⬇️ Exportar CSV</button>
         </div>
-        <div class="meta-sep"></div>
-        <div class="meta-part">
-          <svg viewBox="0 0 24 24"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg>
-          <span class="editable" contenteditable="true" data-key="room">AULA 3</span>
+
+        <!-- Instrucciones columnas CSV -->
+        <div style="margin-top:16px; padding:12px 14px; background:var(--surface-alt); border-radius:var(--r); border:1px solid var(--border-light);">
+          <div class="section-label" style="margin-bottom:8px;">Columnas esperadas en el CSV</div>
+          <div style="font-size:11px; color:var(--text-sec); line-height:1.8;">
+            Competición · A favor / En contra · Jornada · Rival · Nivel rival · Local/Visitante ·
+            Diferencia en marcador · Goleador · Minuto · Tramo minuto · Tipología · Estilo ·
+            Zona de Robo · Posicionamiento del robo · Primer pase · Nº Pases · Tiempo en Transición ·
+            Tipo de Pase · Superficie de remate · Nº Contactos · Zona remate
+          </div>
         </div>
-      </section>
-
-      <section class="schedule" aria-label="Agenda editable">
-        <div class="cell time editable" contenteditable="true" data-key="time-1">17:10</div>
-        <div class="cell speaker"><svg viewBox="0 0 64 64"><circle cx="22" cy="22" r="7"/><circle cx="42" cy="22" r="7"/><circle cx="32" cy="17" r="8"/><path d="M10 50c1-12 8-18 20-18M54 50c-1-12-8-18-20-18M18 50c1-10 7-15 14-15s13 5 14 15"/></svg></div>
-        <div class="cell topic editable" contenteditable="true" data-key="topic-1"><strong>Bienvenida y presentación</strong></div>
-
-        <div class="cell time editable" contenteditable="true" data-key="time-2">17:15</div>
-        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-2">JB</span></div>
-        <div class="cell topic editable" contenteditable="true" data-key="topic-2"><strong>Entrenamiento técnico-posicional</strong><br>en contextos sectoriales de juego.</div>
-
-        <div class="cell time editable" contenteditable="true" data-key="time-3">17:30</div>
-        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-3">JC</span></div>
-        <div class="cell topic editable" contenteditable="true" data-key="topic-3"><strong>Del jugador al sistema:</strong> posición, percepción y orientación<br>para la superación de líneas.</div>
-
-        <div class="cell time editable" contenteditable="true" data-key="time-4">17:45</div>
-        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-4">CA</span></div>
-        <div class="cell topic editable" contenteditable="true" data-key="topic-4"><strong>Entrenamiento técnico individual</strong> para ofrecer soluciones<br>ofensivas en el último tercio.</div>
-
-        <div class="cell time editable" contenteditable="true" data-key="time-5">18:00</div>
-        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-5">CB</span></div>
-        <div class="cell topic editable" contenteditable="true" data-key="topic-5"><strong>Planificación y organización del entrenamiento técnico-posicional</strong><br>en grupos de jugadores durante la sesión.</div>
-
-        <div class="cell time editable" contenteditable="true" data-key="time-6">18:15</div>
-        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-6">IA</span></div>
-        <div class="cell topic editable" contenteditable="true" data-key="topic-6"><strong>Desarrollo individualizado del futbolista:</strong> transferencia del<br>entrenamiento al rendimiento competitivo.</div>
-
-        <div class="cell time editable" contenteditable="true" data-key="time-7">18:30</div>
-        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-7">IB</span></div>
-        <div class="cell topic editable" contenteditable="true" data-key="topic-7"><strong>Optimización de acciones técnicas determinantes</strong><br>en la etapa Infantil B.</div>
-
-        <div class="cell time editable" contenteditable="true" data-key="time-8">18:45</div>
-        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-8">AA</span></div>
-        <div class="cell topic editable" contenteditable="true" data-key="topic-8"><strong>Planificación y organización del entrenamiento técnico-posicional</strong><br>en grupos de jugadores durante la sesión.</div>
-
-        <div class="cell time editable" contenteditable="true" data-key="time-9">19:00</div>
-        <div class="cell speaker"><span class="badge editable" contenteditable="true" data-key="speaker-9">F7</span></div>
-        <div class="cell topic editable" contenteditable="true" data-key="topic-9"><strong>Bases para el desarrollo integral del jugador.</strong></div>
-
-        <div class="cell time editable" contenteditable="true" data-key="time-10">19:15</div>
-        <div class="cell speaker"><svg viewBox="0 0 64 64"><path d="M17 38c7-10 18-15 31-12l4 2-3 13-5 1c-12 1-21 4-27 9-5-4-5-9 0-13Z"/><path d="M49 28l7-4M50 35h9M46 23l3-7M16 33l-5-7M22 30l-2-9"/><circle cx="18" cy="45" r="5"/></svg></div>
-        <div class="cell topic editable" contenteditable="true" data-key="topic-10"><strong>Clausura y debate final.</strong></div>
-      </section>
-
-      <section class="footer-event">
-        <div class="footer-icon"><svg viewBox="0 0 64 64"><path d="M21 10v44M15 10v18c0 5 12 5 12 0V10M47 10v44M41 10h6c7 0 10 7 7 15-2 5-7 8-13 8"/></svg></div>
-        <div class="footer-time editable" contenteditable="true" data-key="bbq-time">19:45</div>
-        <div class="footer-text">
-          <div class="bbq editable" contenteditable="true" data-key="bbq-title">BBQ</div>
-          <div class="place editable" contenteditable="true" data-key="bbq-place">en el bajo grada del campo 7.</div>
-        </div>
-        <div class="footer-building"><svg viewBox="0 0 160 60"><path d="M15 45h130M25 35h110M35 25h90M45 15h70M36 15v30M64 15v30M96 15v30M124 15v30M30 48h100"/></svg></div>
-      </section>
-    </main>
+      </div>
+    </div>
   </div>
 
+  <!-- ===================================================
+       PANEL 2: REGISTRO MANUAL
+       =================================================== -->
+  <div id="panel-manual" class="panel">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">✏️</span> Nuevo gol</div>
+        <button class="btn btn-secondary" onclick="resetForm()" style="height:28px;padding:0 12px;font-size:11px;">Limpiar</button>
+      </div>
+      <div class="card-body">
+
+        <div class="section-label">General</div>
+        <div class="form-grid" id="formGrid">
+
+          <div class="field-group">
+            <label class="field-label">Competición *</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-competicion">
+                <option value="">Seleccionar</option>
+                <option>Liga</option>
+                <option>Torneo</option>
+                <option>Amistoso</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">A favor / En contra *</label>
+            <div class="chip-group" id="chips-favor">
+              <div class="chip green" data-val="A favor" onclick="selectChip(this,'chips-favor','f-favor')">✅ A favor</div>
+              <div class="chip red" data-val="En contra" onclick="selectChip(this,'chips-favor','f-favor')">❌ En contra</div>
+            </div>
+            <input type="hidden" id="f-favor">
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Jornada</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-jornada">
+                <option value="">—</option>
+                <!-- JS rellena J1..J38 -->
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Rival</label>
+            <input class="field-input" type="text" id="f-rival" placeholder="Nombre del rival">
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Nivel rival</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-nivel">
+                <option value="">—</option>
+                <option>Nivel 1</option><option>Nivel 2</option>
+                <option>Nivel 3</option><option>Nivel 4</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Local / Visitante</label>
+            <div class="chip-group" id="chips-lv">
+              <div class="chip" data-val="Local" onclick="selectChip(this,'chips-lv','f-lv')">🏠 Local</div>
+              <div class="chip" data-val="Visitante" onclick="selectChip(this,'chips-lv','f-lv')">✈️ Visitante</div>
+            </div>
+            <input type="hidden" id="f-lv">
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Diferencia marcador</label>
+            <input class="field-input" type="number" id="f-dif" placeholder="0" min="-10" max="10">
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Goleador</label>
+            <input class="field-input" type="text" id="f-goleador" placeholder="Nombre">
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Minuto</label>
+            <input class="field-input" type="number" id="f-minuto" placeholder="1-120" min="1" max="120">
+          </div>
+
+        </div>
+
+        <div class="form-divider"></div>
+        <div class="section-label">Táctica</div>
+
+        <div class="form-grid">
+
+          <div class="field-group">
+            <label class="field-label">Tipología *</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-tipologia">
+                <option value="">Seleccionar</option>
+                <option>Balón parado</option>
+                <option>Transiciones</option>
+                <option>Juego directo</option>
+                <option>Juego posicional</option>
+                <option>Otros</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Estilo</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-estilo">
+                <option value="">Seleccionar</option>
+                <option>Centro retrasado</option>
+                <option>Centro profundidad</option>
+                <option>Juego combinativo (paredes)</option>
+                <option>Juego combinativo (último pase)</option>
+                <option>Acción individual</option>
+                <option>Falta directa</option>
+                <option>Falta indirecta</option>
+                <option>Córner directo</option>
+                <option>Córner no directo</option>
+                <option>Saque de banda y centro</option>
+                <option>Saque de banda y combinativo</option>
+                <option>Penalti</option>
+                <option>Transicion</option>
+                <option>Juego directo</option>
+                <option>Saque de banda + tiro</option>
+                <option>Propia puerta</option>
+                <option>Equilibrio</option>
+                <option>Otros</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Zona de robo</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-zona-robo">
+                <option value="">—</option>
+                <option>Z1</option><option>Z2</option>
+                <option>Z3</option><option>Z4</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Posic. del robo</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-posic-robo">
+                <option value="">—</option>
+                <option>Carril central</option>
+                <option>Banda</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Primer pase</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-primer-pase">
+                <option value="">—</option>
+                <option>Horizontal</option>
+                <option>Hacia detrás</option>
+                <option>Hacia adelante</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Nº Pases</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-n-pases">
+                <option value="">—</option>
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option>
+                <option>9</option><option>10</option><option>10+</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Tiempo transición</label>
+            <input class="field-input" type="number" id="f-tiempo" placeholder="seg." min="1">
+          </div>
+
+        </div>
+
+        <div class="form-divider"></div>
+        <div class="section-label">Remate</div>
+
+        <div class="form-grid">
+
+          <div class="field-group">
+            <label class="field-label">Tipo de pase</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-tipo-pase">
+                <option value="">—</option>
+                <option>Aereo</option>
+                <option>Raso</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Superficie de remate *</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-superficie">
+                <option value="">Seleccionar</option>
+                <option>Cabeza</option>
+                <option>Pie Izquierdo</option>
+                <option>Pie derecho</option>
+                <option>Otros</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Nº Contactos</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-contactos">
+                <option value="">—</option>
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option>
+                <option>9</option><option>10</option><option>10+</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Zona remate *</label>
+            <div class="select-wrap">
+              <select class="field-select" id="f-zona-remate">
+                <option value="">Seleccionar</option>
+                <option>1er palo</option>
+                <option>2º palo</option>
+                <option>2º palo (espalda 2º central)</option>
+                <option>Penalti</option>
+                <option>Vértice</option>
+                <option>Fuera del área</option>
+                <option>Área pequeña</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="guardarGol(false)">💾 Guardar gol</button>
+          <button class="btn btn-secondary" onclick="guardarGol(true)">➕ Guardar y añadir otro</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       PANEL 3: TABLA
+       =================================================== -->
+  <div id="panel-tabla" class="panel">
+    <div class="card">
+      <div class="table-toolbar">
+        <div class="search-wrap">
+          <input class="search-input" type="text" id="tableSearch"
+                 placeholder="Buscar rival, goleador, tipología..."
+                 oninput="renderTabla()">
+        </div>
+        <select class="filter-select" id="filterComp" onchange="renderTabla()">
+          <option value="">Todas las competiciones</option>
+          <option>Liga</option><option>Torneo</option><option>Amistoso</option>
+        </select>
+        <select class="filter-select" id="filterTipo" onchange="renderTabla()">
+          <option value="">Todas las tipologías</option>
+          <option>Balón parado</option>
+          <option>Transiciones</option>
+          <option>Juego directo</option>
+          <option>Juego posicional</option>
+          <option>Otros</option>
+        </select>
+        <select class="filter-select" id="filterFavor" onchange="renderTabla()">
+          <option value="">A favor / En contra</option>
+          <option value="A favor">A favor</option>
+          <option value="En contra">En contra</option>
+        </select>
+        <span class="table-count" id="tableCount">0 registros</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table" id="dataTable">
+          <thead>
+            <tr>
+              <th onclick="sortTabla('competicion')">Comp.</th>
+              <th onclick="sortTabla('favor')">A/EC</th>
+              <th onclick="sortTabla('jornada')">Jorn.</th>
+              <th onclick="sortTabla('rival')">Rival</th>
+              <th onclick="sortTabla('nivel')">Nivel</th>
+              <th onclick="sortTabla('lv')">L/V</th>
+              <th onclick="sortTabla('goleador')">Goleador</th>
+              <th onclick="sortTabla('minuto')">Min.</th>
+              <th onclick="sortTabla('tramo')">Tramo</th>
+              <th onclick="sortTabla('tipologia')">Tipología</th>
+              <th onclick="sortTabla('estilo')">Estilo</th>
+              <th onclick="sortTabla('superficie')">Superficie</th>
+              <th onclick="sortTabla('zonaRemate')">Zona remate</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+          </tbody>
+        </table>
+        <div id="tableEmpty" class="empty-state" style="display:none">
+          <div class="icon">📭</div>
+          <p>Sin registros. Importa un CSV o registra goles manualmente.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       PANEL 4: DASHBOARD
+       =================================================== -->
+  <div id="panel-dashboard" class="panel">
+
+    <!-- Filtros dashboard -->
+    <div class="dash-filters">
+      <span class="dash-filter-label">Filtros</span>
+      <select class="dash-filter-select" id="dashComp" onchange="renderDashboard()">
+        <option value="">Todas las competiciones</option>
+        <option>Liga</option><option>Torneo</option><option>Amistoso</option>
+      </select>
+      <select class="dash-filter-select" id="dashLV" onchange="renderDashboard()">
+        <option value="">Local + Visitante</option>
+        <option>Local</option><option>Visitante</option>
+      </select>
+      <select class="dash-filter-select" id="dashFavor" onchange="renderDashboard()">
+        <option value="">A favor + En contra</option>
+        <option value="A favor">A favor</option>
+        <option value="En contra">En contra</option>
+      </select>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+
+      <div class="chart-card">
+        <div class="chart-head"><span class="chart-title">⚽ Goles por Tipología</span></div>
+        <div class="chart-body"><canvas id="chartTipologia"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head"><span class="chart-title">🦶 Superficie de remate</span></div>
+        <div class="chart-body"><canvas id="chartSuperficie"></canvas></div>
+      </div>
+
+      <div class="chart-card full">
+        <div class="chart-head"><span class="chart-title">⏱️ Goles por tramo de minuto</span></div>
+        <div class="chart-body tall"><canvas id="chartTramo"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head"><span class="chart-title">📍 Zona de remate</span></div>
+        <div class="chart-body"><canvas id="chartZona"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head"><span class="chart-title">🧭 Tipo de pase</span></div>
+        <div class="chart-body"><canvas id="chartTipoPase"></canvas></div>
+      </div>
+
+      <div class="chart-card full">
+        <div class="chart-head"><span class="chart-title">🎯 Ranking de Estilos</span></div>
+        <div class="chart-body">
+          <div class="rank-list" id="rankEstilos"></div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head"><span class="chart-title">🗺️ Zona de robo</span></div>
+        <div class="chart-body"><canvas id="chartZonaRobo"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head"><span class="chart-title">🏠 Local vs Visitante</span></div>
+        <div class="chart-body"><canvas id="chartLV"></canvas></div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<footer class="app-footer">
+  Cantera del Real Madrid CF · Tipología de Goles · 25/26
+  <!-- =====================================================
+       FIREBASE: añadir aquí el SDK de Firebase cuando corresponda
+       import { initializeApp } from 'firebase/app';
+       const firebaseConfig = { ... };
+       ===================================================== -->
+</footer>
+
+<div class="toast" id="toast"></div>
+
 <script>
-  const STORAGE_PREFIX = 'formacion-metodologia-editable-v1:';
+/* =====================================================
+   ESTADO GLOBAL
+   ===================================================== */
+let goles = [];   // Array principal de datos
+let sortField = null;
+let sortDir = 1;
 
-  function initEditable() {
-    document.querySelectorAll('.editable[data-key]').forEach(el => {
-      if (!el.dataset.default) el.dataset.default = el.innerHTML;
-      const saved = localStorage.getItem(STORAGE_PREFIX + el.dataset.key);
-      if (saved !== null) el.innerHTML = saved;
-      el.addEventListener('input', () => {
-        localStorage.setItem(STORAGE_PREFIX + el.dataset.key, el.innerHTML);
-      });
-    });
+// Gráficos Chart.js activos (para destruir antes de re-renderizar)
+const charts = {};
+
+/* =====================================================
+   DATOS SEED — 50 goles reales Castilla 25/26
+   ===================================================== */
+const SEED_DATA = [
+  {competicion:"Amistoso",favor:"A favor",jornada:"J16",rival:"Racing Ferrol",nivel:"Nivel 3",lv:"Local",dif:0,goleador:"Diego Aguado",minuto:49,tramo:"41-50",tipologia:"Juego posicional",estilo:"Saque de banda y centro",zonaRobo:"Z3",posicRobo:"Carril central",primerPase:"Hacia adelante",nPases:"4",tiempoTransicion:16,tipoPase:"Aereo",superficie:"Cabeza",nContactos:"8",zonaRemate:"2º palo (espalda 2º central)"},
+  {competicion:"Torneo",favor:"En contra",jornada:"J33",rival:"Sevilla Atlético",nivel:"Nivel 3",lv:"Visitante",dif:-3,goleador:"Diego Aguado",minuto:38,tramo:"31-40",tipologia:"Balón parado",estilo:"Saque de banda + tiro",zonaRobo:"Z3",posicRobo:"Carril central",primerPase:"Hacia adelante",nPases:"9",tiempoTransicion:4,tipoPase:"Raso",superficie:"Pie Izquierdo",nContactos:"6",zonaRemate:"Penalti"},
+  {competicion:"Liga",favor:"En contra",jornada:"J1",rival:"Barcelona Atlètic",nivel:"Nivel 2",lv:"Visitante",dif:2,goleador:"Yáñez",minuto:24,tramo:"21-30",tipologia:"Juego posicional",estilo:"Saque de banda + tiro",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Hacia adelante",nPases:"10+",tiempoTransicion:12,tipoPase:"Aereo",superficie:"Cabeza",nContactos:"6",zonaRemate:"Vértice"},
+  {competicion:"Amistoso",favor:"En contra",jornada:"J13",rival:"Athletic B",nivel:"Nivel 1",lv:"Local",dif:2,goleador:"Víctor Muñoz",minuto:15,tramo:"11-20",tipologia:"Transiciones",estilo:"Saque de banda y centro",zonaRobo:"Z3",posicRobo:"Carril central",primerPase:"Hacia adelante",nPases:"10",tiempoTransicion:18,tipoPase:"Raso",superficie:"Pie derecho",nContactos:"5",zonaRemate:"Fuera del área"},
+  {competicion:"Liga",favor:"En contra",jornada:"J36",rival:"Ponferradina",nivel:"Nivel 1",lv:"Local",dif:6,goleador:"Diego Aguado",minuto:75,tramo:"71-80",tipologia:"Transiciones",estilo:"Saque de banda y centro",zonaRobo:"Z3",posicRobo:"Carril central",primerPase:"Hacia detrás",nPases:"10+",tiempoTransicion:18,tipoPase:"Raso",superficie:"Pie derecho",nContactos:"9",zonaRemate:"Penalti"},
+  {competicion:"Liga",favor:"En contra",jornada:"J10",rival:"Cartagena",nivel:"Nivel 3",lv:"Visitante",dif:-3,goleador:"Capdevila",minuto:11,tramo:"11-20",tipologia:"Otros",estilo:"Equilibrio",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Horizontal",nPases:"6",tiempoTransicion:8,tipoPase:"Aereo",superficie:"Otros",nContactos:"1",zonaRemate:"Vértice"},
+  {competicion:"Liga",favor:"En contra",jornada:"J38",rival:"Tenerife",nivel:"Nivel 3",lv:"Visitante",dif:6,goleador:"David Jiménez",minuto:39,tramo:"31-40",tipologia:"Otros",estilo:"Juego directo",zonaRobo:"Z1",posicRobo:"Carril central",primerPase:"Hacia detrás",nPases:"4",tiempoTransicion:8,tipoPase:"Aereo",superficie:"Pie derecho",nContactos:"9",zonaRemate:"Área pequeña"},
+  {competicion:"Amistoso",favor:"En contra",jornada:"J20",rival:"Cartagena",nivel:"Nivel 4",lv:"Local",dif:-2,goleador:"Lorenzo",minuto:32,tramo:"31-40",tipologia:"Otros",estilo:"Acción individual",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Horizontal",nPases:"1",tiempoTransicion:12,tipoPase:"Raso",superficie:"Pie derecho",nContactos:"6",zonaRemate:"Fuera del área"},
+  {competicion:"Amistoso",favor:"A favor",jornada:"J1",rival:"Sporting",nivel:"Nivel 3",lv:"Local",dif:-3,goleador:"Diego Aguado",minuto:56,tramo:"51-60",tipologia:"Transiciones",estilo:"Transicion",zonaRobo:"Z1",posicRobo:"Banda",primerPase:"Horizontal",nPases:"5",tiempoTransicion:15,tipoPase:"Aereo",superficie:"Pie derecho",nContactos:"4",zonaRemate:"2º palo"},
+  {competicion:"Torneo",favor:"En contra",jornada:"J17",rival:"Real Madrid B",nivel:"Nivel 4",lv:"Visitante",dif:2,goleador:"Manu Serrano",minuto:8,tramo:"0-10",tipologia:"Transiciones",estilo:"Saque de banda y combinativo",zonaRobo:"Z4",posicRobo:"Banda",primerPase:"Horizontal",nPases:"10",tiempoTransicion:14,tipoPase:"Raso",superficie:"Pie derecho",nContactos:"7",zonaRemate:"1er palo"},
+  {competicion:"Torneo",favor:"En contra",jornada:"J18",rival:"Burgos",nivel:"Nivel 4",lv:"Local",dif:-1,goleador:"Víctor Muñoz",minuto:38,tramo:"31-40",tipologia:"Otros",estilo:"Saque de banda y centro",zonaRobo:"Z1",posicRobo:"Carril central",primerPase:"Hacia detrás",nPases:"10",tiempoTransicion:8,tipoPase:"Raso",superficie:"Otros",nContactos:"8",zonaRemate:"2º palo (espalda 2º central)"},
+  {competicion:"Amistoso",favor:"A favor",jornada:"J13",rival:"Eibar",nivel:"Nivel 1",lv:"Visitante",dif:-5,goleador:"Bruno Iglesias",minuto:39,tramo:"31-40",tipologia:"Juego posicional",estilo:"Transicion",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Hacia detrás",nPases:"9",tiempoTransicion:7,tipoPase:"Raso",superficie:"Pie derecho",nContactos:"4",zonaRemate:"2º palo (espalda 2º central)"},
+  {competicion:"Amistoso",favor:"A favor",jornada:"J19",rival:"Oviedo",nivel:"Nivel 2",lv:"Visitante",dif:1,goleador:"Bruno Iglesias",minuto:83,tramo:"81-90",tipologia:"Balón parado",estilo:"Córner no directo",zonaRobo:"Z1",posicRobo:"Banda",primerPase:"Hacia detrás",nPases:"7",tiempoTransicion:7,tipoPase:"Aereo",superficie:"Cabeza",nContactos:"8",zonaRemate:"1er palo"},
+  {competicion:"Amistoso",favor:"A favor",jornada:"J15",rival:"Tenerife",nivel:"Nivel 4",lv:"Visitante",dif:0,goleador:"Chema Andrés",minuto:49,tramo:"41-50",tipologia:"Transiciones",estilo:"Falta directa",zonaRobo:"Z2",posicRobo:"Banda",primerPase:"Hacia adelante",nPases:"1",tiempoTransicion:7,tipoPase:"Raso",superficie:"Pie derecho",nContactos:"3",zonaRemate:"2º palo"},
+  {competicion:"Torneo",favor:"En contra",jornada:"J19",rival:"Andorra",nivel:"Nivel 4",lv:"Visitante",dif:9,goleador:"Gonzalo García",minuto:40,tramo:"31-40",tipologia:"Balón parado",estilo:"Penalti",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Hacia detrás",nPases:"1",tiempoTransicion:17,tipoPase:"Aereo",superficie:"Otros",nContactos:"10+",zonaRemate:"Área pequeña"},
+  {competicion:"Amistoso",favor:"En contra",jornada:"J13",rival:"Eibar",nivel:"Nivel 1",lv:"Visitante",dif:-1,goleador:"Chema Andrés",minuto:51,tramo:"51-60",tipologia:"Otros",estilo:"Transicion",zonaRobo:"Z2",posicRobo:"Banda",primerPase:"Horizontal",nPases:"4",tiempoTransicion:9,tipoPase:"Aereo",superficie:"Cabeza",nContactos:"3",zonaRemate:"Fuera del área"},
+  {competicion:"Amistoso",favor:"A favor",jornada:"J36",rival:"Andorra",nivel:"Nivel 1",lv:"Visitante",dif:10,goleador:"Víctor Muñoz",minuto:18,tramo:"11-20",tipologia:"Otros",estilo:"Falta indirecta",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Horizontal",nPases:"5",tiempoTransicion:6,tipoPase:"Aereo",superficie:"Pie derecho",nContactos:"10",zonaRemate:"2º palo (espalda 2º central)"},
+  {competicion:"Torneo",favor:"En contra",jornada:"J13",rival:"Levante",nivel:"Nivel 3",lv:"Visitante",dif:4,goleador:"Bruno Iglesias",minuto:85,tramo:"81-90",tipologia:"Otros",estilo:"Centro profundidad",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Horizontal",nPases:"4",tiempoTransicion:19,tipoPase:"Aereo",superficie:"Cabeza",nContactos:"4",zonaRemate:"Vértice"},
+  {competicion:"Liga",favor:"En contra",jornada:"J34",rival:"Barcelona Atlètic",nivel:"Nivel 4",lv:"Visitante",dif:-5,goleador:"Hugo de Llanos",minuto:79,tramo:"71-80",tipologia:"Otros",estilo:"Saque de banda y combinativo",zonaRobo:"Z2",posicRobo:"Carril central",primerPase:"Hacia detrás",nPases:"3",tiempoTransicion:12,tipoPase:"Raso",superficie:"Cabeza",nContactos:"8",zonaRemate:"Fuera del área"},
+  {competicion:"Liga",favor:"En contra",jornada:"J31",rival:"Real Madrid B",nivel:"Nivel 4",lv:"Local",dif:8,goleador:"Cestero",minuto:25,tramo:"21-30",tipologia:"Otros",estilo:"Acción individual",zonaRobo:"Z2",posicRobo:"Carril central",primerPase:"Hacia adelante",nPases:"1",tiempoTransicion:19,tipoPase:"Aereo",superficie:"Otros",nContactos:"4",zonaRemate:"Área pequeña"},
+  {competicion:"Amistoso",favor:"En contra",jornada:"J37",rival:"Sporting",nivel:"Nivel 3",lv:"Local",dif:6,goleador:"Lorenzo",minuto:58,tramo:"51-60",tipologia:"Juego directo",estilo:"Saque de banda y centro",zonaRobo:"Z2",posicRobo:"Banda",primerPase:"Horizontal",nPases:"1",tiempoTransicion:1,tipoPase:"Raso",superficie:"Cabeza",nContactos:"5",zonaRemate:"Fuera del área"},
+  {competicion:"Liga",favor:"A favor",jornada:"J21",rival:"Barcelona Atlètic",nivel:"Nivel 3",lv:"Local",dif:-3,goleador:"Hugo de Llanos",minuto:51,tramo:"51-60",tipologia:"Juego directo",estilo:"Saque de banda y combinativo",zonaRobo:"Z2",posicRobo:"Banda",primerPase:"Hacia detrás",nPases:"9",tiempoTransicion:15,tipoPase:"Raso",superficie:"Pie Izquierdo",nContactos:"4",zonaRemate:"Fuera del área"},
+  {competicion:"Liga",favor:"A favor",jornada:"J21",rival:"Andorra",nivel:"Nivel 2",lv:"Local",dif:-4,goleador:"Joan Martínez",minuto:42,tramo:"41-50",tipologia:"Balón parado",estilo:"Propia puerta",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Horizontal",nPases:"2",tiempoTransicion:14,tipoPase:"Raso",superficie:"Pie Izquierdo",nContactos:"10",zonaRemate:"1er palo"},
+  {competicion:"Liga",favor:"A favor",jornada:"J25",rival:"Albacete",nivel:"Nivel 1",lv:"Visitante",dif:-5,goleador:"Roberto Martín",minuto:3,tramo:"0-10",tipologia:"Juego directo",estilo:"Juego directo",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Hacia detrás",nPases:"1",tiempoTransicion:7,tipoPase:"Raso",superficie:"Pie Izquierdo",nContactos:"10",zonaRemate:"2º palo"},
+  {competicion:"Amistoso",favor:"A favor",jornada:"J5",rival:"Sporting",nivel:"Nivel 4",lv:"Local",dif:6,goleador:"Lorenzo",minuto:14,tramo:"11-20",tipologia:"Balón parado",estilo:"Saque de banda + tiro",zonaRobo:"Z2",posicRobo:"Banda",primerPase:"Horizontal",nPases:"5",tiempoTransicion:6,tipoPase:"Raso",superficie:"Pie Izquierdo",nContactos:"4",zonaRemate:"Fuera del área"},
+  {competicion:"Liga",favor:"En contra",jornada:"J1",rival:"Levante",nivel:"Nivel 1",lv:"Visitante",dif:1,goleador:"Roberto Martín",minuto:32,tramo:"31-40",tipologia:"Transiciones",estilo:"Juego combinativo (paredes)",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Horizontal",nPases:"6",tiempoTransicion:19,tipoPase:"Aereo",superficie:"Pie derecho",nContactos:"9",zonaRemate:"Área pequeña"},
+  {competicion:"Torneo",favor:"En contra",jornada:"J20",rival:"Sporting",nivel:"Nivel 3",lv:"Visitante",dif:7,goleador:"Hugo de Llanos",minuto:38,tramo:"31-40",tipologia:"Otros",estilo:"Juego directo",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Horizontal",nPases:"8",tiempoTransicion:13,tipoPase:"Raso",superficie:"Otros",nContactos:"1",zonaRemate:"Penalti"},
+  {competicion:"Amistoso",favor:"A favor",jornada:"J5",rival:"Barcelona Atlètic",nivel:"Nivel 3",lv:"Local",dif:2,goleador:"Gonzalo García",minuto:1,tramo:"0-10",tipologia:"Otros",estilo:"Propia puerta",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Hacia detrás",nPases:"8",tiempoTransicion:19,tipoPase:"Aereo",superficie:"Pie Izquierdo",nContactos:"2",zonaRemate:"Vértice"},
+  {competicion:"Torneo",favor:"A favor",jornada:"J11",rival:"Levante",nivel:"Nivel 3",lv:"Local",dif:4,goleador:"Joan Martínez",minuto:63,tramo:"61-70",tipologia:"Juego directo",estilo:"Juego combinativo (último pase)",zonaRobo:"Z2",posicRobo:"Carril central",primerPase:"Hacia adelante",nPases:"8",tiempoTransicion:5,tipoPase:"Aereo",superficie:"Pie derecho",nContactos:"8",zonaRemate:"2º palo (espalda 2º central)"},
+  {competicion:"Liga",favor:"A favor",jornada:"J16",rival:"Mirandés",nivel:"Nivel 4",lv:"Visitante",dif:-2,goleador:"Chema Andrés",minuto:57,tramo:"51-60",tipologia:"Otros",estilo:"Juego directo",zonaRobo:"Z1",posicRobo:"Carril central",primerPase:"Hacia detrás",nPases:"3",tiempoTransicion:8,tipoPase:"Raso",superficie:"Cabeza",nContactos:"4",zonaRemate:"Fuera del área"},
+  {competicion:"Liga",favor:"A favor",jornada:"J20",rival:"Racing Ferrol",nivel:"Nivel 2",lv:"Local",dif:10,goleador:"Chema Andrés",minuto:73,tramo:"71-80",tipologia:"Balón parado",estilo:"Otros",zonaRobo:"Z4",posicRobo:"Banda",primerPase:"Horizontal",nPases:"8",tiempoTransicion:3,tipoPase:"Aereo",superficie:"Cabeza",nContactos:"10+",zonaRemate:"2º palo (espalda 2º central)"},
+  {competicion:"Torneo",favor:"En contra",jornada:"J29",rival:"Racing Ferrol",nivel:"Nivel 1",lv:"Visitante",dif:8,goleador:"Yáñez",minuto:80,tramo:"71-80",tipologia:"Transiciones",estilo:"Centro retrasado",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Hacia detrás",nPases:"3",tiempoTransicion:10,tipoPase:"Aereo",superficie:"Pie derecho",nContactos:"3",zonaRemate:"Penalti"},
+  {competicion:"Amistoso",favor:"En contra",jornada:"J17",rival:"Alcorcón",nivel:"Nivel 4",lv:"Visitante",dif:0,goleador:"Yáñez",minuto:9,tramo:"0-10",tipologia:"Transiciones",estilo:"Saque de banda y combinativo",zonaRobo:"Z1",posicRobo:"Banda",primerPase:"Hacia adelante",nPases:"1",tiempoTransicion:4,tipoPase:"Raso",superficie:"Cabeza",nContactos:"1",zonaRemate:"Penalti"},
+  {competicion:"Liga",favor:"A favor",jornada:"J17",rival:"Alcorcón",nivel:"Nivel 2",lv:"Visitante",dif:0,goleador:"Joan Martínez",minuto:75,tramo:"71-80",tipologia:"Transiciones",estilo:"Córner directo",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Horizontal",nPases:"10",tiempoTransicion:12,tipoPase:"Aereo",superficie:"Pie derecho",nContactos:"5",zonaRemate:"2º palo"},
+  {competicion:"Amistoso",favor:"En contra",jornada:"J30",rival:"Eibar",nivel:"Nivel 2",lv:"Visitante",dif:0,goleador:"Hugo de Llanos",minuto:71,tramo:"71-80",tipologia:"Transiciones",estilo:"Otros",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Hacia detrás",nPases:"8",tiempoTransicion:16,tipoPase:"Raso",superficie:"Cabeza",nContactos:"7",zonaRemate:"Fuera del área"},
+  {competicion:"Amistoso",favor:"En contra",jornada:"J31",rival:"Cartagena",nivel:"Nivel 2",lv:"Local",dif:-2,goleador:"David Jiménez",minuto:41,tramo:"41-50",tipologia:"Juego posicional",estilo:"Otros",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Horizontal",nPases:"3",tiempoTransicion:10,tipoPase:"Raso",superficie:"Pie Izquierdo",nContactos:"10",zonaRemate:"Vértice"},
+  {competicion:"Liga",favor:"En contra",jornada:"J15",rival:"Barcelona Atlètic",nivel:"Nivel 2",lv:"Visitante",dif:-3,goleador:"Joan Martínez",minuto:61,tramo:"61-70",tipologia:"Juego directo",estilo:"Centro retrasado",zonaRobo:"Z3",posicRobo:"Carril central",primerPase:"Horizontal",nPases:"3",tiempoTransicion:10,tipoPase:"Raso",superficie:"Pie derecho",nContactos:"10",zonaRemate:"2º palo (espalda 2º central)"},
+  {competicion:"Torneo",favor:"En contra",jornada:"J20",rival:"Athletic B",nivel:"Nivel 3",lv:"Local",dif:-3,goleador:"Manu Serrano",minuto:54,tramo:"51-60",tipologia:"Juego directo",estilo:"Centro retrasado",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Hacia adelante",nPases:"7",tiempoTransicion:4,tipoPase:"Raso",superficie:"Cabeza",nContactos:"1",zonaRemate:"2º palo"},
+  {competicion:"Liga",favor:"En contra",jornada:"J1",rival:"Sporting",nivel:"Nivel 4",lv:"Visitante",dif:3,goleador:"Yáñez",minuto:80,tramo:"71-80",tipologia:"Juego posicional",estilo:"Propia puerta",zonaRobo:"Z4",posicRobo:"Banda",primerPase:"Horizontal",nPases:"10+",tiempoTransicion:7,tipoPase:"Aereo",superficie:"Pie derecho",nContactos:"8",zonaRemate:"2º palo (espalda 2º central)"},
+  {competicion:"Liga",favor:"En contra",jornada:"J30",rival:"Ponferradina",nivel:"Nivel 3",lv:"Local",dif:5,goleador:"Theo Zidane",minuto:49,tramo:"41-50",tipologia:"Juego posicional",estilo:"Acción individual",zonaRobo:"Z1",posicRobo:"Banda",primerPase:"Hacia detrás",nPases:"8",tiempoTransicion:8,tipoPase:"Aereo",superficie:"Otros",nContactos:"9",zonaRemate:"Penalti"},
+  {competicion:"Torneo",favor:"En contra",jornada:"J30",rival:"Tenerife",nivel:"Nivel 1",lv:"Visitante",dif:10,goleador:"Manu Serrano",minuto:82,tramo:"81-90",tipologia:"Juego directo",estilo:"Juego combinativo (último pase)",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Horizontal",nPases:"5",tiempoTransicion:19,tipoPase:"Raso",superficie:"Cabeza",nContactos:"7",zonaRemate:"2º palo"},
+  {competicion:"Torneo",favor:"En contra",jornada:"J32",rival:"Sevilla Atlético",nivel:"Nivel 1",lv:"Local",dif:7,goleador:"Yáñez",minuto:19,tramo:"11-20",tipologia:"Otros",estilo:"Otros",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Horizontal",nPases:"10+",tiempoTransicion:17,tipoPase:"Raso",superficie:"Cabeza",nContactos:"6",zonaRemate:"1er palo"},
+  {competicion:"Amistoso",favor:"En contra",jornada:"J14",rival:"Cartagena",nivel:"Nivel 3",lv:"Visitante",dif:6,goleador:"Hugo de Llanos",minuto:77,tramo:"71-80",tipologia:"Otros",estilo:"Acción individual",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Hacia adelante",nPases:"10+",tiempoTransicion:14,tipoPase:"Aereo",superficie:"Pie Izquierdo",nContactos:"9",zonaRemate:"Fuera del área"},
+  {competicion:"Torneo",favor:"En contra",jornada:"J19",rival:"Tenerife",nivel:"Nivel 4",lv:"Local",dif:2,goleador:"Lorenzo",minuto:86,tramo:"81-90",tipologia:"Juego posicional",estilo:"Penalti",zonaRobo:"Z2",posicRobo:"Carril central",primerPase:"Hacia detrás",nPases:"9",tiempoTransicion:7,tipoPase:"Aereo",superficie:"Pie Izquierdo",nContactos:"6",zonaRemate:"Fuera del área"},
+  {competicion:"Liga",favor:"En contra",jornada:"J12",rival:"Oviedo",nivel:"Nivel 3",lv:"Visitante",dif:-1,goleador:"Gonzalo García",minuto:67,tramo:"61-70",tipologia:"Juego posicional",estilo:"Otros",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Hacia detrás",nPases:"6",tiempoTransicion:1,tipoPase:"Aereo",superficie:"Cabeza",nContactos:"4",zonaRemate:"Fuera del área"},
+  {competicion:"Liga",favor:"En contra",jornada:"J3",rival:"Ponferradina",nivel:"Nivel 3",lv:"Local",dif:1,goleador:"Capdevila",minuto:28,tramo:"21-30",tipologia:"Transiciones",estilo:"Centro retrasado",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Hacia adelante",nPases:"6",tiempoTransicion:5,tipoPase:"Raso",superficie:"Otros",nContactos:"1",zonaRemate:"2º palo"},
+  {competicion:"Torneo",favor:"A favor",jornada:"J11",rival:"Oviedo",nivel:"Nivel 4",lv:"Visitante",dif:0,goleador:"Theo Zidane",minuto:17,tramo:"11-20",tipologia:"Juego directo",estilo:"Equilibrio",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Horizontal",nPases:"3",tiempoTransicion:4,tipoPase:"Aereo",superficie:"Pie derecho",nContactos:"2",zonaRemate:"Vértice"},
+  {competicion:"Liga",favor:"A favor",jornada:"J31",rival:"Oviedo",nivel:"Nivel 3",lv:"Local",dif:-2,goleador:"Bruno Iglesias",minuto:37,tramo:"31-40",tipologia:"Otros",estilo:"Falta indirecta",zonaRobo:"Z4",posicRobo:"Banda",primerPase:"Hacia adelante",nPases:"4",tiempoTransicion:18,tipoPase:"Raso",superficie:"Pie Izquierdo",nContactos:"1",zonaRemate:"1er palo"},
+  {competicion:"Liga",favor:"A favor",jornada:"J36",rival:"Sporting",nivel:"Nivel 4",lv:"Local",dif:0,goleador:"Gonzalo García",minuto:53,tramo:"51-60",tipologia:"Juego posicional",estilo:"Juego combinativo (paredes)",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Horizontal",nPases:"9",tiempoTransicion:13,tipoPase:"Raso",superficie:"Otros",nContactos:"6",zonaRemate:"Vértice"},
+  {competicion:"Amistoso",favor:"En contra",jornada:"J38",rival:"Real Madrid B",nivel:"Nivel 1",lv:"Visitante",dif:3,goleador:"Lorenzo",minuto:28,tramo:"21-30",tipologia:"Juego posicional",estilo:"Saque de banda y centro",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Hacia detrás",nPases:"4",tiempoTransicion:6,tipoPase:"Aereo",superficie:"Pie Izquierdo",nContactos:"7",zonaRemate:"Vértice"}
+];
+
+/* =====================================================
+   INIT
+   ===================================================== */
+document.addEventListener('DOMContentLoaded', () => {
+  // Rellenar select jornadas
+  const selJ = document.getElementById('f-jornada');
+  for (let i = 1; i <= 38; i++) {
+    const o = document.createElement('option');
+    o.value = 'J' + i; o.textContent = 'J' + i;
+    selJ.appendChild(o);
   }
 
-  function resetTemplate() {
-    if (!confirm('¿Restaurar los textos originales de la plantilla?')) return;
-    document.querySelectorAll('.editable[data-key]').forEach(el => {
-      localStorage.removeItem(STORAGE_PREFIX + el.dataset.key);
-      el.innerHTML = el.dataset.default || el.innerHTML;
-    });
+  // Cargar localStorage si existe
+  // =====================================================
+  // FIREBASE: reemplazar localStorage por Firestore aquí
+  // fbCargarSesion('tipologia-goles').then(data => { goles = data; ... })
+  // =====================================================
+  const saved = localStorage.getItem('tipologia-goles-v1');
+  if (saved) {
+    try { goles = JSON.parse(saved); } catch(e) { goles = []; }
   }
 
-  function downloadCurrentHtml() {
-    document.querySelectorAll('.editable[data-key]').forEach(el => {
-      el.setAttribute('data-default', el.dataset.default || el.innerHTML);
-    });
-    const html = '<!doctype html>\n' + document.documentElement.outerHTML;
-    const blob = new Blob([html], {type:'text/html;charset=utf-8'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'plantilla_formacion_metodologia_editada.html';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(a.href);
+  updateBadge();
+  renderTabla();
+
+  // Dark mode persistente
+  if (localStorage.getItem('tg-dark') === '1') {
+    document.body.classList.add('dark');
+    document.getElementById('darkBtn').innerHTML = '☀';
   }
 
-  document.getElementById('logoInput').addEventListener('change', event => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      const src = e.target.result;
-      document.getElementById('logoImg').src = src;
-      localStorage.setItem(STORAGE_PREFIX + 'logo', src);
-    };
-    reader.readAsDataURL(file);
+  // Drag & drop
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) processFile(f);
   });
+});
 
-  const savedLogo = localStorage.getItem(STORAGE_PREFIX + 'logo');
-  if (savedLogo) document.getElementById('logoImg').src = savedLogo;
+/* =====================================================
+   NAVEGACIÓN
+   ===================================================== */
+function showPanel(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'tabla') renderTabla();
+}
 
-  initEditable();
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  const on = document.body.classList.contains('dark');
+  document.getElementById('darkBtn').innerHTML = on ? '☀' : '☾';
+  localStorage.setItem('tg-dark', on ? '1' : '0');
+}
+
+/* =====================================================
+   IMPORTAR CSV
+   ===================================================== */
+function handleFileSelect(e) {
+  const f = e.target.files[0];
+  if (f) processFile(f);
+}
+
+function processFile(file) {
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: (res) => {
+      if (!res.data.length) { showImportStatus('err', '❌ El archivo está vacío o no es válido.'); return; }
+      const mapped = res.data.map(mapCSVRow).filter(Boolean);
+      if (!mapped.length) { showImportStatus('err', '❌ No se reconoció ninguna fila válida. Revisa las columnas.'); return; }
+      goles = [...goles, ...mapped];
+      saveData();
+      updateBadge();
+      renderTabla();
+      showImportStatus('ok', `✅ ${mapped.length} goles importados correctamente.`);
+      document.getElementById('importInfo').style.display = 'grid';
+      document.getElementById('infoRegistros').textContent = mapped.length;
+      document.getElementById('infoCols').textContent = res.meta.fields?.length || '—';
+      document.getElementById('infoFile').textContent = file.name.length > 12 ? file.name.slice(0,12)+'…' : file.name;
+    },
+    error: () => showImportStatus('err', '❌ Error al leer el archivo.')
+  });
+}
+
+function mapCSVRow(row) {
+  const get = (...keys) => {
+    for (const k of keys) {
+      const val = row[k] ?? row[k.toLowerCase()] ?? row[k.toUpperCase()];
+      if (val !== undefined && val !== '') return String(val).trim();
+    }
+    return '';
+  };
+  return {
+    competicion: get('Competición','Competicion'),
+    favor: get('A favor / En contra','A FAVOR/EN CONTRA'),
+    jornada: get('Jornada','JORNADA'),
+    rival: get('Rival','RIVAL'),
+    nivel: get('Nivel rival','NIVEL RIVAL'),
+    lv: get('Local/Visitante','LOCAL/VISITANTE'),
+    dif: get('Diferencia en marcador','DIFERENCIA EN MARCADOR'),
+    goleador: get('Goleador','GOLEADOR'),
+    minuto: parseInt(get('Minuto','MINUTO')) || 0,
+    tramo: get('Tramo minuto','TRAMO MINUTO'),
+    tipologia: get('Tipología','Tipologia','TIPOLOGÍA'),
+    estilo: get('Estilo','ESTILO'),
+    zonaRobo: get('Zona de Robo','ZONA DE ROBO'),
+    posicRobo: get('Posicionamiento del robo','POSICIONAMIENTO DEL ROBO'),
+    primerPase: get('Primer pase','PRIMER PASE'),
+    nPases: get('Nº Pases','Nº PASES'),
+    tiempoTransicion: parseInt(get('Tiempo en Transición','TIEMPO EN TRANSICIÓN')) || 0,
+    tipoPase: get('Tipo de Pase','TIPO DE PASE'),
+    superficie: get('Superficie de remate','SUPERFICIE DE REMATE'),
+    nContactos: get('Nº Contactos','Nº CONTACTOS'),
+    zonaRemate: get('Zona remate','ZONA REMATE'),
+    _id: Date.now() + Math.random()
+  };
+}
+
+function showImportStatus(type, msg) {
+  const el = document.getElementById('importStatus');
+  el.className = 'import-status ' + type;
+  el.innerHTML = msg;
+}
+
+function loadSeedData() {
+  goles = SEED_DATA.map(g => ({ ...g, _id: Date.now() + Math.random() }));
+  saveData();
+  updateBadge();
+  renderTabla();
+  showImportStatus('ok', `✅ ${goles.length} goles de ejemplo cargados (Castilla 25/26).`);
+  document.getElementById('importInfo').style.display = 'grid';
+  document.getElementById('infoRegistros').textContent = goles.length;
+  document.getElementById('infoCols').textContent = 21;
+  document.getElementById('infoFile').textContent = 'Seed data';
+  showToast('✅ 50 goles cargados');
+}
+
+function exportCSV() {
+  if (!goles.length) { showToast('Sin datos para exportar'); return; }
+  const headers = ['competicion','favor','jornada','rival','nivel','lv','dif','goleador',
+    'minuto','tramo','tipologia','estilo','zonaRobo','posicRobo','primerPase',
+    'nPases','tiempoTransicion','tipoPase','superficie','nContactos','zonaRemate'];
+  const rows = [headers.join(','), ...goles.map(g =>
+    headers.map(h => '"' + String(g[h] ?? '').replace(/"/g,'""') + '"').join(',')
+  )];
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tipologia-goles.csv';
+  a.click();
+}
+
+/* =====================================================
+   REGISTRO MANUAL
+   ===================================================== */
+function selectChip(el, groupId, hiddenId) {
+  document.querySelectorAll('#' + groupId + ' .chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById(hiddenId).value = el.dataset.val;
+}
+
+function guardarGol(continuar) {
+  const g = {
+    _id: Date.now() + Math.random(),
+    competicion: v('f-competicion'),
+    favor: v('f-favor'),
+    jornada: v('f-jornada'),
+    rival: v('f-rival'),
+    nivel: v('f-nivel'),
+    lv: v('f-lv'),
+    dif: v('f-dif'),
+    goleador: v('f-goleador'),
+    minuto: parseInt(v('f-minuto')) || 0,
+    tramo: calcTramo(parseInt(v('f-minuto'))),
+    tipologia: v('f-tipologia'),
+    estilo: v('f-estilo'),
+    zonaRobo: v('f-zona-robo'),
+    posicRobo: v('f-posic-robo'),
+    primerPase: v('f-primer-pase'),
+    nPases: v('f-n-pases'),
+    tiempoTransicion: parseInt(v('f-tiempo')) || 0,
+    tipoPase: v('f-tipo-pase'),
+    superficie: v('f-superficie'),
+    nContactos: v('f-contactos'),
+    zonaRemate: v('f-zona-remate')
+  };
+
+  // Validación mínima
+  if (!g.competicion || !g.favor || !g.tipologia) {
+    showToast('⚠️ Rellena Competición, A favor/En contra y Tipología', 'orange');
+    return;
+  }
+
+  goles.push(g);
+  saveData();
+  updateBadge();
+  showToast('⚽ Gol guardado');
+
+  if (continuar) resetForm();
+  else { resetForm(); }
+}
+
+function v(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function calcTramo(min) {
+  if (!min) return '';
+  if (min <= 10) return '0-10';
+  if (min <= 20) return '11-20';
+  if (min <= 30) return '21-30';
+  if (min <= 40) return '31-40';
+  if (min <= 50) return '41-50';
+  if (min <= 60) return '51-60';
+  if (min <= 70) return '61-70';
+  if (min <= 80) return '71-80';
+  return '81-90';
+}
+
+function resetForm() {
+  document.querySelectorAll('.field-select').forEach(s => s.value = '');
+  document.querySelectorAll('.field-input').forEach(i => i.value = '');
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+  document.getElementById('f-favor').value = '';
+  document.getElementById('f-lv').value = '';
+}
+
+/* =====================================================
+   TABLA
+   ===================================================== */
+function getFiltered() {
+  const q = (document.getElementById('tableSearch')?.value || '').toLowerCase();
+  const comp = document.getElementById('filterComp')?.value || '';
+  const tipo = document.getElementById('filterTipo')?.value || '';
+  const favor = document.getElementById('filterFavor')?.value || '';
+
+  return goles.filter(g => {
+    if (comp && g.competicion !== comp) return false;
+    if (tipo && g.tipologia !== tipo) return false;
+    if (favor && g.favor !== favor) return false;
+    if (q) {
+      const str = [g.rival,g.goleador,g.tipologia,g.estilo,g.zonaRemate].join(' ').toLowerCase();
+      if (!str.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderTabla() {
+  let data = getFiltered();
+
+  if (sortField) {
+    data = [...data].sort((a, b) => {
+      const av = a[sortField] ?? ''; const bv = b[sortField] ?? '';
+      if (typeof av === 'number') return (av - bv) * sortDir;
+      return String(av).localeCompare(String(bv)) * sortDir;
+    });
+  }
+
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('tableEmpty');
+  document.getElementById('tableCount').textContent = data.length + ' registros';
+
+  if (!data.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = data.map(g => `
+    <tr>
+      <td><span class="badge badge-blue">${esc(g.competicion)}</span></td>
+      <td><span class="badge ${g.favor === 'A favor' ? 'badge-green' : 'badge-red'}">${esc(g.favor)}</span></td>
+      <td>${esc(g.jornada)}</td>
+      <td style="font-weight:600">${esc(g.rival)}</td>
+      <td>${esc(g.nivel)}</td>
+      <td>${esc(g.lv)}</td>
+      <td>${esc(g.goleador)}</td>
+      <td style="font-weight:700;color:var(--rm-blue)">${g.minuto || '—'}'</td>
+      <td>${esc(g.tramo)}</td>
+      <td>${esc(g.tipologia)}</td>
+      <td style="color:var(--text-sec)">${esc(g.estilo)}</td>
+      <td>${esc(g.superficie)}</td>
+      <td>${esc(g.zonaRemate)}</td>
+      <td><button class="btn-del" onclick="eliminarGol('${g._id}')">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function sortTabla(field) {
+  const map = { rival:'rival', goleador:'goleador', tipologia:'tipologia',
+    competicion:'competicion', jornada:'jornada', favor:'favor',
+    nivel:'nivel', lv:'lv', minuto:'minuto', tramo:'tramo',
+    estilo:'estilo', superficie:'superficie', zonaRemate:'zonaRemate' };
+  const f = map[field] || field;
+  if (sortField === f) sortDir *= -1; else { sortField = f; sortDir = 1; }
+  document.querySelectorAll('.data-table th').forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+  });
+  event.currentTarget.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+  renderTabla();
+}
+
+function eliminarGol(id) {
+  goles = goles.filter(g => String(g._id) !== String(id));
+  saveData(); updateBadge(); renderTabla();
+  showToast('🗑️ Gol eliminado');
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* =====================================================
+   DASHBOARD
+   ===================================================== */
+
+// Paleta corporativa RM
+const RM_PALETTE = [
+  '#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe',
+  '#1d4ed8','#1e40af','#1e3a8a','#dbeafe','#eff6ff'
+];
+const RM_GREENS = ['#16a34a','#22c55e','#4ade80','#86efac','#bbf7d0'];
+const RM_REDS   = ['#dc2626','#ef4444','#f87171','#fca5a5','#fecaca'];
+
+function getDashData() {
+  const comp = document.getElementById('dashComp')?.value || '';
+  const lv   = document.getElementById('dashLV')?.value || '';
+  const fav  = document.getElementById('dashFavor')?.value || '';
+  return goles.filter(g => {
+    if (comp && g.competicion !== comp) return false;
+    if (lv   && g.lv !== lv) return false;
+    if (fav  && g.favor !== fav) return false;
+    return true;
+  });
+}
+
+function count(data, field) {
+  const acc = {};
+  data.forEach(g => { const v = g[field] || 'Sin datos'; acc[v] = (acc[v] || 0) + 1; });
+  return acc;
+}
+
+function sortedCount(data, field, limit = 999) {
+  const c = count(data, field);
+  return Object.entries(c).sort((a,b) => b[1]-a[1]).slice(0, limit);
+}
+
+function renderDashboard() {
+  const data = getDashData();
+
+  if (!data.length) {
+    document.getElementById('kpiGrid').innerHTML =
+      '<div class="empty-state" style="grid-column:1/-1"><div class="icon">📊</div><p>Sin datos. Carga goles primero.</p></div>';
+    return;
+  }
+
+  // KPIs
+  const total = data.length;
+  const aFavor = data.filter(g => g.favor === 'A favor').length;
+  const enContra = data.filter(g => g.favor === 'En contra').length;
+  const local = data.filter(g => g.lv === 'Local').length;
+  const visitante = data.filter(g => g.lv === 'Visitante').length;
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total goles</div><div class="kpi-value">${total}</div><div class="kpi-sub">registros</div></div>
+    <div class="kpi-card green"><div class="kpi-label">A favor</div><div class="kpi-value" style="color:var(--green)">${aFavor}</div><div class="kpi-sub">${pct(aFavor,total)}%</div></div>
+    <div class="kpi-card red"><div class="kpi-label">En contra</div><div class="kpi-value" style="color:var(--red)">${enContra}</div><div class="kpi-sub">${pct(enContra,total)}%</div></div>
+    <div class="kpi-card"><div class="kpi-label">Local</div><div class="kpi-value">${local}</div><div class="kpi-sub">${pct(local,total)}%</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">Visitante</div><div class="kpi-value" style="color:var(--orange)">${visitante}</div><div class="kpi-sub">${pct(visitante,total)}%</div></div>
+  `;
+
+  // Chart.js helpers
+  const isDark = document.body.classList.contains('dark');
+  const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
+  const tickColor = isDark ? '#70757f' : '#8b919e';
+
+  function mkChart(id, type, labels, datasets, opts = {}) {
+    if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+    const ctx = document.getElementById(id)?.getContext('2d');
+    if (!ctx) return;
+    charts[id] = new Chart(ctx, {
+      type,
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: opts.legend ?? false,
+            labels: { color: tickColor, font: { size: 11 }, padding: 12 } },
+          tooltip: { callbacks: {
+            label: ctx => ` ${ctx.parsed.y ?? ctx.parsed} goles (${pct(ctx.parsed.y ?? ctx.parsed, total)}%)`
+          }}
+        },
+        scales: type === 'doughnut' || type === 'pie' ? {} : {
+          x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } },
+          y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 }, stepSize: 1 } }
+        },
+        ...opts
+      }
+    });
+  }
+
+  // Tipología
+  const tipEntries = sortedCount(data, 'tipologia');
+  mkChart('chartTipologia', 'doughnut',
+    tipEntries.map(e=>e[0]),
+    [{ data: tipEntries.map(e=>e[1]), backgroundColor: RM_PALETTE, borderWidth: 2, borderColor: isDark ? '#1c1f26' : '#fff' }],
+    { legend: true, plugins: { tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} goles (${pct(ctx.parsed,total)}%)` }}}}
+  );
+
+  // Superficie remate
+  const supEntries = sortedCount(data, 'superficie');
+  mkChart('chartSuperficie', 'bar',
+    supEntries.map(e=>e[0]),
+    [{ data: supEntries.map(e=>e[1]),
+       backgroundColor: supEntries.map((_,i) => RM_PALETTE[i % RM_PALETTE.length]),
+       borderRadius: 6, borderSkipped: false }]
+  );
+
+  // Tramos de minuto
+  const tramos = ['0-10','11-20','21-30','31-40','41-50','51-60','61-70','71-80','81-90'];
+  const tramoCounts = tramos.map(t => data.filter(g => g.tramo === t).length);
+  const tramoAF = tramos.map(t => data.filter(g => g.tramo === t && g.favor === 'A favor').length);
+  const tramoEC = tramos.map(t => data.filter(g => g.tramo === t && g.favor === 'En contra').length);
+
+  if (charts['chartTramo']) { charts['chartTramo'].destroy(); delete charts['chartTramo']; }
+  const ctxT = document.getElementById('chartTramo')?.getContext('2d');
+  if (ctxT) {
+    charts['chartTramo'] = new Chart(ctxT, {
+      type: 'bar',
+      data: {
+        labels: tramos,
+        datasets: [
+          { label: 'A favor', data: tramoAF, backgroundColor: '#16a34a', borderRadius: 4, borderSkipped: false, stack: 'goles' },
+          { label: 'En contra', data: tramoEC, backgroundColor: '#dc2626', borderRadius: 4, borderSkipped: false, stack: 'goles' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: {
+          legend: { display: true, labels: { color: tickColor, font: { size: 11 }, padding: 16 } },
+          tooltip: { mode: 'index' }
+        },
+        scales: {
+          x: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor } },
+          y: { stacked: true, beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, stepSize: 1 } }
+        }
+      }
+    });
+  }
+
+  // Zona remate
+  const zrEntries = sortedCount(data, 'zonaRemate');
+  mkChart('chartZona', 'bar',
+    zrEntries.map(e=>e[0]),
+    [{ data: zrEntries.map(e=>e[1]),
+       backgroundColor: zrEntries.map((_,i) => RM_PALETTE[i % RM_PALETTE.length]),
+       borderRadius: 6, borderSkipped: false }],
+    { indexAxis: 'y' }
+  );
+
+  // Tipo pase
+  const tpEntries = sortedCount(data, 'tipoPase');
+  mkChart('chartTipoPase', 'doughnut',
+    tpEntries.map(e=>e[0]),
+    [{ data: tpEntries.map(e=>e[1]),
+       backgroundColor: ['#2563eb','#16a34a','#ea580c','#9333ea'],
+       borderWidth: 2, borderColor: isDark ? '#1c1f26' : '#fff' }],
+    { legend: true, plugins: { tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${pct(ctx.parsed,total)}%)` }}}}
+  );
+
+  // Zona de robo
+  const zonaRoboEntries = sortedCount(data, 'zonaRobo');
+  mkChart('chartZonaRobo', 'doughnut',
+    zonaRoboEntries.map(e=>e[0]),
+    [{ data: zonaRoboEntries.map(e=>e[1]),
+       backgroundColor: ['#2563eb','#3b82f6','#93c5fd','#bfdbfe'],
+       borderWidth: 2, borderColor: isDark ? '#1c1f26' : '#fff' }],
+    { legend: true, plugins: { tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${pct(ctx.parsed,total)}%)` }}}}
+  );
+
+  // Local vs Visitante
+  const lvAF = ['A favor', 'En contra'];
+  const localData = lvAF.map(f => data.filter(g => g.lv === 'Local' && g.favor === f).length);
+  const visitanteData = lvAF.map(f => data.filter(g => g.lv === 'Visitante' && g.favor === f).length);
+  mkChart('chartLV', 'bar',
+    ['Local', 'Visitante'],
+    [
+      { label: 'A favor', data: [localData[0], visitanteData[0]], backgroundColor: '#16a34a', borderRadius: 6, borderSkipped: false },
+      { label: 'En contra', data: [localData[1], visitanteData[1]], backgroundColor: '#dc2626', borderRadius: 6, borderSkipped: false }
+    ],
+    { legend: true, plugins: { tooltip: { mode: 'index' }}}
+  );
+
+  // Ranking Estilos
+  const estilosEntries = sortedCount(data, 'estilo', 10);
+  const maxEstilo = estilosEntries[0]?.[1] || 1;
+  document.getElementById('rankEstilos').innerHTML = estilosEntries.map(([name, cnt], i) => `
+    <div class="rank-item">
+      <div class="rank-pos">${i+1}</div>
+      <div class="rank-bar-wrap">
+        <div class="rank-name">${esc(name)}</div>
+        <div class="rank-bar-bg">
+          <div class="rank-bar-fill" style="width:${(cnt/maxEstilo*100).toFixed(1)}%"></div>
+        </div>
+      </div>
+      <div class="rank-val">${cnt}</div>
+    </div>
+  `).join('');
+}
+
+function pct(n, total) {
+  if (!total) return '0';
+  return (n / total * 100).toFixed(1);
+}
+
+/* =====================================================
+   PERSISTENCIA localStorage
+   FIREBASE: sustituir estas funciones por llamadas
+   a fbGuardarSesion / fbCargarSesion cuando proceda
+   ===================================================== */
+function saveData() {
+  try {
+    localStorage.setItem('tipologia-goles-v1', JSON.stringify(goles));
+  } catch(e) {
+    console.warn('localStorage lleno — considera conectar Firebase');
+  }
+}
+
+function updateBadge() {
+  const b = document.getElementById('badge-count');
+  if (b) b.textContent = goles.length;
+}
+
+/* =====================================================
+   TOAST
+   ===================================================== */
+let toastTimer;
+function showToast(msg, type = 'green') {
+  const t = document.getElementById('toast');
+  t.style.background = type === 'orange' ? 'var(--orange)' : 'var(--green)';
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
 </script>
 </body>
 </html>

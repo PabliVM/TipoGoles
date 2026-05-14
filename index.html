@@ -6,6 +6,7 @@
 <title>Tipología de Goles — Real Madrid Cantera</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 /* =====================================================
    TOKENS — MAESTRO CORPORATIVO RM
@@ -401,10 +402,10 @@ tr:hover .btn-del{opacity:1}
     </div>
     <div class="card-body">
       <div class="import-zone" id="dropZone">
-        <input type="file" accept=".csv" id="csvInput" onchange="handleFileSelect(event)">
+        <input type="file" accept=".csv,.xlsx,.xls" id="csvInput" onchange="handleFileSelect(event)">
         <span class="import-icon">📂</span>
-        <div class="import-title">Arrastra tu CSV aquí</div>
-        <div class="import-sub">o haz clic para seleccionar · UTF-8, separador coma</div>
+        <div class="import-title">Arrastra tu archivo aquí</div>
+        <div class="import-sub">o haz clic para seleccionar · Excel (.xlsx/.xls) o CSV</div>
       </div>
       <div class="import-status" id="importStatus"></div>
       <div class="import-info-grid" id="importInfo" style="display:none">
@@ -417,9 +418,11 @@ tr:hover .btn-del{opacity:1}
         <button class="btn btn-secondary" onclick="exportCSV()">⬇️ Exportar CSV</button>
       </div>
       <div style="margin-top:14px;padding:10px 12px;background:var(--surface-alt);border-radius:var(--r);border:1px solid var(--border-light)">
-        <div class="sec-label" style="margin-bottom:6px">Columnas CSV esperadas</div>
-        <div style="font-size:11px;color:var(--text-sec);line-height:1.8">
-          Competición · A favor / En contra · Jornada · Rival · Nivel rival · Local/Visitante · Diferencia en marcador · Goleador · Minuto · Tramo minuto · Tipología · Estilo · Zona de Robo · Posicionamiento del robo · Primer pase · Nº Pases · Tiempo en Transición · Tipo de Pase · Superficie de remate · Nº Contactos · Zona remate
+        <div class="sec-label" style="margin-bottom:6px">Estructura esperada</div>
+        <div style="font-size:11px;color:var(--text-sec);line-height:1.9">
+          <strong>Excel (.xlsx/.xls):</strong> hoja llamada <code style="background:var(--rm-bg);color:var(--rm);padding:1px 5px;border-radius:3px">Datos</code> con cabecera en fila 1.<br>
+          <strong>CSV:</strong> cualquier encoding (UTF-8, Latin-1, Windows-1252) — se detecta automáticamente.<br><br>
+          Columnas: Competición · A favor / En contra · Jornada · Rival · Nivel rival · Local/Visitante · Diferencia en marcador · Goleador · Minuto · Tramo minuto · Tipología · Estilo · Zona de Robo · Posicionamiento del robo · Primer pase · Nº Pases · Tiempo en Transición · Tipo de Pase · Superficie de remate · Nº Contactos · Zona remate
         </div>
       </div>
     </div>
@@ -1145,56 +1148,198 @@ function toggleDark() {
 }
 
 /* =====================================================
-   IMPORTAR CSV
+   IMPORTAR — EXCEL (.xlsx/.xls) + CSV (cualquier encoding)
+   Hoja Excel esperada: "Datos"
    ===================================================== */
 function handleFileSelect(e) { const f=e.target.files[0]; if(f) processFile(f); }
 
 function processFile(file) {
-  Papa.parse(file, {
-    header:true, skipEmptyLines:true,
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'xlsx' || ext === 'xls') {
+    processExcel(file);
+  } else {
+    processCSV(file);
+  }
+}
+
+/* --- EXCEL --- */
+function processExcel(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array', codepage: 65001 });
+
+      // Buscar hoja "Datos", si no existe usar la primera
+      let sheetName = wb.SheetNames.find(n => n.trim() === 'Datos') || wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+
+      // Convertir a JSON — raw:false para que las fechas y números vengan como texto limpio
+      const rows = XLSX.utils.sheet_to_json(ws, { raw: false, defval: '' });
+
+      if (!rows.length) { showImportStatus('err', '❌ La hoja "' + sheetName + '" está vacía.'); return; }
+
+      // Filtrar filas que parezcan datos reales (que tengan al menos Competición o Tipología)
+      const dataRows = rows.filter(r => {
+        const comp = normalizeVal(r['Competición'] || r['Competicion'] || r['COMPETICIÓN'] || '');
+        const tip  = normalizeVal(r['Tipología']  || r['Tipologia']  || r['TIPOLOGÍA']  || '');
+        return comp || tip;
+      });
+
+      if (!dataRows.length) { showImportStatus('err', '❌ No se encontraron filas de datos en la hoja "' + sheetName + '". Comprueba que la cabecera esté en la fila 1.'); return; }
+
+      const mapped = dataRows.map(mapRow).filter(Boolean);
+      finishImport(mapped, file.name, sheetName);
+    } catch(err) {
+      console.error(err);
+      showImportStatus('err', '❌ Error al leer el Excel: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* --- CSV con detección automática de encoding --- */
+function processCSV(file) {
+  // Intentar UTF-8 primero; si hay caracteres corruptos, reintentar con Latin-1
+  const readerUtf = new FileReader();
+  readerUtf.onload = function(e) {
+    const text = e.target.result;
+    // Detectar corrupción: si hay caracteres de reemplazo U+FFFD, usar Latin-1
+    if (text.includes('�')) {
+      readCSVLatin1(file);
+    } else {
+      parseCSVText(text, file.name);
+    }
+  };
+  readerUtf.readAsText(file, 'UTF-8');
+}
+
+function readCSVLatin1(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) { parseCSVText(e.target.result, file.name); };
+  reader.readAsText(file, 'Windows-1252');
+}
+
+function parseCSVText(text, fileName) {
+  // Eliminar BOM si existe
+  const clean = text.replace(/^﻿/, '');
+  Papa.parse(clean, {
+    header: true,
+    skipEmptyLines: true,
     complete: res => {
-      if (!res.data.length) { showImportStatus('err','❌ Archivo vacío o inválido.'); return; }
-      const mapped = res.data.map(mapCSVRow).filter(Boolean);
-      if (!mapped.length) { showImportStatus('err','❌ No se reconocieron columnas válidas.'); return; }
-      const existing = currentGoles();
-      setGoles(activeTeam, activeSeason, [...existing, ...mapped]);
-      updateBadge(); renderTabla();
-      showImportStatus('ok', `✅ ${mapped.length} goles importados a ${activeTeam} · ${activeSeason}`);
-      document.getElementById('importInfo').style.display = 'grid';
-      document.getElementById('infoReg').textContent = mapped.length;
-      document.getElementById('infoCols').textContent = res.meta.fields?.length || '—';
-      document.getElementById('infoFile').textContent = file.name.length>14 ? file.name.slice(0,14)+'…' : file.name;
+      if (!res.data.length) { showImportStatus('err','❌ CSV vacío.'); return; }
+      const mapped = res.data.map(mapRow).filter(Boolean);
+      finishImport(mapped, fileName, 'CSV');
     },
-    error: () => showImportStatus('err','❌ Error al leer el archivo.')
+    error: () => showImportStatus('err','❌ Error al parsear el CSV.')
   });
 }
 
-function mapCSVRow(row) {
-  const get = (...keys) => { for(const k of keys){ const v=row[k]??row[k.toLowerCase()]??row[k.toUpperCase()]; if(v!==undefined&&v!=='') return String(v).trim(); } return ''; };
+/* --- Mapeo unificado fila → objeto gol --- */
+// Normaliza valores con caracteres especiales corruptos o variantes
+function normalizeVal(v) {
+  if (!v) return '';
+  return String(v).trim()
+    // Correcciones comunes de encoding corrupto
+    .replace(/Tipolog[ií][ao]/i, s => 'Tipología')
+    .replace(/Competici[oó]n/i, s => 'Competición')
+    .replace(/Jornada/i, s => 'Jornada');
+}
+
+// Mapa de alias de columnas → campo interno
+const COL_MAP = {
+  competicion: ['Competición','Competicion','COMPETICIÓN','COMPETICION','competición'],
+  favor:       ['A favor / En contra','A FAVOR/EN CONTRA','A favor/En contra','A FAVOR / EN CONTRA'],
+  jornada:     ['Jornada','JORNADA'],
+  rival:       ['Rival','RIVAL'],
+  nivel:       ['Nivel rival','NIVEL RIVAL','Nivel Rival'],
+  lv:          ['Local/Visitante','LOCAL/VISITANTE','Local / Visitante','LOCAL / VISITANTE'],
+  dif:         ['Diferencia en marcador','DIFERENCIA EN MARCADOR','Diferencia en Marcador'],
+  goleador:    ['Goleador','GOLEADOR'],
+  minuto:      ['Minuto','MINUTO'],
+  tramo:       ['Tramo minuto','TRAMO MINUTO','Tramo Minuto'],
+  tipologia:   ['Tipología','Tipologia','TIPOLOGÍA','TIPOLOGIA','tipolog�a'],
+  estilo:      ['Estilo','ESTILO'],
+  zonaRobo:    ['Zona de Robo','ZONA DE ROBO','Zona de robo','zona de robo'],
+  posicRobo:   ['Posicionamiento del robo','POSICIONAMIENTO DEL ROBO','Posicionamiento del Robo'],
+  primerPase:  ['Primer pase','PRIMER PASE','Primer Pase'],
+  nPases:      ['Nº Pases','Nº Pases','Nº PASES','N Pases','nPases'],
+  tiempoTransicion: ['Tiempo en Transición','TIEMPO EN TRANSICIÓN','Tiempo en Transicion','Tiempo en transición'],
+  tipoPase:    ['Tipo de Pase','TIPO DE PASE','Tipo de pase'],
+  superficie:  ['Superficie de remate','SUPERFICIE DE REMATE','Superficie de Remate'],
+  nContactos:  ['Nº Contactos','Nº Contactos','Nº CONTACTOS','N Contactos'],
+  zonaRemate:  ['Zona remate','ZONA REMATE','Zona Remate'],
+};
+
+// Construye índice invertido alias→campo al iniciar
+let _colIndex = null;
+function getColIndex() {
+  if (_colIndex) return _colIndex;
+  _colIndex = {};
+  for (const [field, aliases] of Object.entries(COL_MAP)) {
+    for (const a of aliases) _colIndex[a.toLowerCase()] = field;
+  }
+  return _colIndex;
+}
+
+function mapRow(row) {
+  const idx = getColIndex();
+  const resolved = {};
+
+  // Resolver cada columna del row usando el índice
+  for (const [rawKey, rawVal] of Object.entries(row)) {
+    const normKey = rawKey.trim().toLowerCase();
+    const field = idx[normKey];
+    if (field && rawVal !== undefined && rawVal !== '') {
+      resolved[field] = String(rawVal).trim();
+    }
+  }
+
+  // Si la fila no tiene ningún campo reconocido, descartar
+  if (!resolved.tipologia && !resolved.competicion) return null;
+
+  const minuto = parseInt(resolved.minuto) || 0;
   return {
-    _id: Date.now()+Math.random(),
-    competicion:get('Competición','Competicion'),
-    favor:get('A favor / En contra','A FAVOR/EN CONTRA'),
-    jornada:get('Jornada','JORNADA'),
-    rival:get('Rival'),
-    nivel:get('Nivel rival','NIVEL RIVAL'),
-    lv:get('Local/Visitante','LOCAL/VISITANTE'),
-    dif:get('Diferencia en marcador'),
-    goleador:get('Goleador'),
-    minuto:parseInt(get('Minuto'))||0,
-    tramo:get('Tramo minuto','TRAMO MINUTO'),
-    tipologia:get('Tipología','Tipologia'),
-    estilo:get('Estilo'),
-    zonaRobo:get('Zona de Robo','ZONA DE ROBO'),
-    posicRobo:get('Posicionamiento del robo'),
-    primerPase:get('Primer pase'),
-    nPases:get('Nº Pases'),
-    tiempoTransicion:parseInt(get('Tiempo en Transición'))||0,
-    tipoPase:get('Tipo de Pase'),
-    superficie:get('Superficie de remate'),
-    nContactos:get('Nº Contactos'),
-    zonaRemate:get('Zona remate','ZONA REMATE'),
+    _id: Date.now() + Math.random(),
+    competicion:      resolved.competicion || '',
+    favor:            resolved.favor || '',
+    jornada:          resolved.jornada || '',
+    rival:            resolved.rival || '',
+    nivel:            resolved.nivel || '',
+    lv:               resolved.lv || '',
+    dif:              resolved.dif || '',
+    goleador:         resolved.goleador || '',
+    minuto:           minuto,
+    tramo:            resolved.tramo || calcTramo(minuto),
+    tipologia:        resolved.tipologia || '',
+    estilo:           resolved.estilo || '',
+    zonaRobo:         resolved.zonaRobo || '',
+    posicRobo:        resolved.posicRobo || '',
+    primerPase:       resolved.primerPase || '',
+    nPases:           resolved.nPases || '',
+    tiempoTransicion: parseInt(resolved.tiempoTransicion) || 0,
+    tipoPase:         resolved.tipoPase || '',
+    superficie:       resolved.superficie || '',
+    nContactos:       resolved.nContactos || '',
+    zonaRemate:       resolved.zonaRemate || '',
   };
+}
+
+function finishImport(mapped, fileName, sheetInfo) {
+  if (!mapped.length) {
+    showImportStatus('err', '❌ No se mapeó ninguna fila. Verifica que las cabeceras coincidan con lo esperado.');
+    return;
+  }
+  const existing = currentGoles();
+  setGoles(activeTeam, activeSeason, [...existing, ...mapped]);
+  updateBadge(); renderTabla();
+  const shortName = fileName.length > 16 ? fileName.slice(0,16)+'…' : fileName;
+  showImportStatus('ok', `✅ ${mapped.length} goles importados a ${activeTeam} · ${activeSeason} (${sheetInfo})`);
+  document.getElementById('importInfo').style.display = 'grid';
+  document.getElementById('infoReg').textContent = mapped.length;
+  document.getElementById('infoCols').textContent = Object.keys(COL_MAP).length;
+  document.getElementById('infoFile').textContent = shortName;
+  showToast(`✅ ${mapped.length} goles importados`);
 }
 
 function showImportStatus(type, msg) {
@@ -1206,8 +1351,11 @@ function exportCSV() {
   const data = currentGoles();
   if (!data.length) { showToast('Sin datos','orange'); return; }
   const headers = ['competicion','favor','jornada','rival','nivel','lv','dif','goleador','minuto','tramo','tipologia','estilo','zonaRobo','posicRobo','primerPase','nPases','tiempoTransicion','tipoPase','superficie','nContactos','zonaRemate'];
+  // BOM UTF-8 para que Excel lo abra correctamente
+  const BOM = '\uFEFF';
   const rows = [headers.join(','), ...data.map(g => headers.map(h => '"'+String(g[h]??'').replace(/"/g,'""')+'"').join(','))];
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([BOM + rows.join('\n')], {type:'text/csv;charset=utf-8'}));
   a.download = `tipologia-${activeTeam}-${activeSeason.replace('/','_')}.csv`; a.click();
 }
 

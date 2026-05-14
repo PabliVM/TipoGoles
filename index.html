@@ -1035,7 +1035,7 @@ const CHART_CATALOG = [
   {id:'chartPosicRobo',  title:'Carriles de robo',          icon:'📌', bloque:'Tácticos',         full:false, visible:true,  chartType:'bar'},
   {id:'chartPrimerPase', title:'Primer pase',               icon:'➡️', bloque:'Tácticos',         full:false, visible:false, chartType:'bar'},
   {id:'chartZonaRoboXTip',title:'Zona robo × Tipología',   icon:'📊', bloque:'Tácticos',         full:true,  visible:false, chartType:'bar'},
-  {id:'chartSuperficie', title:'Superficie de remate',      icon:'🦶', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'svg'},
+  {id:'chartSuperficie', title:'Superficie de remate',      icon:'🦶', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar'},
   {id:'chartZona',       title:'Zona de remate',            icon:'📍', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar'},
   {id:'chartTipoPase',   title:'Tipo de pase',              icon:'🧭', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'doughnut'},
   {id:'chartContactos',  title:'Nº de contactos',           icon:'🔢', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar'},
@@ -2086,7 +2086,7 @@ function renderDashboard() {
           scales:{x:{stacked:true,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:true,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
         }}); break; }
       case 'chartTipologia': renderChart(id,'tipologia'); break;
-      case 'chartSuperficie': renderSuperficieSVG(id, data); break;
+      case 'chartSuperficie': renderChart(id,'superficie'); break;
       case 'chartZonaRobo':   renderZonaRoboSVG(id, data); break;
       case 'chartPosicRobo':  renderChart(id,'posicRobo'); break;
       case 'chartZona':       renderChart(id,'zonaRemate'); break;

@@ -75,26 +75,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .btn-icon{width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.12);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:background var(--tr)}
 .btn-icon:hover{background:rgba(255,255,255,.22)}
 /* Auth */
-.auth-btn{height:28px;padding:0 10px;border-radius:14px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;font-size:11px;font-weight:700;font-family:var(--font);display:flex;align-items:center;gap:5px;transition:background var(--tr);white-space:nowrap}
-.auth-btn:hover{background:rgba(255,255,255,.22)}
-.auth-avatar{width:22px;height:22px;border-radius:50%;object-fit:cover;border:1.5px solid rgba(255,255,255,.4)}
+
 .sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .sync-dot.ok{background:#4ade80}
 .sync-dot.syncing{background:#fbbf24;animation:pulse .8s infinite}
 .sync-dot.err{background:#f87171}
 .sync-dot.off{background:rgba(255,255,255,.3)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-/* Auth overlay */
-.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:800;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
-.auth-overlay.open{display:flex}
-.auth-card{background:var(--surface);border-radius:var(--rl);padding:32px 28px;width:340px;max-width:90vw;text-align:center;box-shadow:var(--sh-lg)}
-.auth-card-logo{width:56px;height:56px;border-radius:50%;background:var(--rm);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;overflow:hidden}
-.auth-card-logo img{width:100%;height:100%;object-fit:contain}
-.auth-card-title{font-size:18px;font-weight:800;margin-bottom:6px}
-.auth-card-sub{font-size:12px;color:var(--text-sec);margin-bottom:20px;line-height:1.6}
-.btn-google{width:100%;height:42px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all var(--tr)}
-.btn-google:hover{border-color:var(--rm);box-shadow:var(--sh-md)}
-.btn-google img{width:18px;height:18px}
+
 
 /* NAV EQUIPOS */
 .nav-teams{background:var(--rm-dark);display:flex;gap:0;overflow-x:auto;scrollbar-width:none;padding:0 6px}
@@ -497,35 +485,11 @@ tr:hover .btn-del{opacity:1}
       <div class="sync-dot off" id="syncDot"></div>
       <span id="syncLabel" style="font-size:10px;color:rgba(255,255,255,.5);display:none"></span>
     </div>
-    <!-- Auth button -->
-    <button class="auth-btn" id="authBtn" onclick="handleAuthClick()">
-      <span id="authBtnText">Entrar</span>
-    </button>
+
     <button class="btn-icon" onclick="toggleDark()" id="darkBtn" title="Modo oscuro">☾</button>
   </div>
 </header>
 
-<!-- AUTH OVERLAY — login con Google -->
-<div class="auth-overlay" id="authOverlay">
-  <div class="auth-card">
-    <div class="auth-card-logo">
-      <img src="https://raw.githubusercontent.com/PabliVM/Promociones/main/rm__.png"
-           crossorigin="anonymous" alt="RM" onerror="this.style.display='none'">
-    </div>
-    <div class="auth-card-title">Tipología de Goles</div>
-    <div class="auth-card-sub">
-      Real Madrid Cantera CF<br>
-      Inicia sesión con tu cuenta de Google para<br>sincronizar los datos en la nube.
-    </div>
-    <button class="btn-google" onclick="loginGoogle()">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
-      Continuar con Google
-    </button>
-    <div style="margin-top:12px;font-size:11px;color:var(--text-mut)">
-      Solo usuarios autorizados pueden acceder.
-    </div>
-  </div>
-</div>
 
 <!-- NAV EQUIPOS -->
 <nav class="nav-teams" id="navTeams"></nav>
@@ -1135,24 +1099,14 @@ function setSyncState(state, label='') {
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
-function handleAuthClick() {
-  if (fbUser) {
-    // Mostrar menú de logout
-    if (confirm('¿Cerrar sesión de ' + fbUser.email + '?')) logoutGoogle();
-  } else {
-    document.getElementById('authOverlay').classList.add('open');
-  }
-}
+
 
 async function loginGoogle() {
+  // Login silencioso — se activa automáticamente via onAuthStateChanged
   try {
     const { auth, signInWithPopup, GoogleAuthProvider } = window._fb;
     await signInWithPopup(auth, new GoogleAuthProvider());
-    document.getElementById('authOverlay').classList.remove('open');
-  } catch(e) {
-    console.error('Login error:', e);
-    showToast('❌ Error al iniciar sesión', 'red');
-  }
+  } catch(e) { console.error('Login error:', e); }
 }
 
 async function logoutGoogle() {
@@ -1166,16 +1120,10 @@ async function logoutGoogle() {
 }
 
 function updateAuthUI(user) {
-  const btn = document.getElementById('authBtn');
-  const txt = document.getElementById('authBtnText');
-  if (!btn) return;
+  // Botón de auth eliminado — solo actualizar sync dot
   if (user) {
-    txt.innerHTML = user.photoURL
-      ? `<img src="${user.photoURL}" class="auth-avatar"> ${user.displayName?.split(' ')[0] || user.email}`
-      : `👤 ${user.displayName?.split(' ')[0] || user.email}`;
     setSyncState('ok');
   } else {
-    txt.innerHTML = 'Entrar';
     setSyncState('off');
   }
 }
@@ -1410,8 +1358,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setSyncState('off');
         // Sin sesión: mostrar overlay de login automáticamente
         // (comenta esta línea si prefieres que no sea obligatorio)
-        // document.getElementById('authOverlay').classList.add('open');
-      }
+        }
     });
   }
 

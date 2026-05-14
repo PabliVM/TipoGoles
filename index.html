@@ -3,1602 +3,1723 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tipología de Goles — Castilla 25/26</title>
-
-<!-- Chart.js -->
+<title>Tipología de Goles — Real Madrid Cantera</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<!-- PapaParse -->
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-
 <style>
 /* =====================================================
-   DESIGN TOKENS — MAESTRO CORPORATIVO RM
-   Para cambiar colores: editar las variables --rm-* aquí
+   TOKENS — MAESTRO CORPORATIVO RM
    ===================================================== */
 :root {
-  --bg: #f0f2f5;
-  --surface: #ffffff;
-  --surface-alt: #fafbfc;
-  --border: #dfe1e6;
-  --border-light: #eaecf0;
-  --text: #1a1d23;
-  --text-sec: #5a6170;
-  --text-mut: #8b919e;
-  --text-faint: #b4b9c4;
-  --rm-blue: #2563eb;
-  --rm-blue-lt: #3b7cf5;
-  --rm-blue-bg: #edf1fc;
-  --rm-blue-dark: #1d4ed8;
-  --green: #16a34a;
-  --green-bg: #dcfce7;
-  --orange: #ea580c;
-  --orange-bg: #fff7ed;
-  --red: #dc2626;
-  --red-bg: #fef2f2;
-  --sh-sm: 0 1px 3px rgba(0,0,0,.06);
-  --sh-md: 0 2px 8px rgba(0,0,0,.08);
-  --sh-lg: 0 4px 16px rgba(0,0,0,.12);
-  --r: 8px;
-  --rs: 5px;
-  --rl: 12px;
-  /* Para cambiar fuente: editar --font aquí */
-  --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-  --tr: .2s ease;
+  --bg:#f0f2f5; --surface:#fff; --surface-alt:#fafbfc;
+  --border:#dfe1e6; --border-light:#eaecf0;
+  --text:#1a1d23; --text-sec:#5a6170; --text-mut:#8b919e; --text-faint:#b4b9c4;
+  --rm:#2563eb; --rm-lt:#3b7cf5; --rm-bg:#edf1fc; --rm-dark:#1d4ed8;
+  --green:#16a34a; --green-bg:#dcfce7;
+  --orange:#ea580c; --orange-bg:#fff7ed;
+  --red:#dc2626; --red-bg:#fef2f2;
+  --purple:#7c3aed; --purple-bg:#f5f3ff;
+  --sh-sm:0 1px 3px rgba(0,0,0,.06); --sh-md:0 2px 8px rgba(0,0,0,.08); --sh-lg:0 4px 20px rgba(0,0,0,.14);
+  --r:8px; --rs:5px; --rl:12px;
+  --font:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;
+  --tr:.18s ease;
 }
-
 body.dark {
-  --bg: #111318;
-  --surface: #1c1f26;
-  --surface-alt: #22262e;
-  --border: #2e3340;
-  --border-light: #272b34;
-  --text: #e4e6ea;
-  --text-sec: #9095a0;
-  --text-mut: #60656e;
-  --text-faint: #404550;
-  --rm-blue-bg: #162040;
-  --green-bg: #0a2e18;
-  --orange-bg: #2a1800;
-  --red-bg: #2a0a0a;
+  --bg:#111318; --surface:#1c1f26; --surface-alt:#22262e;
+  --border:#2e3340; --border-light:#272b34;
+  --text:#e4e6ea; --text-sec:#9095a0; --text-mut:#60656e; --text-faint:#404550;
+  --rm-bg:#162040; --green-bg:#0a2e18; --orange-bg:#2a1800; --red-bg:#2a0a0a; --purple-bg:#1e1535;
 }
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;line-height:1.45;padding-bottom:52px;transition:background var(--tr),color var(--tr)}
 
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+/* HEADER */
+.header{background:var(--rm);padding:9px 18px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:300;box-shadow:0 2px 12px rgba(37,99,235,.3)}
+.header-logo{width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;box-shadow:0 0 0 2px rgba(255,255,255,.2)}
+.header-logo img{width:100%;height:100%;object-fit:contain}
+.header-title{font-size:15px;font-weight:700;color:#fff;flex:1;letter-spacing:-.2px}
+.header-right{display:flex;align-items:center;gap:6px}
 
-body {
-  font-family: var(--font);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 13px;
-  line-height: 1.45;
-  padding-bottom: 52px;
-  transition: background var(--tr), color var(--tr);
-}
+/* Temporada selector */
+.season-wrap{position:relative}
+.season-select{height:26px;padding:0 22px 0 8px;border-radius:var(--rs);border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;font-size:12px;font-weight:600;font-family:var(--font);outline:none;cursor:pointer;appearance:none;-webkit-appearance:none}
+.season-select option{color:var(--text);background:var(--surface)}
+.season-wrap::after{content:'▾';position:absolute;right:6px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.7);pointer-events:none;font-size:10px}
+.btn-add-season{width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:background var(--tr)}
+.btn-add-season:hover{background:rgba(255,255,255,.22)}
+.btn-icon{width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.12);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:background var(--tr)}
+.btn-icon:hover{background:rgba(255,255,255,.22)}
 
-/* =====================================================
-   HEADER
-   Para cambiar escudo: editar src en .header-logo img
-   Para cambiar temporada: editar .doc-season texto
-   ===================================================== */
-.header {
-  background: var(--rm-blue);
-  padding: 10px 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  position: sticky;
-  top: 0;
-  z-index: 200;
-  box-shadow: 0 2px 12px rgba(37,99,235,.35);
-}
+/* NAV EQUIPOS */
+.nav-teams{background:var(--rm-dark);display:flex;gap:0;overflow-x:auto;scrollbar-width:none;padding:0 6px}
+.nav-teams::-webkit-scrollbar{display:none}
+.team-tab{padding:7px 12px;font-size:11.5px;font-weight:700;color:rgba(255,255,255,.6);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--tr),border-color var(--tr);letter-spacing:.2px}
+.team-tab:hover{color:rgba(255,255,255,.9)}
+.team-tab.active{color:#fff;border-bottom-color:#fff}
 
-.header-logo {
-  width: 36px; height: 36px;
-  border-radius: 50%;
-  background: #fff;
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
-  flex-shrink: 0;
-  box-shadow: 0 0 0 2px rgba(255,255,255,.25);
-}
-
-/* Para cambiar escudo: editar esta URL */
-.header-logo img { width: 100%; height: 100%; object-fit: contain; }
-
-.header-title-wrap { flex: 1; display: flex; align-items: baseline; gap: 10px; }
-.doc-title { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
-/* Para cambiar temporada: editar texto aquí */
-.doc-season { font-size: 12px; color: rgba(255,255,255,.65); }
-
-.header-right { display: flex; gap: 8px; align-items: center; }
-
-.btn-icon {
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,.12);
-  color: #fff;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
-  transition: background var(--tr);
-}
-.btn-icon:hover { background: rgba(255,255,255,.22); }
-
-/* NAV TABS */
-.nav-tabs {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  gap: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.nav-tabs::-webkit-scrollbar { display: none; }
-
-.nav-tab {
-  padding: 10px 18px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-mut);
-  cursor: pointer;
-  border: none;
-  background: none;
-  border-bottom: 2px solid transparent;
-  white-space: nowrap;
-  transition: color var(--tr), border-color var(--tr);
-  display: flex; align-items: center; gap: 6px;
-}
-.nav-tab:hover { color: var(--rm-blue); }
-.nav-tab.active {
-  color: var(--rm-blue);
-  border-bottom-color: var(--rm-blue);
-}
-.tab-badge {
-  background: var(--rm-blue-bg);
-  color: var(--rm-blue);
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 10px;
-  min-width: 18px;
-  text-align: center;
-}
+/* NAV MÓDULOS */
+.nav-modules{background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:0;overflow-x:auto;scrollbar-width:none}
+.nav-modules::-webkit-scrollbar{display:none}
+.mod-tab{padding:9px 16px;font-size:12px;font-weight:600;color:var(--text-mut);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--tr),border-color var(--tr);display:flex;align-items:center;gap:5px}
+.mod-tab:hover{color:var(--rm)}
+.mod-tab.active{color:var(--rm);border-bottom-color:var(--rm)}
+.mod-badge{background:var(--rm-bg);color:var(--rm);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px}
 
 /* MAIN */
-.main { max-width: 1400px; margin: 0 auto; padding: 16px 20px; }
+.main{max-width:1440px;margin:0 auto;padding:14px 18px}
+.panel{display:none}.panel.active{display:block}
 
-/* PANEL */
-.panel { display: none; }
-.panel.active { display: block; }
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);box-shadow:var(--sh-sm);overflow:hidden}
+.card-header{padding:12px 16px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+.card-icon{width:22px;height:22px;border-radius:6px;background:var(--rm-bg);color:var(--rm);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.card-body{padding:14px 16px}
 
-/* CARDS */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--rl);
-  box-shadow: var(--sh-sm);
-  overflow: hidden;
-}
+/* BTN */
+.btn{height:34px;padding:0 16px;border-radius:var(--r);border:none;font-size:12.5px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all var(--tr);display:inline-flex;align-items:center;gap:5px}
+.btn-sm{height:28px;padding:0 10px;font-size:11.5px}
+.btn-primary{background:var(--rm);color:#fff}.btn-primary:hover{background:var(--rm-dark)}
+.btn-secondary{background:var(--surface);border:1.5px solid var(--border);color:var(--text-sec)}.btn-secondary:hover{border-color:var(--rm);color:var(--rm)}
+.btn-danger{background:var(--red-bg);color:var(--red)}.btn-danger:hover{background:var(--red);color:#fff}
+.btn-green{background:var(--green-bg);color:var(--green)}.btn-green:hover{background:var(--green);color:#fff}
+.btn-purple{background:var(--purple-bg);color:var(--purple)}.btn-purple:hover{background:var(--purple);color:#fff}
 
-.card-header {
-  padding: 14px 18px 12px;
-  border-bottom: 1px solid var(--border-light);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
+/* SECTION LABEL */
+.sec-label{font-size:10.5px;font-weight:700;color:var(--rm);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.sec-label::before{content:'';display:inline-block;width:3px;height:11px;background:var(--rm);border-radius:2px}
+.sec-label.green::before{background:var(--green)}.sec-label.green{color:var(--green)}
+.sec-label.orange::before{background:var(--orange)}.sec-label.orange{color:var(--orange)}
 
-.card-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-  display: flex; align-items: center; gap: 8px;
-}
+/* FORM */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.field-group{display:flex;flex-direction:column;gap:4px}
+.field-label{font-size:10.5px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.3px}
+.field-select,.field-input{height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);font-size:12.5px;font-family:var(--font);outline:none;transition:border-color var(--tr),box-shadow var(--tr);width:100%;appearance:none;-webkit-appearance:none;cursor:pointer}
+.field-select:focus,.field-input:focus{border-color:var(--rm);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.field-input[type=number]{cursor:text}
+.select-wrap{position:relative}.select-wrap::after{content:'▾';position:absolute;right:9px;top:50%;transform:translateY(-50%);color:var(--text-mut);pointer-events:none;font-size:11px}
+.form-divider{height:1px;background:var(--border-light);margin:14px 0}
+.chip-group{display:flex;gap:5px;flex-wrap:wrap}
+.chip{padding:5px 11px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;transition:all var(--tr);background:var(--surface);color:var(--text-sec);user-select:none}
+.chip:hover{border-color:var(--rm);color:var(--rm)}
+.chip.selected{background:var(--rm);border-color:var(--rm);color:#fff}
+.chip.green.selected{background:var(--green);border-color:var(--green)}
+.chip.red.selected{background:var(--red);border-color:var(--red)}
+.form-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
 
-.card-title .icon {
-  width: 22px; height: 22px;
-  border-radius: 6px;
-  background: var(--rm-blue-bg);
-  color: var(--rm-blue);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px;
-}
+/* IMPORT */
+.import-zone{border:2px dashed var(--border);border-radius:var(--rl);padding:36px 20px;text-align:center;cursor:pointer;transition:border-color var(--tr),background var(--tr);background:var(--surface-alt);position:relative}
+.import-zone:hover,.import-zone.drag-over{border-color:var(--rm);background:var(--rm-bg)}
+.import-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.import-icon{font-size:32px;margin-bottom:10px;display:block}
+.import-title{font-size:14px;font-weight:700;margin-bottom:5px}
+.import-sub{font-size:12px;color:var(--text-mut)}
+.import-status{margin-top:12px;padding:9px 12px;border-radius:var(--r);font-size:12px;font-weight:600;display:none}
+.import-status.ok{background:var(--green-bg);color:var(--green);display:flex;align-items:center;gap:7px}
+.import-status.err{background:var(--red-bg);color:var(--red);display:flex;align-items:center;gap:7px}
+.import-info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.info-chip{background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;text-align:center}
+.info-chip .val{font-size:20px;font-weight:800;color:var(--rm)}
+.info-chip .lbl{font-size:10.5px;color:var(--text-mut);margin-top:1px}
 
-.card-body { padding: 16px 18px; }
+/* TABLE */
+.table-toolbar{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border-light);align-items:center}
+.search-wrap{position:relative;flex:1;min-width:150px}
+.search-wrap::before{content:'🔍';position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;pointer-events:none}
+.search-input{width:100%;height:30px;padding:0 9px 0 28px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface-alt);color:var(--text);font-size:12px;font-family:var(--font);outline:none;transition:border-color var(--tr)}
+.search-input:focus{border-color:var(--rm)}
+.filter-select{height:30px;padding:0 7px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface-alt);color:var(--text);font-size:12px;font-family:var(--font);outline:none;cursor:pointer}
+.table-count{font-size:11.5px;color:var(--text-mut);white-space:nowrap;margin-left:auto}
+.table-wrap{overflow-x:auto;overflow-y:auto;max-height:460px}
+.table-wrap::-webkit-scrollbar{height:4px;width:4px}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.data-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+.data-table th{position:sticky;top:0;background:var(--surface-alt);border-bottom:2px solid var(--border);padding:7px 11px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sec);text-transform:uppercase;letter-spacing:.3px;cursor:pointer;user-select:none}
+.data-table th:hover{color:var(--rm)}
+.data-table th.sort-asc::after{content:' ↑';color:var(--rm)}
+.data-table th.sort-desc::after{content:' ↓';color:var(--rm)}
+.data-table td{padding:6px 11px;border-bottom:1px solid var(--border-light)}
+.data-table tr:hover td{background:var(--rm-bg)}
+.badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10.5px;font-weight:700}
+.badge-blue{background:var(--rm-bg);color:var(--rm)}
+.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+.badge-orange{background:var(--orange-bg);color:var(--orange)}
+.btn-del{width:20px;height:20px;border-radius:4px;border:none;background:var(--red-bg);color:var(--red);cursor:pointer;font-size:10px;display:inline-flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--tr)}
+tr:hover .btn-del{opacity:1}
 
-/* GRID LAYOUTS */
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+/* DASHBOARD */
+.dash-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.dash-topbar-left{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dash-active-filters{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.dash-active-chip{display:inline-flex;align-items:center;gap:3px;background:var(--rm-bg);color:var(--rm);border:1px solid rgba(37,99,235,.2);border-radius:20px;padding:2px 7px;font-size:11px;font-weight:600;cursor:pointer;transition:background var(--tr)}
+.dash-active-chip:hover{background:var(--red-bg);color:var(--red)}
+.dash-filter-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:12px;overflow:hidden;display:none}
+.dash-filter-panel.open{display:block}
+.filter-block{border-bottom:1px solid var(--border-light)}
+.filter-block:last-child{border-bottom:none}
+.filter-block-header{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;cursor:pointer;user-select:none;transition:background var(--tr)}
+.filter-block-header:hover{background:var(--surface-alt)}
+.filter-block-title{font-size:11.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
+.filter-block-title .dot{width:7px;height:7px;border-radius:50%;background:var(--rm)}
+.filter-block-title .dot.green{background:var(--green)}
+.filter-block-title .dot.orange{background:var(--orange)}
+.filter-block-badge{font-size:10px;font-weight:700;background:var(--rm);color:#fff;padding:1px 5px;border-radius:10px;min-width:16px;text-align:center}
+.filter-block-arrow{font-size:10px;color:var(--text-mut);transition:transform var(--tr)}
+.filter-block.expanded .filter-block-arrow{transform:rotate(180deg)}
+.filter-block-body{display:none;padding:10px 14px 12px;background:var(--surface-alt)}
+.filter-block.expanded .filter-block-body{display:block}
+.filter-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px}
+.filter-field{display:flex;flex-direction:column;gap:3px}
+.filter-field-label{font-size:10px;font-weight:700;color:var(--text-mut);text-transform:uppercase;letter-spacing:.3px}
+.filter-field-select{height:28px;padding:0 7px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text);font-size:12px;font-family:var(--font);outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;transition:border-color var(--tr)}
+.filter-field-select:focus{border-color:var(--rm)}
+.filter-field-select.active{border-color:var(--rm);background:var(--rm-bg);color:var(--rm);font-weight:600}
+.filter-actions{display:flex;gap:7px;margin-top:10px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--rm)}
+.kpi-card.green::before{background:var(--green)}
+.kpi-card.red::before{background:var(--red)}
+.kpi-card.orange::before{background:var(--orange)}
+.kpi-label{font-size:10px;font-weight:700;color:var(--text-mut);text-transform:uppercase;letter-spacing:.4px}
+.kpi-value{font-size:26px;font-weight:800;color:var(--text);margin:3px 0 1px;line-height:1}
+.kpi-sub{font-size:10.5px;color:var(--text-mut)}
+.charts-dynamic{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.chart-card.full-width{grid-column:1/-1}
+.chart-head{padding:10px 14px 9px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between}
+.chart-title{font-size:12px;font-weight:700}
+.chart-body{padding:12px 14px;position:relative}
+.chart-body canvas{max-height:210px}
+.chart-body.tall canvas{max-height:260px}
+.rank-list{display:flex;flex-direction:column;gap:5px}
+.rank-item{display:flex;align-items:center;gap:8px}
+.rank-pos{width:18px;height:18px;border-radius:50%;background:var(--rm-bg);color:var(--rm);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rank-bar-wrap{flex:1}
+.rank-name{font-size:11.5px;color:var(--text);margin-bottom:2px}
+.rank-bar-bg{height:5px;background:var(--border-light);border-radius:3px;overflow:hidden}
+.rank-bar-fill{height:100%;background:var(--rm);border-radius:3px;transition:width .5s ease}
+.rank-val{font-size:11.5px;font-weight:700;min-width:24px;text-align:right}
 
-/* =====================================================
-   PANEL 1 — IMPORTAR CSV
-   ===================================================== */
-.import-zone {
-  border: 2px dashed var(--border);
-  border-radius: var(--rl);
-  padding: 40px 24px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color var(--tr), background var(--tr);
-  background: var(--surface-alt);
-  position: relative;
-}
-.import-zone:hover, .import-zone.drag-over {
-  border-color: var(--rm-blue);
-  background: var(--rm-blue-bg);
-}
-.import-zone input[type=file] {
-  position: absolute; inset: 0;
-  opacity: 0; cursor: pointer; width: 100%; height: 100%;
-}
-.import-icon {
-  font-size: 36px;
-  margin-bottom: 12px;
-  display: block;
-}
-.import-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-.import-sub { font-size: 12px; color: var(--text-mut); }
+/* EDITOR SIDEBAR */
+.editor-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:400;display:none;backdrop-filter:blur(2px)}
+.editor-overlay.open{display:block}
+.editor-sidebar{position:fixed;top:0;right:0;width:320px;height:100%;background:var(--surface);z-index:500;box-shadow:-4px 0 20px rgba(0,0,0,.15);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.editor-sidebar.open{transform:translateX(0)}
+.editor-head{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.editor-head-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+.editor-close{width:26px;height:26px;border-radius:50%;border:none;background:var(--surface-alt);color:var(--text-mut);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:background var(--tr)}
+.editor-close:hover{background:var(--red-bg);color:var(--red)}
+.editor-body{flex:1;overflow-y:auto;padding:10px}
+.editor-body::-webkit-scrollbar{width:4px}
+.editor-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.editor-section-title{font-size:10px;font-weight:700;color:var(--text-mut);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 5px;padding:0 3px}
+.chart-item{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:var(--r);border:1px solid var(--border);margin-bottom:4px;background:var(--surface);transition:border-color var(--tr),background var(--tr)}
+.chart-item.active{border-color:var(--rm);background:var(--rm-bg)}
+.chart-item-toggle{width:30px;height:17px;border-radius:9px;border:none;background:var(--border);position:relative;cursor:pointer;flex-shrink:0;transition:background var(--tr)}
+.chart-item-toggle::after{content:'';position:absolute;left:2px;top:1.5px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left var(--tr)}
+.chart-item.active .chart-item-toggle{background:var(--rm)}
+.chart-item.active .chart-item-toggle::after{left:15px}
+.chart-item-info{flex:1;min-width:0}
+.chart-item-name{font-size:11.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart-item-sub{font-size:10px;color:var(--text-mut)}
+/* Chart type selector in editor */
+.chart-type-sel{height:22px;padding:0 5px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface-alt);color:var(--text-sec);font-size:10.5px;font-family:var(--font);outline:none;cursor:pointer}
+.chart-item-order{display:flex;flex-direction:column;gap:2px}
+.btn-order{width:18px;height:15px;border:1px solid var(--border);border-radius:3px;background:var(--surface-alt);color:var(--text-mut);font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--tr)}
+.btn-order:hover:not(:disabled){background:var(--rm-bg);color:var(--rm);border-color:var(--rm)}
+.btn-order:disabled{opacity:.3;cursor:default}
+.editor-foot{padding:10px;border-top:1px solid var(--border);display:flex;gap:7px;flex-shrink:0}
 
-.import-status {
-  margin-top: 14px;
-  padding: 10px 14px;
-  border-radius: var(--r);
-  font-size: 12.5px;
-  font-weight: 600;
-  display: none;
-}
-.import-status.ok { background: var(--green-bg); color: var(--green); display: flex; align-items: center; gap: 8px; }
-.import-status.err { background: var(--red-bg); color: var(--red); display: flex; align-items: center; gap: 8px; }
+/* COMPARATIVAS */
+.comp-setup{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.comp-side{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.comp-side-head{padding:9px 14px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:7px}
+.comp-side-head .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.comp-side-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.comp-metric-row{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:12px;flex-wrap:wrap}
+.comp-charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.comp-chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.comp-chart-head{padding:9px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:6px}
+.comp-chart-label{font-size:11.5px;font-weight:700;flex:1}
+.comp-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.comp-chart-body{padding:12px 14px}
+.comp-chart-body canvas{max-height:200px}
+.comp-table{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:10px}
+.comp-table th{background:var(--surface-alt);padding:6px 10px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border)}
+.comp-table td{padding:5px 10px;border-bottom:1px solid var(--border-light)}
+.comp-table tr:hover td{background:var(--rm-bg)}
+.diff-pos{color:var(--green);font-weight:700}
+.diff-neg{color:var(--red);font-weight:700}
+.diff-neu{color:var(--text-mut)}
 
-.import-info-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 14px;
-}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:600;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--rl);box-shadow:var(--sh-lg);padding:22px 24px;width:360px;max-width:90vw}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:14px}
+.modal-actions{display:flex;gap:8px;margin-top:18px;justify-content:flex-end}
 
-.info-chip {
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 10px 12px;
-  text-align: center;
-}
-.info-chip .val { font-size: 20px; font-weight: 800; color: var(--rm-blue); }
-.info-chip .lbl { font-size: 11px; color: var(--text-mut); margin-top: 2px; }
-
-/* =====================================================
-   PANEL 2 — REGISTRO MANUAL
-   ===================================================== */
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.field-group { display: flex; flex-direction: column; gap: 5px; }
-.field-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-sec);
-  text-transform: uppercase;
-  letter-spacing: .4px;
-}
-
-.field-select, .field-input {
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13px;
-  font-family: var(--font);
-  outline: none;
-  transition: border-color var(--tr), box-shadow var(--tr);
-  width: 100%;
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-}
-.field-select:focus, .field-input:focus {
-  border-color: var(--rm-blue);
-  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
-}
-.field-input[type=number] { cursor: text; }
-
-.select-wrap { position: relative; }
-.select-wrap::after {
-  content: '▾';
-  position: absolute;
-  right: 10px; top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-mut);
-  pointer-events: none;
-  font-size: 11px;
-}
-
-/* CHIPS LOCALES/VISITANTE */
-.chip-group { display: flex; gap: 6px; flex-wrap: wrap; }
-.chip {
-  padding: 5px 12px;
-  border-radius: 20px;
-  border: 1.5px solid var(--border);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--tr);
-  background: var(--surface);
-  color: var(--text-sec);
-  user-select: none;
-}
-.chip:hover { border-color: var(--rm-blue); color: var(--rm-blue); }
-.chip.selected {
-  background: var(--rm-blue);
-  border-color: var(--rm-blue);
-  color: #fff;
-}
-.chip.green.selected { background: var(--green); border-color: var(--green); }
-.chip.red.selected { background: var(--red); border-color: var(--red); }
-
-.form-actions {
-  display: flex; gap: 10px;
-  margin-top: 18px;
-  flex-wrap: wrap;
-}
-
-.btn {
-  height: 36px;
-  padding: 0 18px;
-  border-radius: var(--r);
-  border: none;
-  font-size: 13px;
-  font-weight: 700;
-  font-family: var(--font);
-  cursor: pointer;
-  transition: all var(--tr);
-  display: inline-flex; align-items: center; gap: 6px;
-}
-.btn-primary { background: var(--rm-blue); color: #fff; }
-.btn-primary:hover { background: var(--rm-blue-dark); }
-.btn-secondary {
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  color: var(--text-sec);
-}
-.btn-secondary:hover { border-color: var(--rm-blue); color: var(--rm-blue); }
-.btn-danger { background: var(--red-bg); color: var(--red); }
-.btn-danger:hover { background: var(--red); color: #fff; }
-
-.form-divider {
-  height: 1px;
-  background: var(--border-light);
-  margin: 16px 0;
-}
-
-.section-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--rm-blue);
-  text-transform: uppercase;
-  letter-spacing: .6px;
-  margin-bottom: 10px;
-  display: flex; align-items: center; gap: 6px;
-}
-.section-label::before {
-  content: '';
-  display: inline-block;
-  width: 3px; height: 12px;
-  background: var(--rm-blue);
-  border-radius: 2px;
-}
-
-/* SUCCESS TOAST */
-.toast {
-  position: fixed;
-  bottom: 64px; right: 20px;
-  background: var(--green);
-  color: #fff;
-  padding: 10px 16px;
-  border-radius: var(--r);
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: var(--sh-lg);
-  transform: translateY(20px);
-  opacity: 0;
-  transition: all .25s ease;
-  z-index: 300;
-  display: flex; align-items: center; gap: 8px;
-}
-.toast.show { transform: translateY(0); opacity: 1; }
-
-/* =====================================================
-   PANEL 3 — TABLA
-   ===================================================== */
-.table-toolbar {
-  display: flex; gap: 10px; flex-wrap: wrap;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-light);
-  align-items: center;
-}
-
-.search-wrap {
-  position: relative;
-  flex: 1;
-  min-width: 160px;
-}
-.search-wrap::before {
-  content: '🔍';
-  position: absolute;
-  left: 9px; top: 50%;
-  transform: translateY(-50%);
-  font-size: 12px;
-  pointer-events: none;
-}
-.search-input {
-  width: 100%;
-  height: 32px;
-  padding: 0 10px 0 30px;
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  background: var(--surface-alt);
-  color: var(--text);
-  font-size: 12.5px;
-  font-family: var(--font);
-  outline: none;
-  transition: border-color var(--tr);
-}
-.search-input:focus { border-color: var(--rm-blue); }
-
-.filter-select {
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  background: var(--surface-alt);
-  color: var(--text);
-  font-size: 12px;
-  font-family: var(--font);
-  outline: none;
-  cursor: pointer;
-}
-
-.table-count {
-  font-size: 12px;
-  color: var(--text-mut);
-  white-space: nowrap;
-  margin-left: auto;
-}
-
-.table-wrap {
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: 480px;
-}
-.table-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
-.table-wrap::-webkit-scrollbar-track { background: var(--surface-alt); }
-.table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.data-table th {
-  position: sticky;
-  top: 0;
-  background: var(--surface-alt);
-  border-bottom: 2px solid var(--border);
-  padding: 8px 12px;
-  text-align: left;
-  font-weight: 700;
-  font-size: 11px;
-  color: var(--text-sec);
-  text-transform: uppercase;
-  letter-spacing: .3px;
-  cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-}
-.data-table th:hover { color: var(--rm-blue); }
-.data-table th.sort-asc::after { content: ' ↑'; color: var(--rm-blue); }
-.data-table th.sort-desc::after { content: ' ↓'; color: var(--rm-blue); }
-.data-table td {
-  padding: 7px 12px;
-  border-bottom: 1px solid var(--border-light);
-  color: var(--text);
-}
-.data-table tr:hover td { background: var(--rm-blue-bg); }
-
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 20px;
-  font-size: 10.5px;
-  font-weight: 700;
-}
-.badge-green { background: var(--green-bg); color: var(--green); }
-.badge-red { background: var(--red-bg); color: var(--red); }
-.badge-blue { background: var(--rm-blue-bg); color: var(--rm-blue); }
-.badge-orange { background: var(--orange-bg); color: var(--orange); }
-
-.btn-del {
-  width: 22px; height: 22px;
-  border-radius: 4px;
-  border: none;
-  background: var(--red-bg);
-  color: var(--red);
-  cursor: pointer;
-  font-size: 11px;
-  display: inline-flex; align-items: center; justify-content: center;
-  opacity: 0;
-  transition: opacity var(--tr);
-}
-tr:hover .btn-del { opacity: 1; }
-
-/* =====================================================
-   PANEL 4 — DASHBOARD
-   ===================================================== */
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.kpi-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--rl);
-  padding: 14px 16px;
-  position: relative;
-  overflow: hidden;
-}
-.kpi-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--rm-blue);
-}
-.kpi-card.green::before { background: var(--green); }
-.kpi-card.red::before { background: var(--red); }
-.kpi-card.orange::before { background: var(--orange); }
-
-.kpi-label { font-size: 10.5px; font-weight: 700; color: var(--text-mut); text-transform: uppercase; letter-spacing: .4px; }
-.kpi-value { font-size: 28px; font-weight: 800; color: var(--text); margin: 4px 0 2px; line-height: 1; }
-.kpi-sub { font-size: 11px; color: var(--text-mut); }
-
-.charts-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-.chart-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--rl);
-  overflow: hidden;
-}
-.chart-card.full { grid-column: 1 / -1; }
-
-.chart-head {
-  padding: 12px 16px 10px;
-  border-bottom: 1px solid var(--border-light);
-  display: flex; align-items: center; justify-content: space-between;
-}
-.chart-title {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text);
-}
-.chart-body {
-  padding: 14px 16px;
-  position: relative;
-}
-.chart-body canvas { max-height: 220px; }
-.chart-body.tall canvas { max-height: 280px; }
-
-/* RANKING LIST */
-.rank-list { display: flex; flex-direction: column; gap: 6px; }
-.rank-item {
-  display: flex; align-items: center; gap: 10px;
-}
-.rank-pos {
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: var(--rm-blue-bg);
-  color: var(--rm-blue);
-  font-size: 10px; font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.rank-bar-wrap { flex: 1; }
-.rank-name { font-size: 12px; color: var(--text); margin-bottom: 3px; }
-.rank-bar-bg { height: 5px; background: var(--border-light); border-radius: 3px; overflow: hidden; }
-.rank-bar-fill { height: 100%; background: var(--rm-blue); border-radius: 3px; transition: width .6s ease; }
-.rank-val { font-size: 12px; font-weight: 700; color: var(--text); min-width: 28px; text-align: right; }
-
-/* =====================================================
-   DASHBOARD — FILTROS EN BLOQUES + EDITOR DE LAYOUT
-   ===================================================== */
-
-/* Barra superior del dashboard */
-.dash-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-.dash-topbar-left {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-}
-.dash-active-filters {
-  display: flex; gap: 5px; flex-wrap: wrap; align-items: center;
-}
-.dash-active-chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  background: var(--rm-blue-bg);
-  color: var(--rm-blue);
-  border: 1px solid rgba(37,99,235,.2);
-  border-radius: 20px;
-  padding: 2px 8px 2px 8px;
-  font-size: 11px; font-weight: 600;
-  cursor: pointer;
-  transition: background var(--tr);
-}
-.dash-active-chip:hover { background: var(--red-bg); color: var(--red); border-color: rgba(220,38,38,.2); }
-.dash-active-chip .x { font-size: 10px; margin-left: 2px; }
-
-/* Panel de filtros por bloques */
-.dash-filter-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--rl);
-  margin-bottom: 14px;
-  overflow: hidden;
-  display: none;
-}
-.dash-filter-panel.open { display: block; }
-
-.filter-block {
-  border-bottom: 1px solid var(--border-light);
-}
-.filter-block:last-child { border-bottom: none; }
-
-.filter-block-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px;
-  cursor: pointer;
-  user-select: none;
-  transition: background var(--tr);
-}
-.filter-block-header:hover { background: var(--surface-alt); }
-
-.filter-block-title {
-  font-size: 12px; font-weight: 700;
-  color: var(--text);
-  display: flex; align-items: center; gap: 8px;
-}
-.filter-block-title .dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--rm-blue);
-}
-.filter-block-title .dot.green { background: var(--green); }
-.filter-block-title .dot.orange { background: var(--orange); }
-.filter-block-badge {
-  font-size: 10px; font-weight: 700;
-  background: var(--rm-blue);
-  color: #fff;
-  padding: 1px 6px; border-radius: 10px;
-  min-width: 18px; text-align: center;
-}
-.filter-block-arrow {
-  font-size: 11px; color: var(--text-mut);
-  transition: transform var(--tr);
-}
-.filter-block.expanded .filter-block-arrow { transform: rotate(180deg); }
-
-.filter-block-body {
-  display: none;
-  padding: 12px 16px 14px;
-  background: var(--surface-alt);
-}
-.filter-block.expanded .filter-block-body { display: block; }
-
-.filter-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 10px;
-}
-
-.filter-field { display: flex; flex-direction: column; gap: 4px; }
-.filter-field-label {
-  font-size: 10.5px; font-weight: 700;
-  color: var(--text-mut);
-  text-transform: uppercase; letter-spacing: .3px;
-}
-.filter-field-select {
-  height: 30px; padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--rs);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 12px; font-family: var(--font);
-  outline: none; cursor: pointer;
-  appearance: none; -webkit-appearance: none;
-  transition: border-color var(--tr);
-}
-.filter-field-select:focus { border-color: var(--rm-blue); }
-.filter-field-select.active { border-color: var(--rm-blue); background: var(--rm-blue-bg); color: var(--rm-blue); font-weight:600; }
-
-.filter-actions {
-  display: flex; gap: 8px; margin-top: 12px;
-}
-
-/* =====================================================
-   EDITOR DE LAYOUT — PANEL LATERAL
-   ===================================================== */
-.editor-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.35);
-  z-index: 400;
-  display: none;
-  backdrop-filter: blur(2px);
-}
-.editor-overlay.open { display: block; }
-
-.editor-sidebar {
-  position: fixed;
-  top: 0; right: 0;
-  width: 340px; height: 100%;
-  background: var(--surface);
-  z-index: 500;
-  box-shadow: -4px 0 24px rgba(0,0,0,.18);
-  display: flex; flex-direction: column;
-  transform: translateX(100%);
-  transition: transform .28s cubic-bezier(.4,0,.2,1);
-}
-.editor-sidebar.open { transform: translateX(0); }
-
-.editor-head {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-  flex-shrink: 0;
-}
-.editor-head-title {
-  font-size: 14px; font-weight: 700;
-  display: flex; align-items: center; gap: 8px;
-}
-.editor-close {
-  width: 28px; height: 28px;
-  border-radius: 50%; border: none;
-  background: var(--surface-alt);
-  color: var(--text-mut);
-  cursor: pointer; font-size: 14px;
-  display: flex; align-items: center; justify-content: center;
-  transition: background var(--tr);
-}
-.editor-close:hover { background: var(--red-bg); color: var(--red); }
-
-.editor-body {
-  flex: 1; overflow-y: auto; padding: 12px;
-}
-.editor-body::-webkit-scrollbar { width: 4px; }
-.editor-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-.editor-section-title {
-  font-size: 10px; font-weight: 700; color: var(--text-mut);
-  text-transform: uppercase; letter-spacing: .5px;
-  margin: 10px 0 6px;
-  padding: 0 4px;
-}
-
-.chart-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 10px;
-  border-radius: var(--r);
-  border: 1px solid var(--border);
-  margin-bottom: 5px;
-  background: var(--surface);
-  transition: border-color var(--tr), background var(--tr);
-  cursor: default;
-}
-.chart-item.active { border-color: var(--rm-blue); background: var(--rm-blue-bg); }
-
-.chart-item-toggle {
-  width: 32px; height: 18px;
-  border-radius: 9px;
-  border: none;
-  background: var(--border);
-  position: relative;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background var(--tr);
-}
-.chart-item-toggle::after {
-  content: '';
-  position: absolute;
-  left: 2px; top: 2px;
-  width: 14px; height: 14px;
-  border-radius: 50%;
-  background: #fff;
-  transition: left var(--tr);
-}
-.chart-item.active .chart-item-toggle { background: var(--rm-blue); }
-.chart-item.active .chart-item-toggle::after { left: 16px; }
-
-.chart-item-info { flex: 1; min-width: 0; }
-.chart-item-name {
-  font-size: 12px; font-weight: 600;
-  color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.chart-item-sub { font-size: 10.5px; color: var(--text-mut); }
-
-.chart-item-order {
-  display: flex; flex-direction: column; gap: 2px;
-}
-.btn-order {
-  width: 20px; height: 16px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  background: var(--surface-alt);
-  color: var(--text-mut);
-  font-size: 9px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all var(--tr);
-}
-.btn-order:hover:not(:disabled) { background: var(--rm-blue-bg); color: var(--rm-blue); border-color: var(--rm-blue); }
-.btn-order:disabled { opacity: .3; cursor: default; }
-
-.editor-foot {
-  padding: 12px;
-  border-top: 1px solid var(--border);
-  display: flex; gap: 8px;
-  flex-shrink: 0;
-}
-
-/* Contenedor dinámico de charts */
-.charts-dynamic {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-.chart-card.full-width { grid-column: 1 / -1; }
-
-@media (max-width: 640px) {
-  .editor-sidebar { width: 100%; }
-  .charts-dynamic { grid-template-columns: 1fr; }
-}
-
-/* dash-filter-select legacy compat */
-.dash-filter-select {
-  height: 30px; padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--rs);
-  background: var(--surface-alt);
-  color: var(--text);
-  font-size: 12px; font-family: var(--font);
-  outline: none; cursor: pointer;
-}
-.dash-filter-select:focus { border-color: var(--rm-blue); }
+/* TOAST */
+.toast{position:fixed;bottom:60px;right:18px;background:var(--green);color:#fff;padding:9px 14px;border-radius:var(--r);font-size:12.5px;font-weight:600;box-shadow:var(--sh-lg);transform:translateY(16px);opacity:0;transition:all .22s ease;z-index:700;display:flex;align-items:center;gap:7px}
+.toast.show{transform:translateY(0);opacity:1}
 
 /* FOOTER */
-.app-footer {
-  background: var(--rm-blue);
-  color: rgba(255,255,255,.55);
-  font-size: 10px;
-  text-align: center;
-  padding: 10px;
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  z-index: 100;
-}
+.app-footer{background:var(--rm);color:rgba(255,255,255,.5);font-size:10px;text-align:center;padding:9px;position:fixed;left:0;right:0;bottom:0;z-index:100}
 
-/* EMPTY STATE */
-.empty-state {
-  text-align: center;
-  padding: 48px 20px;
-  color: var(--text-mut);
-}
-.empty-state .icon { font-size: 40px; margin-bottom: 12px; }
-.empty-state p { font-size: 13px; }
+/* EMPTY */
+.empty-state{text-align:center;padding:44px 20px;color:var(--text-mut)}
+.empty-state .icon{font-size:36px;margin-bottom:10px}
+.empty-state p{font-size:13px}
 
 /* RESPONSIVE */
-@media (max-width: 768px) {
-  .main { padding: 10px 12px; }
-  .charts-grid { grid-template-columns: 1fr; }
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .form-grid { grid-template-columns: 1fr 1fr; }
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-  .header { padding: 8px 12px; }
-  .doc-title { font-size: 14px; }
+@media(max-width:768px){
+  .main{padding:10px 10px}
+  .charts-dynamic,.comp-setup,.comp-charts-grid{grid-template-columns:1fr}
+  .chart-card.full-width{grid-column:1}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .form-grid{grid-template-columns:1fr 1fr}
+  .editor-sidebar{width:100%}
 }
-@media (max-width: 480px) {
-  .form-grid { grid-template-columns: 1fr; }
-  .kpi-grid { grid-template-columns: 1fr 1fr; }
+@media(max-width:480px){
+  .form-grid{grid-template-columns:1fr}
+  .comp-setup{grid-template-columns:1fr}
 }
+
+/* =====================================================
+   PDF / PRINT STYLES
+   ===================================================== */
+@media print {
+  @page { size: A4 portrait; margin: 12mm 14mm; }
+
+  /* Ocultar UI chrome */
+  .header, .nav-teams, .nav-modules, .app-footer,
+  .dash-topbar, .dash-filter-panel, .editor-overlay,
+  .editor-sidebar, .toast, .btn-del,
+  #btnToggleFilters, #btnResetFilters, #btnEditorOpen,
+  #btnExportPDF, #btnCompExportPDF { display: none !important; }
+
+  body { background: #fff !important; color: #000 !important; font-size: 11px; padding-bottom: 0; }
+
+  .panel { display: none !important; }
+  .panel.active { display: block !important; }
+
+  /* PDF header */
+  .pdf-header { display: flex !important; }
+
+  /* KPIs */
+  .kpi-grid { grid-template-columns: repeat(5,1fr) !important; gap: 6px !important; margin-bottom: 10px !important; }
+  .kpi-card { border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; }
+  .kpi-value { font-size: 20px !important; }
+
+  /* Charts grid — 2 col portrait */
+  .charts-dynamic { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .chart-card { border: 1px solid #ddd !important; border-radius: 6px !important; break-inside: avoid; }
+  .chart-card.full-width { grid-column: 1 / -1 !important; }
+  .chart-body canvas { max-height: 160px !important; }
+  .chart-body.tall canvas { max-height: 200px !important; }
+  .chart-head { padding: 6px 10px !important; }
+  .chart-title { font-size: 10px !important; }
+
+  /* Comparativas */
+  .comp-charts-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .comp-chart-wrap { break-inside: avoid; }
+  .comp-chart-body canvas { max-height: 150px !important; }
+
+  /* Rank lists */
+  .rank-bar-fill { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+  /* Tables */
+  .table-wrap { max-height: none !important; overflow: visible !important; }
+  .data-table { font-size: 9px !important; }
+  .data-table th, .data-table td { padding: 4px 6px !important; }
+}
+
+/* PDF header — only visible when printing */
+.pdf-header {
+  display: none;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #2563eb;
+  margin-bottom: 14px;
+}
+.pdf-header-logo {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: #2563eb;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.pdf-header-logo img { width: 100%; height: 100%; object-fit: contain; }
+.pdf-header-info { flex: 1; }
+.pdf-header-title { font-size: 16px; font-weight: 800; color: #1a1d23; }
+.pdf-header-sub { font-size: 11px; color: #5a6170; margin-top: 2px; }
+.pdf-header-meta { text-align: right; font-size: 10px; color: #8b919e; line-height: 1.6; }
 </style>
 </head>
-
 <body>
 
-<!-- HEADER — Para cambiar escudo: reemplazar src del img -->
+<!-- HEADER -->
 <header class="header">
   <div class="header-logo">
-    <!-- Para cambiar escudo: reemplazar esta URL -->
     <img src="https://raw.githubusercontent.com/PabliVM/Promociones/main/rm__.png"
          crossorigin="anonymous" alt="RM" onerror="this.parentNode.innerHTML='⚽'">
   </div>
-  <div class="header-title-wrap">
-    <h1 class="doc-title">Tipología de Goles</h1>
-    <!-- Para cambiar temporada: editar este texto -->
-    <span class="doc-season">Castilla · 25/26</span>
-  </div>
+  <span class="header-title">Tipología de Goles</span>
   <div class="header-right">
+    <div class="season-wrap">
+      <select class="season-select" id="seasonSelect" onchange="onSeasonChange()"></select>
+    </div>
+    <button class="btn-add-season" onclick="openAddSeason()" title="Nueva temporada">＋</button>
     <button class="btn-icon" onclick="toggleDark()" id="darkBtn" title="Modo oscuro">☾</button>
   </div>
 </header>
 
-<!-- NAV TABS -->
-<nav class="nav-tabs" role="tablist">
-  <button class="nav-tab active" onclick="showPanel('import',this)" role="tab">
-    📥 Importar
-  </button>
-  <button class="nav-tab" onclick="showPanel('manual',this)" role="tab">
-    ✏️ Registrar
-  </button>
-  <button class="nav-tab" onclick="showPanel('tabla',this)" role="tab">
-    📋 Registros <span class="tab-badge" id="badge-count">0</span>
-  </button>
-  <button class="nav-tab" onclick="showPanel('dashboard',this)" role="tab">
-    📊 Dashboard
-  </button>
+<!-- NAV EQUIPOS -->
+<nav class="nav-teams" id="navTeams"></nav>
+
+<!-- NAV MÓDULOS -->
+<nav class="nav-modules" id="navModules">
+  <button class="mod-tab active" onclick="showMod('importar',this)">📥 Importar</button>
+  <button class="mod-tab" onclick="showMod('registro',this)">✏️ Registro</button>
+  <button class="mod-tab" onclick="showMod('bbdd',this)">🗄️ BBDD <span class="mod-badge" id="badge-count">0</span></button>
+  <button class="mod-tab" onclick="showMod('informes',this)">📊 Informes</button>
+  <button class="mod-tab" onclick="showMod('comparativas',this)">⚖️ Comparativas</button>
 </nav>
 
 <main class="main">
 
-  <!-- ===================================================
-       PANEL 1: IMPORTAR CSV
-       =================================================== -->
-  <div id="panel-import" class="panel active">
-    <div class="card" style="max-width:640px;margin:0 auto;">
-      <div class="card-header">
-        <div class="card-title"><span class="icon">📥</span> Importar CSV</div>
+<!-- ===================================================
+     PANEL: IMPORTAR
+=================================================== -->
+<div id="panel-importar" class="panel active">
+  <div class="card" style="max-width:600px;margin:0 auto">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">📥</span> Importar CSV</div>
+    </div>
+    <div class="card-body">
+      <div class="import-zone" id="dropZone">
+        <input type="file" accept=".csv" id="csvInput" onchange="handleFileSelect(event)">
+        <span class="import-icon">📂</span>
+        <div class="import-title">Arrastra tu CSV aquí</div>
+        <div class="import-sub">o haz clic para seleccionar · UTF-8, separador coma</div>
       </div>
-      <div class="card-body">
-        <div class="import-zone" id="dropZone">
-          <input type="file" accept=".csv" id="csvInput" onchange="handleFileSelect(event)">
-          <span class="import-icon">📂</span>
-          <div class="import-title">Arrastra tu CSV aquí</div>
-          <div class="import-sub">o haz clic para seleccionar archivo · Formato: UTF-8, separador coma</div>
+      <div class="import-status" id="importStatus"></div>
+      <div class="import-info-grid" id="importInfo" style="display:none">
+        <div class="info-chip"><div class="val" id="infoReg">—</div><div class="lbl">Registros</div></div>
+        <div class="info-chip"><div class="val" id="infoCols">—</div><div class="lbl">Columnas</div></div>
+        <div class="info-chip"><div class="val" id="infoFile">—</div><div class="lbl">Archivo</div></div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="loadSeedData()">⚽ Cargar 50 goles reales (Castilla 25/26)</button>
+        <button class="btn btn-secondary" onclick="exportCSV()">⬇️ Exportar CSV</button>
+      </div>
+      <div style="margin-top:14px;padding:10px 12px;background:var(--surface-alt);border-radius:var(--r);border:1px solid var(--border-light)">
+        <div class="sec-label" style="margin-bottom:6px">Columnas CSV esperadas</div>
+        <div style="font-size:11px;color:var(--text-sec);line-height:1.8">
+          Competición · A favor / En contra · Jornada · Rival · Nivel rival · Local/Visitante · Diferencia en marcador · Goleador · Minuto · Tramo minuto · Tipología · Estilo · Zona de Robo · Posicionamiento del robo · Primer pase · Nº Pases · Tiempo en Transición · Tipo de Pase · Superficie de remate · Nº Contactos · Zona remate
         </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <div class="import-status" id="importStatus"></div>
+<!-- ===================================================
+     PANEL: REGISTRO
+=================================================== -->
+<div id="panel-registro" class="panel">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-icon">✏️</span> Nuevo gol</div>
+      <button class="btn btn-secondary btn-sm" onclick="resetForm()">Limpiar</button>
+    </div>
+    <div class="card-body">
+      <div class="sec-label">General</div>
+      <div class="form-grid">
+        <div class="field-group">
+          <label class="field-label">Competición *</label>
+          <div class="select-wrap"><select class="field-select" id="f-comp">
+            <option value="">Seleccionar</option>
+            <option>Liga</option><option>Torneo</option><option>Amistoso</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">A favor / En contra *</label>
+          <div class="chip-group" id="chips-favor">
+            <div class="chip green" data-val="A favor" onclick="selectChip(this,'chips-favor','f-favor')">✅ A favor</div>
+            <div class="chip red" data-val="En contra" onclick="selectChip(this,'chips-favor','f-favor')">❌ En contra</div>
+          </div>
+          <input type="hidden" id="f-favor">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Jornada</label>
+          <div class="select-wrap"><select class="field-select" id="f-jornada"><option value="">—</option></select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Rival</label>
+          <input class="field-input" type="text" id="f-rival" placeholder="Nombre del rival">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Nivel rival</label>
+          <div class="select-wrap"><select class="field-select" id="f-nivel">
+            <option value="">—</option><option>Nivel 1</option><option>Nivel 2</option><option>Nivel 3</option><option>Nivel 4</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Local / Visitante</label>
+          <div class="chip-group" id="chips-lv">
+            <div class="chip" data-val="Local" onclick="selectChip(this,'chips-lv','f-lv')">🏠 Local</div>
+            <div class="chip" data-val="Visitante" onclick="selectChip(this,'chips-lv','f-lv')">✈️ Visitante</div>
+          </div>
+          <input type="hidden" id="f-lv">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Dif. marcador</label>
+          <input class="field-input" type="number" id="f-dif" placeholder="0" min="-10" max="10">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Goleador</label>
+          <input class="field-input" type="text" id="f-goleador" placeholder="Nombre">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Minuto</label>
+          <input class="field-input" type="number" id="f-minuto" placeholder="1-120" min="1" max="120">
+        </div>
+      </div>
+      <div class="form-divider"></div>
+      <div class="sec-label green">Táctica</div>
+      <div class="form-grid">
+        <div class="field-group">
+          <label class="field-label">Tipología *</label>
+          <div class="select-wrap"><select class="field-select" id="f-tipologia">
+            <option value="">Seleccionar</option>
+            <option>Balón parado</option><option>Transiciones</option>
+            <option>Juego directo</option><option>Juego posicional</option><option>Otros</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Estilo</label>
+          <div class="select-wrap"><select class="field-select" id="f-estilo">
+            <option value="">—</option>
+            <option>Centro retrasado</option><option>Centro profundidad</option>
+            <option>Juego combinativo (paredes)</option><option>Juego combinativo (último pase)</option>
+            <option>Acción individual</option><option>Falta directa</option><option>Falta indirecta</option>
+            <option>Córner directo</option><option>Córner no directo</option>
+            <option>Saque de banda y centro</option><option>Saque de banda y combinativo</option>
+            <option>Penalti</option><option>Transicion</option><option>Juego directo</option>
+            <option>Saque de banda + tiro</option><option>Propia puerta</option>
+            <option>Equilibrio</option><option>Otros</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Zona de robo</label>
+          <div class="select-wrap"><select class="field-select" id="f-zona-robo">
+            <option value="">—</option><option>Z1</option><option>Z2</option><option>Z3</option><option>Z4</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Posic. del robo</label>
+          <div class="select-wrap"><select class="field-select" id="f-posic-robo">
+            <option value="">—</option><option>Carril central</option><option>Banda</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Primer pase</label>
+          <div class="select-wrap"><select class="field-select" id="f-primer-pase">
+            <option value="">—</option><option>Horizontal</option><option>Hacia detrás</option><option>Hacia adelante</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Nº Pases</label>
+          <div class="select-wrap"><select class="field-select" id="f-n-pases">
+            <option value="">—</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+            <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>10+</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Tiempo transición (s)</label>
+          <input class="field-input" type="number" id="f-tiempo" placeholder="seg." min="1">
+        </div>
+      </div>
+      <div class="form-divider"></div>
+      <div class="sec-label orange">Remate</div>
+      <div class="form-grid">
+        <div class="field-group">
+          <label class="field-label">Tipo de pase</label>
+          <div class="select-wrap"><select class="field-select" id="f-tipo-pase">
+            <option value="">—</option><option>Aereo</option><option>Raso</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Superficie remate *</label>
+          <div class="select-wrap"><select class="field-select" id="f-superficie">
+            <option value="">Seleccionar</option>
+            <option>Cabeza</option><option>Pie Izquierdo</option><option>Pie derecho</option><option>Otros</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Nº Contactos</label>
+          <div class="select-wrap"><select class="field-select" id="f-contactos">
+            <option value="">—</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+            <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>10+</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Zona remate *</label>
+          <div class="select-wrap"><select class="field-select" id="f-zona-remate">
+            <option value="">Seleccionar</option>
+            <option>1er palo</option><option>2º palo</option><option>2º palo (espalda 2º central)</option>
+            <option>Penalti</option><option>Vértice</option><option>Fuera del área</option><option>Área pequeña</option>
+          </select></div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="guardarGol(false)">💾 Guardar gol</button>
+        <button class="btn btn-secondary" onclick="guardarGol(true)">➕ Guardar y añadir otro</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <div class="import-info-grid" id="importInfo" style="display:none">
-          <div class="info-chip">
-            <div class="val" id="infoRegistros">—</div>
-            <div class="lbl">Registros</div>
-          </div>
-          <div class="info-chip">
-            <div class="val" id="infoCols">—</div>
-            <div class="lbl">Columnas</div>
-          </div>
-          <div class="info-chip">
-            <div class="val" id="infoFile">—</div>
-            <div class="lbl">Archivo</div>
+<!-- ===================================================
+     PANEL: BBDD
+=================================================== -->
+<div id="panel-bbdd" class="panel">
+  <div class="card">
+    <div class="table-toolbar">
+      <div class="search-wrap">
+        <input class="search-input" type="text" id="tableSearch"
+               placeholder="Buscar rival, goleador, tipología..."
+               oninput="renderTabla()">
+      </div>
+      <select class="filter-select" id="filterComp" onchange="renderTabla()">
+        <option value="">Todas las comp.</option>
+        <option>Liga</option><option>Torneo</option><option>Amistoso</option>
+      </select>
+      <select class="filter-select" id="filterTipo" onchange="renderTabla()">
+        <option value="">Todas las tipologías</option>
+        <option>Balón parado</option><option>Transiciones</option>
+        <option>Juego directo</option><option>Juego posicional</option><option>Otros</option>
+      </select>
+      <select class="filter-select" id="filterFavor" onchange="renderTabla()">
+        <option value="">A/EC</option>
+        <option value="A favor">A favor</option>
+        <option value="En contra">En contra</option>
+      </select>
+      <span class="table-count" id="tableCount">0 registros</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th onclick="sortTabla('competicion')">Comp.</th>
+          <th onclick="sortTabla('favor')">A/EC</th>
+          <th onclick="sortTabla('jornada')">Jorn.</th>
+          <th onclick="sortTabla('rival')">Rival</th>
+          <th onclick="sortTabla('nivel')">Nivel</th>
+          <th onclick="sortTabla('lv')">L/V</th>
+          <th onclick="sortTabla('goleador')">Goleador</th>
+          <th onclick="sortTabla('minuto')">Min.</th>
+          <th onclick="sortTabla('tramo')">Tramo</th>
+          <th onclick="sortTabla('tipologia')">Tipología</th>
+          <th onclick="sortTabla('estilo')">Estilo</th>
+          <th onclick="sortTabla('superficie')">Superficie</th>
+          <th onclick="sortTabla('zonaRemate')">Zona remate</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div id="tableEmpty" class="empty-state" style="display:none">
+        <div class="icon">📭</div><p>Sin registros para este equipo y temporada.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     PANEL: INFORMES
+=================================================== -->
+<div id="panel-informes" class="panel">
+
+  <!-- PDF header (solo visible al imprimir) -->
+  <div class="pdf-header" id="pdfHeader">
+    <div class="pdf-header-logo">
+      <img src="https://raw.githubusercontent.com/PabliVM/Promociones/main/rm__.png"
+           crossorigin="anonymous" alt="RM" onerror="this.style.display='none'">
+    </div>
+    <div class="pdf-header-info">
+      <div class="pdf-header-title" id="pdfTitle">Real Madrid Cantera — Tipología de Goles</div>
+      <div class="pdf-header-sub" id="pdfSub">Equipo · Temporada</div>
+    </div>
+    <div class="pdf-header-meta" id="pdfMeta"></div>
+  </div>
+
+  <div class="dash-topbar">
+    <div class="dash-topbar-left">
+      <button class="btn btn-secondary btn-sm" id="btnToggleFilters" onclick="toggleFilterPanel()">🔽 Filtros</button>
+      <button class="btn btn-secondary btn-sm" id="btnResetFilters" onclick="resetDashFilters()">✕ Limpiar</button>
+      <div class="dash-active-filters" id="activeFilterChips"></div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-purple btn-sm" id="btnEditorOpen" onclick="openEditor()">⚙️ Editar informe</button>
+      <button class="btn btn-secondary btn-sm" id="btnExportPDF" onclick="exportPDF()">🖨️ PDF</button>
+    </div>
+  </div>
+
+  <div class="dash-filter-panel" id="dashFilterPanel">
+    <div class="filter-block expanded" id="block-generales">
+      <div class="filter-block-header" onclick="toggleBlock('block-generales')">
+        <div class="filter-block-title"><span class="dot"></span>GENERALES<span class="filter-block-badge" id="badge-generales" style="display:none">0</span></div>
+        <span class="filter-block-arrow">▾</span>
+      </div>
+      <div class="filter-block-body">
+        <div class="filter-row">
+          <div class="filter-field"><label class="filter-field-label">Competición</label>
+            <select class="filter-field-select" id="df-comp" onchange="onDashFilter(this)">
+              <option value="">Todas</option><option>Liga</option><option>Torneo</option><option>Amistoso</option>
+            </select></div>
+          <div class="filter-field"><label class="filter-field-label">A favor / EC</label>
+            <select class="filter-field-select" id="df-favor" onchange="onDashFilter(this)">
+              <option value="">Todos</option><option value="A favor">A favor</option><option value="En contra">En contra</option>
+            </select></div>
+          <div class="filter-field"><label class="filter-field-label">Local / Visitante</label>
+            <select class="filter-field-select" id="df-lv" onchange="onDashFilter(this)">
+              <option value="">Todos</option><option>Local</option><option>Visitante</option>
+            </select></div>
+          <div class="filter-field"><label class="filter-field-label">Nivel rival</label>
+            <select class="filter-field-select" id="df-nivel" onchange="onDashFilter(this)">
+              <option value="">Todos</option><option>Nivel 1</option><option>Nivel 2</option><option>Nivel 3</option><option>Nivel 4</option>
+            </select></div>
+          <div class="filter-field"><label class="filter-field-label">Jornada</label>
+            <select class="filter-field-select" id="df-jornada" onchange="onDashFilter(this)">
+              <option value="">Todas</option>
+            </select></div>
+          <!-- Selector multi-equipo en informes -->
+          <div class="filter-field" style="grid-column:1/-1">
+            <label class="filter-field-label">Equipos adicionales (comparar en informe)</label>
+            <div id="multiTeamChecks" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"></div>
           </div>
         </div>
-
-        <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="loadSeedData()">⚽ Cargar datos de ejemplo (50 goles reales)</button>
-          <button class="btn btn-secondary" onclick="exportCSV()">⬇️ Exportar CSV</button>
+      </div>
+    </div>
+    <div class="filter-block" id="block-tacticos">
+      <div class="filter-block-header" onclick="toggleBlock('block-tacticos')">
+        <div class="filter-block-title"><span class="dot green"></span>TÁCTICOS<span class="filter-block-badge" id="badge-tacticos" style="display:none;background:var(--green)">0</span></div>
+        <span class="filter-block-arrow">▾</span>
+      </div>
+      <div class="filter-block-body">
+        <div class="filter-row">
+          <div class="filter-field"><label class="filter-field-label">Tipología</label>
+            <select class="filter-field-select" id="df-tipologia" onchange="onDashFilter(this)">
+              <option value="">Todas</option><option>Balón parado</option><option>Transiciones</option>
+              <option>Juego directo</option><option>Juego posicional</option><option>Otros</option>
+            </select></div>
+          <div class="filter-field"><label class="filter-field-label">Zona de robo</label>
+            <select class="filter-field-select" id="df-zona-robo" onchange="onDashFilter(this)">
+              <option value="">Todas</option><option>Z1</option><option>Z2</option><option>Z3</option><option>Z4</option>
+            </select></div>
+          <div class="filter-field"><label class="filter-field-label">Posic. robo</label>
+            <select class="filter-field-select" id="df-posic-robo" onchange="onDashFilter(this)">
+              <option value="">Todas</option><option>Carril central</option><option>Banda</option>
+            </select></div>
+          <div class="filter-field"><label class="filter-field-label">Primer pase</label>
+            <select class="filter-field-select" id="df-primer-pase" onchange="onDashFilter(this)">
+              <option value="">Todos</option><option>Horizontal</option><option>Hacia detrás</option><option>Hacia adelante</option>
+            </select></div>
         </div>
-
-        <!-- Instrucciones columnas CSV -->
-        <div style="margin-top:16px; padding:12px 14px; background:var(--surface-alt); border-radius:var(--r); border:1px solid var(--border-light);">
-          <div class="section-label" style="margin-bottom:8px;">Columnas esperadas en el CSV</div>
-          <div style="font-size:11px; color:var(--text-sec); line-height:1.8;">
-            Competición · A favor / En contra · Jornada · Rival · Nivel rival · Local/Visitante ·
-            Diferencia en marcador · Goleador · Minuto · Tramo minuto · Tipología · Estilo ·
-            Zona de Robo · Posicionamiento del robo · Primer pase · Nº Pases · Tiempo en Transición ·
-            Tipo de Pase · Superficie de remate · Nº Contactos · Zona remate
-          </div>
+      </div>
+    </div>
+    <div class="filter-block" id="block-tecnico">
+      <div class="filter-block-header" onclick="toggleBlock('block-tecnico')">
+        <div class="filter-block-title"><span class="dot orange"></span>TÉCNICO-TÁCTICOS<span class="filter-block-badge" id="badge-tecnico" style="display:none;background:var(--orange)">0</span></div>
+        <span class="filter-block-arrow">▾</span>
+      </div>
+      <div class="filter-block-body">
+        <div class="filter-row">
+          <div class="filter-field"><label class="filter-field-label">Tipo pase</label>
+            <select class="filter-field-select" id="df-tipo-pase" onchange="onDashFilter(this)">
+              <option value="">Todos</option><option>Aereo</option><option>Raso</option>
+            </select></div>
+          <div class="filter-field"><label class="filter-field-label">Superficie</label>
+            <select class="filter-field-select" id="df-superficie" onchange="onDashFilter(this)">
+              <option value="">Todas</option><option>Cabeza</option><option>Pie Izquierdo</option><option>Pie derecho</option><option>Otros</option>
+            </select></div>
+          <div class="filter-field"><label class="filter-field-label">Zona remate</label>
+            <select class="filter-field-select" id="df-zona-remate" onchange="onDashFilter(this)">
+              <option value="">Todas</option><option>1er palo</option><option>2º palo</option>
+              <option>2º palo (espalda 2º central)</option><option>Penalti</option>
+              <option>Vértice</option><option>Fuera del área</option><option>Área pequeña</option>
+            </select></div>
+          <div class="filter-field"><label class="filter-field-label">Nº Contactos</label>
+            <select class="filter-field-select" id="df-contactos" onchange="onDashFilter(this)">
+              <option value="">Todos</option>
+              <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+              <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>10+</option>
+            </select></div>
+          <div class="filter-field"><label class="filter-field-label">Estilo</label>
+            <select class="filter-field-select" id="df-estilo" onchange="onDashFilter(this)">
+              <option value="">Todos</option>
+              <option>Centro retrasado</option><option>Centro profundidad</option>
+              <option>Juego combinativo (paredes)</option><option>Juego combinativo (último pase)</option>
+              <option>Acción individual</option><option>Falta directa</option><option>Falta indirecta</option>
+              <option>Córner directo</option><option>Córner no directo</option>
+              <option>Saque de banda y centro</option><option>Saque de banda y combinativo</option>
+              <option>Penalti</option><option>Transicion</option><option>Juego directo</option>
+              <option>Saque de banda + tiro</option><option>Propia puerta</option>
+              <option>Equilibrio</option><option>Otros</option>
+            </select></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ===================================================
-       PANEL 2: REGISTRO MANUAL
-       =================================================== -->
-  <div id="panel-manual" class="panel">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title"><span class="icon">✏️</span> Nuevo gol</div>
-        <button class="btn btn-secondary" onclick="resetForm()" style="height:28px;padding:0 12px;font-size:11px;">Limpiar</button>
+  <div class="kpi-grid" id="kpiGrid"></div>
+  <div class="charts-dynamic" id="chartsDynamic"></div>
+</div>
+
+<!-- ===================================================
+     PANEL: COMPARATIVAS
+=================================================== -->
+<div id="panel-comparativas" class="panel">
+
+  <div class="pdf-header" id="pdfHeaderComp">
+    <div class="pdf-header-logo">
+      <img src="https://raw.githubusercontent.com/PabliVM/Promociones/main/rm__.png"
+           crossorigin="anonymous" alt="RM" onerror="this.style.display='none'">
+    </div>
+    <div class="pdf-header-info">
+      <div class="pdf-header-title" id="pdfTitleComp">Comparativa — Real Madrid Cantera</div>
+      <div class="pdf-header-sub" id="pdfSubComp">Comparativa de equipos/temporadas</div>
+    </div>
+    <div class="pdf-header-meta" id="pdfMetaComp"></div>
+  </div>
+
+  <div class="comp-setup">
+    <div class="comp-side">
+      <div class="comp-side-head"><span class="dot" style="background:#2563eb"></span> Lado A</div>
+      <div class="comp-side-body">
+        <div class="filter-field"><label class="filter-field-label">Equipo</label>
+          <select class="filter-field-select" id="compTeamA" onchange="renderComp()" style="width:100%"></select></div>
+        <div class="filter-field"><label class="filter-field-label">Temporada</label>
+          <select class="filter-field-select" id="compSeasonA" onchange="renderComp()" style="width:100%"></select></div>
       </div>
-      <div class="card-body">
-
-        <div class="section-label">General</div>
-        <div class="form-grid" id="formGrid">
-
-          <div class="field-group">
-            <label class="field-label">Competición *</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-competicion">
-                <option value="">Seleccionar</option>
-                <option>Liga</option>
-                <option>Torneo</option>
-                <option>Amistoso</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">A favor / En contra *</label>
-            <div class="chip-group" id="chips-favor">
-              <div class="chip green" data-val="A favor" onclick="selectChip(this,'chips-favor','f-favor')">✅ A favor</div>
-              <div class="chip red" data-val="En contra" onclick="selectChip(this,'chips-favor','f-favor')">❌ En contra</div>
-            </div>
-            <input type="hidden" id="f-favor">
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Jornada</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-jornada">
-                <option value="">—</option>
-                <!-- JS rellena J1..J38 -->
-              </select>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Rival</label>
-            <input class="field-input" type="text" id="f-rival" placeholder="Nombre del rival">
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Nivel rival</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-nivel">
-                <option value="">—</option>
-                <option>Nivel 1</option><option>Nivel 2</option>
-                <option>Nivel 3</option><option>Nivel 4</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Local / Visitante</label>
-            <div class="chip-group" id="chips-lv">
-              <div class="chip" data-val="Local" onclick="selectChip(this,'chips-lv','f-lv')">🏠 Local</div>
-              <div class="chip" data-val="Visitante" onclick="selectChip(this,'chips-lv','f-lv')">✈️ Visitante</div>
-            </div>
-            <input type="hidden" id="f-lv">
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Diferencia marcador</label>
-            <input class="field-input" type="number" id="f-dif" placeholder="0" min="-10" max="10">
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Goleador</label>
-            <input class="field-input" type="text" id="f-goleador" placeholder="Nombre">
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Minuto</label>
-            <input class="field-input" type="number" id="f-minuto" placeholder="1-120" min="1" max="120">
-          </div>
-
-        </div>
-
-        <div class="form-divider"></div>
-        <div class="section-label">Táctica</div>
-
-        <div class="form-grid">
-
-          <div class="field-group">
-            <label class="field-label">Tipología *</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-tipologia">
-                <option value="">Seleccionar</option>
-                <option>Balón parado</option>
-                <option>Transiciones</option>
-                <option>Juego directo</option>
-                <option>Juego posicional</option>
-                <option>Otros</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Estilo</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-estilo">
-                <option value="">Seleccionar</option>
-                <option>Centro retrasado</option>
-                <option>Centro profundidad</option>
-                <option>Juego combinativo (paredes)</option>
-                <option>Juego combinativo (último pase)</option>
-                <option>Acción individual</option>
-                <option>Falta directa</option>
-                <option>Falta indirecta</option>
-                <option>Córner directo</option>
-                <option>Córner no directo</option>
-                <option>Saque de banda y centro</option>
-                <option>Saque de banda y combinativo</option>
-                <option>Penalti</option>
-                <option>Transicion</option>
-                <option>Juego directo</option>
-                <option>Saque de banda + tiro</option>
-                <option>Propia puerta</option>
-                <option>Equilibrio</option>
-                <option>Otros</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Zona de robo</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-zona-robo">
-                <option value="">—</option>
-                <option>Z1</option><option>Z2</option>
-                <option>Z3</option><option>Z4</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Posic. del robo</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-posic-robo">
-                <option value="">—</option>
-                <option>Carril central</option>
-                <option>Banda</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Primer pase</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-primer-pase">
-                <option value="">—</option>
-                <option>Horizontal</option>
-                <option>Hacia detrás</option>
-                <option>Hacia adelante</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Nº Pases</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-n-pases">
-                <option value="">—</option>
-                <option>1</option><option>2</option><option>3</option><option>4</option>
-                <option>5</option><option>6</option><option>7</option><option>8</option>
-                <option>9</option><option>10</option><option>10+</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Tiempo transición</label>
-            <input class="field-input" type="number" id="f-tiempo" placeholder="seg." min="1">
-          </div>
-
-        </div>
-
-        <div class="form-divider"></div>
-        <div class="section-label">Remate</div>
-
-        <div class="form-grid">
-
-          <div class="field-group">
-            <label class="field-label">Tipo de pase</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-tipo-pase">
-                <option value="">—</option>
-                <option>Aereo</option>
-                <option>Raso</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Superficie de remate *</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-superficie">
-                <option value="">Seleccionar</option>
-                <option>Cabeza</option>
-                <option>Pie Izquierdo</option>
-                <option>Pie derecho</option>
-                <option>Otros</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Nº Contactos</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-contactos">
-                <option value="">—</option>
-                <option>1</option><option>2</option><option>3</option><option>4</option>
-                <option>5</option><option>6</option><option>7</option><option>8</option>
-                <option>9</option><option>10</option><option>10+</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Zona remate *</label>
-            <div class="select-wrap">
-              <select class="field-select" id="f-zona-remate">
-                <option value="">Seleccionar</option>
-                <option>1er palo</option>
-                <option>2º palo</option>
-                <option>2º palo (espalda 2º central)</option>
-                <option>Penalti</option>
-                <option>Vértice</option>
-                <option>Fuera del área</option>
-                <option>Área pequeña</option>
-              </select>
-            </div>
-          </div>
-
-        </div>
-
-        <div class="form-actions">
-          <button class="btn btn-primary" onclick="guardarGol(false)">💾 Guardar gol</button>
-          <button class="btn btn-secondary" onclick="guardarGol(true)">➕ Guardar y añadir otro</button>
-        </div>
-
+    </div>
+    <div class="comp-side">
+      <div class="comp-side-head"><span class="dot" style="background:#dc2626"></span> Lado B</div>
+      <div class="comp-side-body">
+        <div class="filter-field"><label class="filter-field-label">Equipo</label>
+          <select class="filter-field-select" id="compTeamB" onchange="renderComp()" style="width:100%"></select></div>
+        <div class="filter-field"><label class="filter-field-label">Temporada</label>
+          <select class="filter-field-select" id="compSeasonB" onchange="renderComp()" style="width:100%"></select></div>
       </div>
     </div>
   </div>
 
-  <!-- ===================================================
-       PANEL 3: TABLA
-       =================================================== -->
-  <div id="panel-tabla" class="panel">
-    <div class="card">
-      <div class="table-toolbar">
-        <div class="search-wrap">
-          <input class="search-input" type="text" id="tableSearch"
-                 placeholder="Buscar rival, goleador, tipología..."
-                 oninput="renderTabla()">
-        </div>
-        <select class="filter-select" id="filterComp" onchange="renderTabla()">
-          <option value="">Todas las competiciones</option>
-          <option>Liga</option><option>Torneo</option><option>Amistoso</option>
-        </select>
-        <select class="filter-select" id="filterTipo" onchange="renderTabla()">
-          <option value="">Todas las tipologías</option>
-          <option>Balón parado</option>
-          <option>Transiciones</option>
-          <option>Juego directo</option>
-          <option>Juego posicional</option>
-          <option>Otros</option>
-        </select>
-        <select class="filter-select" id="filterFavor" onchange="renderTabla()">
-          <option value="">A favor / En contra</option>
-          <option value="A favor">A favor</option>
-          <option value="En contra">En contra</option>
-        </select>
-        <span class="table-count" id="tableCount">0 registros</span>
-      </div>
-
-      <div class="table-wrap">
-        <table class="data-table" id="dataTable">
-          <thead>
-            <tr>
-              <th onclick="sortTabla('competicion')">Comp.</th>
-              <th onclick="sortTabla('favor')">A/EC</th>
-              <th onclick="sortTabla('jornada')">Jorn.</th>
-              <th onclick="sortTabla('rival')">Rival</th>
-              <th onclick="sortTabla('nivel')">Nivel</th>
-              <th onclick="sortTabla('lv')">L/V</th>
-              <th onclick="sortTabla('goleador')">Goleador</th>
-              <th onclick="sortTabla('minuto')">Min.</th>
-              <th onclick="sortTabla('tramo')">Tramo</th>
-              <th onclick="sortTabla('tipologia')">Tipología</th>
-              <th onclick="sortTabla('estilo')">Estilo</th>
-              <th onclick="sortTabla('superficie')">Superficie</th>
-              <th onclick="sortTabla('zonaRemate')">Zona remate</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="tableBody">
-          </tbody>
-        </table>
-        <div id="tableEmpty" class="empty-state" style="display:none">
-          <div class="icon">📭</div>
-          <p>Sin registros. Importa un CSV o registra goles manualmente.</p>
-        </div>
-      </div>
-    </div>
+  <div class="comp-metric-row">
+    <span style="font-size:12px;font-weight:700;color:var(--text-sec)">Métrica:</span>
+    <select class="filter-select" id="compMetric" onchange="renderComp()">
+      <option value="tipologia">Tipología</option>
+      <option value="estilo">Estilo</option>
+      <option value="superficie">Superficie de remate</option>
+      <option value="zonaRemate">Zona de remate</option>
+      <option value="zonaRobo">Zona de robo</option>
+      <option value="tipoPase">Tipo de pase</option>
+      <option value="primerPase">Primer pase</option>
+      <option value="posicRobo">Posic. del robo</option>
+      <option value="tramo">Tramo de minuto</option>
+      <option value="lv">Local / Visitante</option>
+      <option value="favor">A favor / En contra</option>
+      <option value="nContactos">Nº contactos</option>
+      <option value="goleador">Goleador</option>
+      <option value="rival">Rival</option>
+    </select>
+    <span style="font-size:12px;font-weight:700;color:var(--text-sec)">Tipo gráfico:</span>
+    <select class="filter-select" id="compChartType" onchange="renderComp()">
+      <option value="doughnut">Doughnut</option>
+      <option value="bar">Barras</option>
+      <option value="bar_h">Barras horizontales</option>
+      <option value="polarArea">Polar</option>
+    </select>
+    <button class="btn btn-secondary btn-sm" id="btnCompExportPDF" onclick="exportCompPDF()">🖨️ PDF</button>
   </div>
 
-  <!-- ===================================================
-       PANEL 4: DASHBOARD
-       =================================================== -->
-  <div id="panel-dashboard" class="panel">
-
-    <!-- Barra superior: chips activos + botones acción -->
-    <div class="dash-topbar">
-      <div class="dash-topbar-left">
-        <button class="btn btn-secondary" id="btnToggleFilters" onclick="toggleFilterPanel()"
-                style="height:30px;padding:0 12px;font-size:12px;gap:5px;">
-          🔽 Filtros
-        </button>
-        <button class="btn btn-secondary" onclick="resetDashFilters()"
-                style="height:30px;padding:0 12px;font-size:12px;">
-          ✕ Limpiar
-        </button>
-        <div class="dash-active-filters" id="activeFilterChips"></div>
-      </div>
-      <button class="btn btn-primary" onclick="openEditor()"
-              style="height:30px;padding:0 12px;font-size:12px;gap:5px;">
-        ⚙️ Editar informe
-      </button>
-    </div>
-
-    <!-- Panel de filtros por bloques (colapsable) -->
-    <div class="dash-filter-panel" id="dashFilterPanel">
-
-      <!-- BLOQUE 1: GENERALES -->
-      <div class="filter-block expanded" id="block-generales">
-        <div class="filter-block-header" onclick="toggleBlock('block-generales')">
-          <div class="filter-block-title">
-            <span class="dot"></span>
-            GENERALES
-            <span class="filter-block-badge" id="badge-generales">0</span>
-          </div>
-          <span class="filter-block-arrow">▾</span>
-        </div>
-        <div class="filter-block-body">
-          <div class="filter-row">
-            <div class="filter-field">
-              <label class="filter-field-label">Competición</label>
-              <select class="filter-field-select" id="df-competicion" onchange="onDashFilter(this,'Competición')">
-                <option value="">Todas</option>
-                <option>Liga</option><option>Torneo</option><option>Amistoso</option>
-              </select>
-            </div>
-            <div class="filter-field">
-              <label class="filter-field-label">A favor / En contra</label>
-              <select class="filter-field-select" id="df-favor" onchange="onDashFilter(this,'A/EC')">
-                <option value="">Todos</option>
-                <option value="A favor">A favor</option>
-                <option value="En contra">En contra</option>
-              </select>
-            </div>
-            <div class="filter-field">
-              <label class="filter-field-label">Local / Visitante</label>
-              <select class="filter-field-select" id="df-lv" onchange="onDashFilter(this,'L/V')">
-                <option value="">Todos</option>
-                <option>Local</option><option>Visitante</option>
-              </select>
-            </div>
-            <div class="filter-field">
-              <label class="filter-field-label">Nivel rival</label>
-              <select class="filter-field-select" id="df-nivel" onchange="onDashFilter(this,'Nivel')">
-                <option value="">Todos</option>
-                <option>Nivel 1</option><option>Nivel 2</option>
-                <option>Nivel 3</option><option>Nivel 4</option>
-              </select>
-            </div>
-            <div class="filter-field">
-              <label class="filter-field-label">Jornada</label>
-              <select class="filter-field-select" id="df-jornada" onchange="onDashFilter(this,'Jornada')">
-                <option value="">Todas</option>
-                <!-- JS rellena -->
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- BLOQUE 2: TÁCTICOS -->
-      <div class="filter-block" id="block-tacticos">
-        <div class="filter-block-header" onclick="toggleBlock('block-tacticos')">
-          <div class="filter-block-title">
-            <span class="dot green"></span>
-            TÁCTICOS
-            <span class="filter-block-badge" id="badge-tacticos" style="background:var(--green)">0</span>
-          </div>
-          <span class="filter-block-arrow">▾</span>
-        </div>
-        <div class="filter-block-body">
-          <div class="filter-row">
-            <div class="filter-field">
-              <label class="filter-field-label">Tipología</label>
-              <select class="filter-field-select" id="df-tipologia" onchange="onDashFilter(this,'Tipología')">
-                <option value="">Todas</option>
-                <option>Balón parado</option>
-                <option>Transiciones</option>
-                <option>Juego directo</option>
-                <option>Juego posicional</option>
-                <option>Otros</option>
-              </select>
-            </div>
-            <div class="filter-field">
-              <label class="filter-field-label">Zona de robo</label>
-              <select class="filter-field-select" id="df-zona-robo" onchange="onDashFilter(this,'Zona robo')">
-                <option value="">Todas</option>
-                <option>Z1</option><option>Z2</option><option>Z3</option><option>Z4</option>
-              </select>
-            </div>
-            <div class="filter-field">
-              <label class="filter-field-label">Posic. del robo</label>
-              <select class="filter-field-select" id="df-posic-robo" onchange="onDashFilter(this,'Posic.robo')">
-                <option value="">Todas</option>
-                <option>Carril central</option><option>Banda</option>
-              </select>
-            </div>
-            <div class="filter-field">
-              <label class="filter-field-label">Primer pase</label>
-              <select class="filter-field-select" id="df-primer-pase" onchange="onDashFilter(this,'Primer pase')">
-                <option value="">Todos</option>
-                <option>Horizontal</option>
-                <option>Hacia detrás</option>
-                <option>Hacia adelante</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- BLOQUE 3: TÉCNICO-TÁCTICOS -->
-      <div class="filter-block" id="block-tecnico">
-        <div class="filter-block-header" onclick="toggleBlock('block-tecnico')">
-          <div class="filter-block-title">
-            <span class="dot orange"></span>
-            TÉCNICO-TÁCTICOS
-            <span class="filter-block-badge" id="badge-tecnico" style="background:var(--orange)">0</span>
-          </div>
-          <span class="filter-block-arrow">▾</span>
-        </div>
-        <div class="filter-block-body">
-          <div class="filter-row">
-            <div class="filter-field">
-              <label class="filter-field-label">Tipo de pase</label>
-              <select class="filter-field-select" id="df-tipo-pase" onchange="onDashFilter(this,'Tipo pase')">
-                <option value="">Todos</option>
-                <option>Aereo</option><option>Raso</option>
-              </select>
-            </div>
-            <div class="filter-field">
-              <label class="filter-field-label">Superficie remate</label>
-              <select class="filter-field-select" id="df-superficie" onchange="onDashFilter(this,'Superficie')">
-                <option value="">Todas</option>
-                <option>Cabeza</option>
-                <option>Pie Izquierdo</option>
-                <option>Pie derecho</option>
-                <option>Otros</option>
-              </select>
-            </div>
-            <div class="filter-field">
-              <label class="filter-field-label">Zona remate</label>
-              <select class="filter-field-select" id="df-zona-remate" onchange="onDashFilter(this,'Zona remate')">
-                <option value="">Todas</option>
-                <option>1er palo</option>
-                <option>2º palo</option>
-                <option>2º palo (espalda 2º central)</option>
-                <option>Penalti</option>
-                <option>Vértice</option>
-                <option>Fuera del área</option>
-                <option>Área pequeña</option>
-              </select>
-            </div>
-            <div class="filter-field">
-              <label class="filter-field-label">Nº Contactos</label>
-              <select class="filter-field-select" id="df-contactos" onchange="onDashFilter(this,'Contactos')">
-                <option value="">Todos</option>
-                <option>1</option><option>2</option><option>3</option><option>4</option>
-                <option>5</option><option>6</option><option>7</option><option>8</option>
-                <option>9</option><option>10</option><option>10+</option>
-              </select>
-            </div>
-            <div class="filter-field">
-              <label class="filter-field-label">Estilo</label>
-              <select class="filter-field-select" id="df-estilo" onchange="onDashFilter(this,'Estilo')">
-                <option value="">Todos</option>
-                <option>Centro retrasado</option>
-                <option>Centro profundidad</option>
-                <option>Juego combinativo (paredes)</option>
-                <option>Juego combinativo (último pase)</option>
-                <option>Acción individual</option>
-                <option>Falta directa</option>
-                <option>Falta indirecta</option>
-                <option>Córner directo</option>
-                <option>Córner no directo</option>
-                <option>Saque de banda y centro</option>
-                <option>Saque de banda y combinativo</option>
-                <option>Penalti</option>
-                <option>Transicion</option>
-                <option>Juego directo</option>
-                <option>Saque de banda + tiro</option>
-                <option>Propia puerta</option>
-                <option>Equilibrio</option>
-                <option>Otros</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /dash-filter-panel -->
-
-    <!-- KPIs -->
-    <div class="kpi-grid" id="kpiGrid"></div>
-
-    <!-- Gráficos dinámicos — JS construye según layout -->
-    <div class="charts-dynamic" id="chartsDynamic"></div>
-
-  </div>
-
-  <!-- ===================================================
-       EDITOR SIDEBAR
-       =================================================== -->
-  <div class="editor-overlay" id="editorOverlay" onclick="closeEditor()"></div>
-  <div class="editor-sidebar" id="editorSidebar">
-    <div class="editor-head">
-      <div class="editor-head-title">⚙️ Editar informe</div>
-      <button class="editor-close" onclick="closeEditor()">✕</button>
-    </div>
-    <div class="editor-body" id="editorBody">
-      <!-- JS construye la lista de gráficos -->
-    </div>
-    <div class="editor-foot">
-      <button class="btn btn-primary" onclick="applyLayout()" style="flex:1">✅ Aplicar</button>
-      <button class="btn btn-secondary" onclick="resetLayout()" style="flex:0 0 auto">↺ Reset</button>
-    </div>
-  </div>
+  <div class="comp-charts-grid" id="compChartsGrid"></div>
+  <div id="compTableWrap" style="margin-top:12px"></div>
+</div>
 
 </main>
 
+<!-- FOOTER -->
 <footer class="app-footer">
-  Cantera del Real Madrid CF · Tipología de Goles · 25/26
-  <!-- =====================================================
-       FIREBASE: añadir aquí el SDK de Firebase cuando corresponda
-       import { initializeApp } from 'firebase/app';
-       const firebaseConfig = { ... };
-       ===================================================== -->
+  Real Madrid Cantera CF · Tipología de Goles
+  <!-- FIREBASE: initializeApp aquí cuando proceda -->
 </footer>
 
+<!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- MODAL NUEVA TEMPORADA -->
+<div class="modal-overlay" id="modalSeason">
+  <div class="modal">
+    <div class="modal-title">➕ Nueva temporada</div>
+    <div class="field-group">
+      <label class="field-label">Temporada (ej: 26/27)</label>
+      <input class="field-input" type="text" id="newSeasonInput" placeholder="26/27" maxlength="8">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modalSeason')">Cancelar</button>
+      <button class="btn btn-primary" onclick="addSeason()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDITOR SIDEBAR -->
+<div class="editor-overlay" id="editorOverlay" onclick="closeEditor()"></div>
+<div class="editor-sidebar" id="editorSidebar">
+  <div class="editor-head">
+    <div class="editor-head-title">⚙️ Editar informe</div>
+    <button class="editor-close" onclick="closeEditor()">✕</button>
+  </div>
+  <div class="editor-body" id="editorBody"></div>
+  <div class="editor-foot">
+    <button class="btn btn-primary" onclick="applyLayout()" style="flex:1">✅ Aplicar</button>
+    <button class="btn btn-secondary" onclick="resetLayout()">↺ Reset</button>
+  </div>
+</div>
 
 <script>
 /* =====================================================
+   CONSTANTES
+   ===================================================== */
+const TEAMS = ['CAS','RMC','JA','JB','JC','CA','CB','IA','IB','AA','AB','AC','BA','BB','PA','PB','DB'];
+const TEAM_FULL = {
+  CAS:'Castilla',RMC:'RM Castilla B',JA:'Juvenil A',JB:'Juvenil B',JC:'Juvenil C',
+  CA:'Cadete A',CB:'Cadete B',IA:'Infantil A',IB:'Infantil B',
+  AA:'Alevín A',AB:'Alevín B',AC:'Alevín C',
+  BA:'Benjamín A',BB:'Benjamín B',PA:'Prebenjamín A',PB:'Prebenjamín B',DB:'Debutantes'
+};
+const DEFAULT_SEASONS = ['23/24','24/25','25/26'];
+
+const CHART_CATALOG = [
+  {id:'chartTramo',      title:'Goles por tramo de minuto', icon:'⏱️', bloque:'Generales',        full:true,  visible:true,  chartType:'bar'},
+  {id:'chartLV',         title:'Local vs Visitante',        icon:'🏠', bloque:'Generales',        full:false, visible:true,  chartType:'bar'},
+  {id:'chartGoleador',   title:'Ranking goleadores',        icon:'👤', bloque:'Generales',        full:false, visible:true,  chartType:'rank'},
+  {id:'chartRival',      title:'Goles por rival',           icon:'🆚', bloque:'Generales',        full:false, visible:false, chartType:'rank'},
+  {id:'chartTipologia',  title:'Goles por tipología',       icon:'⚽', bloque:'Tácticos',         full:false, visible:true,  chartType:'doughnut'},
+  {id:'chartEstilo',     title:'Ranking de estilos',        icon:'🎯', bloque:'Tácticos',         full:true,  visible:true,  chartType:'rank'},
+  {id:'chartZonaRobo',   title:'Zona de robo',              icon:'🗺️', bloque:'Tácticos',         full:false, visible:true,  chartType:'doughnut'},
+  {id:'chartPosicRobo',  title:'Posicionamiento del robo',  icon:'📌', bloque:'Tácticos',         full:false, visible:false, chartType:'doughnut'},
+  {id:'chartPrimerPase', title:'Primer pase',               icon:'➡️', bloque:'Tácticos',         full:false, visible:false, chartType:'bar'},
+  {id:'chartZonaRoboXTip',title:'Zona robo × Tipología',   icon:'📊', bloque:'Tácticos',         full:true,  visible:false, chartType:'bar'},
+  {id:'chartSuperficie', title:'Superficie de remate',      icon:'🦶', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar'},
+  {id:'chartZona',       title:'Zona de remate',            icon:'📍', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar'},
+  {id:'chartTipoPase',   title:'Tipo de pase',              icon:'🧭', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'doughnut'},
+  {id:'chartContactos',  title:'Nº de contactos',           icon:'🔢', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar'},
+  {id:'chartDifMarcador',title:'Diferencia en marcador',    icon:'📈', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar'},
+];
+
+const DASH_FILTER_MAP = {
+  'df-comp':      {field:'competicion', bloque:'generales'},
+  'df-favor':     {field:'favor',       bloque:'generales'},
+  'df-lv':        {field:'lv',          bloque:'generales'},
+  'df-nivel':     {field:'nivel',       bloque:'generales'},
+  'df-jornada':   {field:'jornada',     bloque:'generales'},
+  'df-tipologia': {field:'tipologia',   bloque:'tacticos'},
+  'df-zona-robo': {field:'zonaRobo',    bloque:'tacticos'},
+  'df-posic-robo':{field:'posicRobo',   bloque:'tacticos'},
+  'df-primer-pase':{field:'primerPase', bloque:'tacticos'},
+  'df-tipo-pase': {field:'tipoPase',    bloque:'tecnico'},
+  'df-superficie':{field:'superficie',  bloque:'tecnico'},
+  'df-zona-remate':{field:'zonaRemate', bloque:'tecnico'},
+  'df-contactos': {field:'nContactos',  bloque:'tecnico'},
+  'df-estilo':    {field:'estilo',      bloque:'tecnico'},
+};
+
+const RM_PALETTE = ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#1d4ed8','#1e40af','#16a34a','#ea580c','#dc2626','#7c3aed'];
+
+/* =====================================================
    ESTADO GLOBAL
    ===================================================== */
-let goles = [];   // Array principal de datos
-let sortField = null;
-let sortDir = 1;
-
-// Gráficos Chart.js activos (para destruir antes de re-renderizar)
+let db = {};            // { 'CAS_25/26': [...goles] }
+let seasons = [];       // ['23/24','24/25','25/26']
+let activeTeam = 'CAS';
+let activeSeason = '25/26';
+let sortField = null, sortDir = 1;
+let layoutState = CHART_CATALOG.map(c => ({id:c.id, visible:c.visible, chartType:c.chartType}));
+let editorState = [];
+let extraTeams = [];    // equipos adicionales en informe
 const charts = {};
 
 /* =====================================================
-   DATOS SEED — 50 goles reales Castilla 25/26
+   PERSISTENCIA
+   FIREBASE: reemplazar funciones save/load por fbGuardarSesion/fbCargarSesion
    ===================================================== */
-const SEED_DATA = [
+function saveAll() {
+  try {
+    localStorage.setItem('tg-db-v2', JSON.stringify(db));
+    localStorage.setItem('tg-seasons-v2', JSON.stringify(seasons));
+    localStorage.setItem('tg-layout-v2', JSON.stringify(layoutState));
+  } catch(e) { console.warn('localStorage lleno'); }
+}
+
+function loadAll() {
+  try {
+    const d = localStorage.getItem('tg-db-v2');
+    if (d) db = JSON.parse(d);
+    const s = localStorage.getItem('tg-seasons-v2');
+    seasons = s ? JSON.parse(s) : [...DEFAULT_SEASONS];
+    const l = localStorage.getItem('tg-layout-v2');
+    if (l) {
+      const parsed = JSON.parse(l);
+      layoutState = CHART_CATALOG.map(c => {
+        const p = parsed.find(x => x.id === c.id);
+        return p ? {id:c.id, visible:p.visible, chartType:p.chartType||c.chartType} : {id:c.id, visible:c.visible, chartType:c.chartType};
+      });
+    }
+  } catch(e) {}
+}
+
+function dbKey(team, season) { return team + '_' + season; }
+function getGoles(team, season) { return db[dbKey(team, season)] || []; }
+function setGoles(team, season, arr) { db[dbKey(team, season)] = arr; saveAll(); }
+function currentGoles() { return getGoles(activeTeam, activeSeason); }
+
+/* =====================================================
+   INIT
+   ===================================================== */
+document.addEventListener('DOMContentLoaded', () => {
+  loadAll();
+  if (!seasons.length) seasons = [...DEFAULT_SEASONS];
+
+  buildSeasonSelect();
+  buildTeamNav();
+  buildJornadaSelect();
+  buildCompSelects();
+  buildMultiTeamChecks();
+  updateBadge();
+  renderTabla();
+
+  // Drag & drop
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); const f=e.dataTransfer.files[0]; if(f) processFile(f); });
+
+  // Dark mode
+  if (localStorage.getItem('tg-dark') === '1') {
+    document.body.classList.add('dark');
+    document.getElementById('darkBtn').innerHTML = '☀';
+  }
+});
+
+/* =====================================================
+   SEASON & TEAM NAV
+   ===================================================== */
+function buildSeasonSelect() {
+  const sel = document.getElementById('seasonSelect');
+  sel.innerHTML = seasons.map(s => `<option value="${s}" ${s===activeSeason?'selected':''}>${s}</option>`).join('');
+}
+
+function onSeasonChange() {
+  activeSeason = document.getElementById('seasonSelect').value;
+  buildCompSelects();
+  buildMultiTeamChecks();
+  updateBadge();
+  renderTabla();
+}
+
+function buildTeamNav() {
+  const nav = document.getElementById('navTeams');
+  nav.innerHTML = TEAMS.map(t =>
+    `<button class="team-tab ${t===activeTeam?'active':''}" onclick="switchTeam('${t}',this)">${t}</button>`
+  ).join('');
+}
+
+function switchTeam(team, btn) {
+  activeTeam = team;
+  document.querySelectorAll('.team-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  buildMultiTeamChecks();
+  updateBadge();
+  renderTabla();
+}
+
+function buildJornadaSelect() {
+  const sel = document.getElementById('f-jornada');
+  const selD = document.getElementById('df-jornada');
+  for (let i = 1; i <= 38; i++) {
+    const v = 'J'+i;
+    if(sel){ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); }
+    if(selD){ const o=document.createElement('option'); o.value=v; o.textContent=v; selD.appendChild(o); }
+  }
+}
+
+function buildCompSelects() {
+  ['compTeamA','compTeamB'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = TEAMS.map(t => `<option value="${t}">${t} — ${TEAM_FULL[t]}</option>`).join('');
+  });
+  document.getElementById('compTeamB').value = 'RMC';
+  ['compSeasonA','compSeasonB'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = seasons.map(s => `<option value="${s}">${s}</option>`).join('');
+    sel.value = activeSeason;
+  });
+}
+
+function buildMultiTeamChecks() {
+  const wrap = document.getElementById('multiTeamChecks');
+  if (!wrap) return;
+  wrap.innerHTML = TEAMS.filter(t => t !== activeTeam).map(t => `
+    <label style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;cursor:pointer;
+      padding:3px 8px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);
+      color:var(--text-sec);transition:all .15s ease" id="lbl-${t}">
+      <input type="checkbox" value="${t}" onchange="onExtraTeam(this)" style="display:none">
+      ${t}
+    </label>`).join('');
+}
+
+function onExtraTeam(cb) {
+  const lbl = document.getElementById('lbl-'+cb.value);
+  if (cb.checked) {
+    extraTeams.push(cb.value);
+    lbl.style.background = 'var(--rm-bg)';
+    lbl.style.color = 'var(--rm)';
+    lbl.style.borderColor = 'var(--rm)';
+  } else {
+    extraTeams = extraTeams.filter(t => t !== cb.value);
+    lbl.style.background = '';
+    lbl.style.color = '';
+    lbl.style.borderColor = '';
+  }
+  renderDashboard();
+}
+
+/* =====================================================
+   TEMPORADAS
+   ===================================================== */
+function openAddSeason() { openModal('modalSeason'); document.getElementById('newSeasonInput').value=''; }
+
+function addSeason() {
+  const val = document.getElementById('newSeasonInput').value.trim();
+  if (!val) return;
+  if (seasons.includes(val)) { showToast('⚠️ Esa temporada ya existe','orange'); return; }
+  seasons.push(val);
+  activeSeason = val;
+  saveAll();
+  buildSeasonSelect();
+  buildCompSelects();
+  closeModal('modalSeason');
+  showToast('✅ Temporada '+val+' creada');
+}
+
+/* =====================================================
+   MODALES
+   ===================================================== */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+/* =====================================================
+   NAVEGACIÓN
+   ===================================================== */
+function showMod(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.mod-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'informes') renderDashboard();
+  if (name === 'bbdd') renderTabla();
+  if (name === 'comparativas') renderComp();
+}
+
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  const on = document.body.classList.contains('dark');
+  document.getElementById('darkBtn').innerHTML = on ? '☀' : '☾';
+  localStorage.setItem('tg-dark', on ? '1' : '0');
+}
+
+/* =====================================================
+   IMPORTAR CSV
+   ===================================================== */
+function handleFileSelect(e) { const f=e.target.files[0]; if(f) processFile(f); }
+
+function processFile(file) {
+  Papa.parse(file, {
+    header:true, skipEmptyLines:true,
+    complete: res => {
+      if (!res.data.length) { showImportStatus('err','❌ Archivo vacío o inválido.'); return; }
+      const mapped = res.data.map(mapCSVRow).filter(Boolean);
+      if (!mapped.length) { showImportStatus('err','❌ No se reconocieron columnas válidas.'); return; }
+      const existing = currentGoles();
+      setGoles(activeTeam, activeSeason, [...existing, ...mapped]);
+      updateBadge(); renderTabla();
+      showImportStatus('ok', `✅ ${mapped.length} goles importados a ${activeTeam} · ${activeSeason}`);
+      document.getElementById('importInfo').style.display = 'grid';
+      document.getElementById('infoReg').textContent = mapped.length;
+      document.getElementById('infoCols').textContent = res.meta.fields?.length || '—';
+      document.getElementById('infoFile').textContent = file.name.length>14 ? file.name.slice(0,14)+'…' : file.name;
+    },
+    error: () => showImportStatus('err','❌ Error al leer el archivo.')
+  });
+}
+
+function mapCSVRow(row) {
+  const get = (...keys) => { for(const k of keys){ const v=row[k]??row[k.toLowerCase()]??row[k.toUpperCase()]; if(v!==undefined&&v!=='') return String(v).trim(); } return ''; };
+  return {
+    _id: Date.now()+Math.random(),
+    competicion:get('Competición','Competicion'),
+    favor:get('A favor / En contra','A FAVOR/EN CONTRA'),
+    jornada:get('Jornada','JORNADA'),
+    rival:get('Rival'),
+    nivel:get('Nivel rival','NIVEL RIVAL'),
+    lv:get('Local/Visitante','LOCAL/VISITANTE'),
+    dif:get('Diferencia en marcador'),
+    goleador:get('Goleador'),
+    minuto:parseInt(get('Minuto'))||0,
+    tramo:get('Tramo minuto','TRAMO MINUTO'),
+    tipologia:get('Tipología','Tipologia'),
+    estilo:get('Estilo'),
+    zonaRobo:get('Zona de Robo','ZONA DE ROBO'),
+    posicRobo:get('Posicionamiento del robo'),
+    primerPase:get('Primer pase'),
+    nPases:get('Nº Pases'),
+    tiempoTransicion:parseInt(get('Tiempo en Transición'))||0,
+    tipoPase:get('Tipo de Pase'),
+    superficie:get('Superficie de remate'),
+    nContactos:get('Nº Contactos'),
+    zonaRemate:get('Zona remate','ZONA REMATE'),
+  };
+}
+
+function showImportStatus(type, msg) {
+  const el = document.getElementById('importStatus');
+  el.className = 'import-status '+type; el.innerHTML = msg;
+}
+
+function exportCSV() {
+  const data = currentGoles();
+  if (!data.length) { showToast('Sin datos','orange'); return; }
+  const headers = ['competicion','favor','jornada','rival','nivel','lv','dif','goleador','minuto','tramo','tipologia','estilo','zonaRobo','posicRobo','primerPase','nPases','tiempoTransicion','tipoPase','superficie','nContactos','zonaRemate'];
+  const rows = [headers.join(','), ...data.map(g => headers.map(h => '"'+String(g[h]??'').replace(/"/g,'""')+'"').join(','))];
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.download = `tipologia-${activeTeam}-${activeSeason.replace('/','_')}.csv`; a.click();
+}
+
+/* =====================================================
+   REGISTRO MANUAL
+   ===================================================== */
+function selectChip(el, groupId, hiddenId) {
+  document.querySelectorAll('#'+groupId+' .chip').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById(hiddenId).value = el.dataset.val;
+}
+
+function guardarGol(continuar) {
+  const g = {
+    _id:Date.now()+Math.random(),
+    competicion:v('f-comp'), favor:v('f-favor'), jornada:v('f-jornada'),
+    rival:v('f-rival'), nivel:v('f-nivel'), lv:v('f-lv'), dif:v('f-dif'),
+    goleador:v('f-goleador'), minuto:parseInt(v('f-minuto'))||0,
+    tramo:calcTramo(parseInt(v('f-minuto'))),
+    tipologia:v('f-tipologia'), estilo:v('f-estilo'),
+    zonaRobo:v('f-zona-robo'), posicRobo:v('f-posic-robo'), primerPase:v('f-primer-pase'),
+    nPases:v('f-n-pases'), tiempoTransicion:parseInt(v('f-tiempo'))||0,
+    tipoPase:v('f-tipo-pase'), superficie:v('f-superficie'),
+    nContactos:v('f-contactos'), zonaRemate:v('f-zona-remate'),
+  };
+  if (!g.competicion||!g.favor||!g.tipologia) { showToast('⚠️ Rellena Competición, A/EC y Tipología','orange'); return; }
+  const arr = currentGoles();
+  arr.push(g);
+  setGoles(activeTeam, activeSeason, arr);
+  updateBadge();
+  showToast('⚽ Gol guardado — '+activeTeam+' '+activeSeason);
+  if (continuar) resetForm();
+  else resetForm();
+}
+
+function v(id) { const el=document.getElementById(id); return el?el.value.trim():''; }
+function calcTramo(m) {
+  if(!m) return '';
+  if(m<=10) return '0-10'; if(m<=20) return '11-20'; if(m<=30) return '21-30';
+  if(m<=40) return '31-40'; if(m<=50) return '41-50'; if(m<=60) return '51-60';
+  if(m<=70) return '61-70'; if(m<=80) return '71-80'; return '81-90';
+}
+function resetForm() {
+  document.querySelectorAll('.field-select').forEach(s=>s.value='');
+  document.querySelectorAll('.field-input').forEach(i=>i.value='');
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('f-favor').value='';
+  document.getElementById('f-lv').value='';
+}
+
+/* =====================================================
+   BBDD / TABLA
+   ===================================================== */
+function getFiltered() {
+  const q = (document.getElementById('tableSearch')?.value||'').toLowerCase();
+  const comp = document.getElementById('filterComp')?.value||'';
+  const tipo = document.getElementById('filterTipo')?.value||'';
+  const favor = document.getElementById('filterFavor')?.value||'';
+  return currentGoles().filter(g => {
+    if(comp&&g.competicion!==comp) return false;
+    if(tipo&&g.tipologia!==tipo) return false;
+    if(favor&&g.favor!==favor) return false;
+    if(q&&![g.rival,g.goleador,g.tipologia,g.estilo,g.zonaRemate].join(' ').toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function renderTabla() {
+  let data = getFiltered();
+  if(sortField) data=[...data].sort((a,b)=>{
+    const av=a[sortField]??'', bv=b[sortField]??'';
+    return typeof av==='number'?(av-bv)*sortDir:String(av).localeCompare(String(bv))*sortDir;
+  });
+  const tbody=document.getElementById('tableBody');
+  const empty=document.getElementById('tableEmpty');
+  document.getElementById('tableCount').textContent=data.length+' registros';
+  if(!data.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=data.map(g=>`<tr>
+    <td><span class="badge badge-blue">${esc(g.competicion)}</span></td>
+    <td><span class="badge ${g.favor==='A favor'?'badge-green':'badge-red'}">${esc(g.favor)}</span></td>
+    <td>${esc(g.jornada)}</td><td style="font-weight:600">${esc(g.rival)}</td>
+    <td>${esc(g.nivel)}</td><td>${esc(g.lv)}</td><td>${esc(g.goleador)}</td>
+    <td style="font-weight:700;color:var(--rm)">${g.minuto||'—'}'</td>
+    <td>${esc(g.tramo)}</td><td>${esc(g.tipologia)}</td>
+    <td style="color:var(--text-sec)">${esc(g.estilo)}</td>
+    <td>${esc(g.superficie)}</td><td>${esc(g.zonaRemate)}</td>
+    <td><button class="btn-del" onclick="eliminarGol('${g._id}')">✕</button></td>
+  </tr>`).join('');
+}
+
+function sortTabla(field) {
+  if(sortField===field) sortDir*=-1; else{sortField=field;sortDir=1;}
+  document.querySelectorAll('.data-table th').forEach(th=>th.classList.remove('sort-asc','sort-desc'));
+  event.currentTarget.classList.add(sortDir===1?'sort-asc':'sort-desc');
+  renderTabla();
+}
+
+function eliminarGol(id) {
+  const arr = currentGoles().filter(g=>String(g._id)!==String(id));
+  setGoles(activeTeam,activeSeason,arr);
+  updateBadge(); renderTabla();
+  showToast('🗑️ Eliminado');
+}
+
+function updateBadge() {
+  const b=document.getElementById('badge-count');
+  if(b) b.textContent=currentGoles().length;
+}
+
+function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* =====================================================
+   DASHBOARD — FILTROS
+   ===================================================== */
+function getDashData() {
+  let teams = [activeTeam, ...extraTeams];
+  let data = teams.flatMap(t => getGoles(t, activeSeason));
+  for(const [id,cfg] of Object.entries(DASH_FILTER_MAP)){
+    const val=document.getElementById(id)?.value||'';
+    if(val) data=data.filter(g=>g[cfg.field]===val);
+  }
+  return data;
+}
+
+function onDashFilter(el) {
+  el.classList.toggle('active', el.value!=='');
+  updateBlockBadges(); updateActiveChips(); renderDashboard();
+}
+
+function resetDashFilters() {
+  for(const id of Object.keys(DASH_FILTER_MAP)){
+    const el=document.getElementById(id); if(el){el.value='';el.classList.remove('active');}
+  }
+  updateBlockBadges(); updateActiveChips(); renderDashboard();
+}
+
+function updateBlockBadges() {
+  const b={generales:0,tacticos:0,tecnico:0};
+  for(const [id,cfg] of Object.entries(DASH_FILTER_MAP)){
+    if(document.getElementById(id)?.value) b[cfg.bloque]++;
+  }
+  ['generales','tacticos','tecnico'].forEach(k=>{
+    const el=document.getElementById('badge-'+k);
+    if(!el) return;
+    el.textContent=b[k]||'';
+    el.style.display=b[k]?'':'none';
+  });
+}
+
+function updateActiveChips() {
+  const c=document.getElementById('activeFilterChips'); if(!c) return;
+  const chips=[];
+  for(const [id,cfg] of Object.entries(DASH_FILTER_MAP)){
+    const val=document.getElementById(id)?.value||'';
+    if(val) chips.push(`<span class="dash-active-chip" onclick="clearFilter('${id}')">${esc(val)} <span>✕</span></span>`);
+  }
+  c.innerHTML=chips.join('');
+}
+
+function clearFilter(id) {
+  const el=document.getElementById(id); if(el){el.value='';el.classList.remove('active');}
+  updateBlockBadges(); updateActiveChips(); renderDashboard();
+}
+
+function toggleFilterPanel() {
+  const p=document.getElementById('dashFilterPanel'); p.classList.toggle('open');
+  document.getElementById('btnToggleFilters').textContent=p.classList.contains('open')?'🔼 Filtros':'🔽 Filtros';
+}
+
+function toggleBlock(id) { document.getElementById(id).classList.toggle('expanded'); }
+
+/* =====================================================
+   EDITOR DE LAYOUT
+   ===================================================== */
+function openEditor() {
+  editorState=layoutState.map(s=>({...s}));
+  renderEditorList();
+  document.getElementById('editorOverlay').classList.add('open');
+  document.getElementById('editorSidebar').classList.add('open');
+}
+function closeEditor() {
+  document.getElementById('editorOverlay').classList.remove('open');
+  document.getElementById('editorSidebar').classList.remove('open');
+}
+
+function renderEditorList() {
+  const body=document.getElementById('editorBody');
+  const bloques=[...new Set(CHART_CATALOG.map(c=>c.bloque))];
+  const CHART_TYPES=[{v:'doughnut',l:'Doughnut'},{v:'bar',l:'Barras'},{v:'bar_h',l:'Barras H.'},{v:'polarArea',l:'Polar'},{v:'rank',l:'Ranking'}];
+  let html='';
+  for(const bloque of bloques){
+    html+=`<div class="editor-section-title">${bloque}</div>`;
+    const items=editorState.map((s,i)=>({...s,i,cat:CHART_CATALOG.find(c=>c.id===s.id)})).filter(s=>s.cat?.bloque===bloque);
+    for(let i=0;i<items.length;i++){
+      const {id,visible,i:gi,cat}=items[i];
+      const typeSel=CHART_TYPES.map(t=>`<option value="${t.v}" ${(editorState[gi].chartType===t.v)?'selected':''}>${t.l}</option>`).join('');
+      html+=`<div class="chart-item ${visible?'active':''}" id="ei-${id}">
+        <button class="chart-item-toggle" onclick="toggleChartVisible('${id}')"></button>
+        <div class="chart-item-info">
+          <div class="chart-item-name">${cat?.icon||''} ${cat?.title||id}</div>
+          <select class="chart-type-sel" onchange="setChartType('${id}',this.value)">${typeSel}</select>
+        </div>
+        <div class="chart-item-order">
+          <button class="btn-order" onclick="moveChart('${id}',-1)" ${i===0?'disabled':''}>▲</button>
+          <button class="btn-order" onclick="moveChart('${id}',1)" ${i===items.length-1?'disabled':''}>▼</button>
+        </div>
+      </div>`;
+    }
+  }
+  body.innerHTML=html;
+}
+
+function toggleChartVisible(id){const s=editorState.find(e=>e.id===id);if(s)s.visible=!s.visible;renderEditorList();}
+function setChartType(id,type){const s=editorState.find(e=>e.id===id);if(s)s.chartType=type;}
+
+function moveChart(id,dir){
+  const cat=CHART_CATALOG.find(c=>c.id===id);
+  const bloqueIds=CHART_CATALOG.filter(c=>c.bloque===cat.bloque).map(c=>c.id);
+  const inBloque=editorState.map((e,i)=>({...e,i})).filter(e=>bloqueIds.includes(e.id));
+  const pos=inBloque.findIndex(e=>e.id===id);
+  const target=pos+dir;
+  if(target<0||target>=inBloque.length) return;
+  const gi=inBloque[pos].i, ti=inBloque[target].i;
+  [editorState[gi],editorState[ti]]=[editorState[ti],editorState[gi]];
+  renderEditorList();
+}
+
+function applyLayout(){layoutState=editorState.map(s=>({...s}));saveAll();closeEditor();renderDashboard();showToast('📊 Informe actualizado');}
+function resetLayout(){editorState=CHART_CATALOG.map(c=>({id:c.id,visible:c.visible,chartType:c.chartType}));renderEditorList();}
+
+/* =====================================================
+   DASHBOARD — RENDER
+   ===================================================== */
+function count(data,field){const a={};data.forEach(g=>{const v=g[field]||'Sin datos';a[v]=(a[v]||0)+1;});return a;}
+function sortedCount(data,field,limit=999){return Object.entries(count(data,field)).sort((a,b)=>b[1]-a[1]).slice(0,limit);}
+function pct(n,t){return t?((n/t)*100).toFixed(1):'0';}
+
+function renderDashboard() {
+  const data = getDashData();
+  const isDark = document.body.classList.contains('dark');
+  const gridColor = isDark?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';
+  const tickColor = isDark?'#70757f':'#8b919e';
+  const surfColor = isDark?'#1c1f26':'#fff';
+  const total = data.length;
+
+  // Update PDF header meta
+  const teamsLabel = [activeTeam,...extraTeams].join(', ');
+  document.getElementById('pdfTitle').textContent = `Tipología de Goles — ${teamsLabel}`;
+  document.getElementById('pdfSub').textContent = `Temporada ${activeSeason}`;
+  document.getElementById('pdfMeta').innerHTML = `Fecha: ${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
+
+  if(!data.length){
+    document.getElementById('kpiGrid').innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">📊</div><p>Sin datos. Carga goles primero.</p></div>';
+    document.getElementById('chartsDynamic').innerHTML='';
+    return;
+  }
+
+  const aFavor=data.filter(g=>g.favor==='A favor').length;
+  const enContra=data.filter(g=>g.favor==='En contra').length;
+  const local=data.filter(g=>g.lv==='Local').length;
+  const visitante=data.filter(g=>g.lv==='Visitante').length;
+
+  document.getElementById('kpiGrid').innerHTML=`
+    <div class="kpi-card"><div class="kpi-label">Total</div><div class="kpi-value">${total}</div><div class="kpi-sub">goles</div></div>
+    <div class="kpi-card green"><div class="kpi-label">A favor</div><div class="kpi-value" style="color:var(--green)">${aFavor}</div><div class="kpi-sub">${pct(aFavor,total)}%</div></div>
+    <div class="kpi-card red"><div class="kpi-label">En contra</div><div class="kpi-value" style="color:var(--red)">${enContra}</div><div class="kpi-sub">${pct(enContra,total)}%</div></div>
+    <div class="kpi-card"><div class="kpi-label">Local</div><div class="kpi-value">${local}</div><div class="kpi-sub">${pct(local,total)}%</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">Visitante</div><div class="kpi-value" style="color:var(--orange)">${visitante}</div><div class="kpi-sub">${pct(visitante,total)}%</div></div>
+  `;
+
+  // Destruir charts previos
+  Object.keys(charts).forEach(id=>{try{charts[id].destroy();}catch(e){}delete charts[id];});
+
+  // Construir HTML
+  const visibleIds=layoutState.filter(s=>s.visible).map(s=>s.id);
+  const typeMap=Object.fromEntries(layoutState.map(s=>[s.id,s.chartType]));
+  let html='';
+  for(const id of visibleIds){
+    const cat=CHART_CATALOG.find(c=>c.id===id); if(!cat) continue;
+    const isRank=['rank'].includes(typeMap[id])||['chartEstilo','chartGoleador','chartRival'].includes(id)&&typeMap[id]==='rank';
+    const fullCls=cat.full?'full-width':'';
+    const tallCls=cat.full?'tall':'';
+    const inner=isRank?`<div class="rank-list" id="${id}"></div>`:`<canvas id="${id}"></canvas>`;
+    html+=`<div class="chart-card ${fullCls}"><div class="chart-head"><span class="chart-title">${cat.icon} ${cat.title}</span></div><div class="chart-body ${tallCls}">${inner}</div></div>`;
+  }
+  document.getElementById('chartsDynamic').innerHTML=html;
+
+  // Helper mkChart
+  function mkC(id,type,labels,datasets,opts={}){
+    const isH=type==='bar_h'; const realType=isH?'bar':type;
+    const ctx=document.getElementById(id)?.getContext('2d'); if(!ctx) return;
+    charts[id]=new Chart(ctx,{type:realType,data:{labels,datasets},options:{
+      responsive:true,maintainAspectRatio:true,indexAxis:isH?'y':'x',
+      plugins:{
+        legend:{display:opts.legend??false,labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},
+        tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed?.r??c.parsed} (${pct(c.parsed?.y??c.parsed?.r??c.parsed,total)}%)`}}
+      },
+      scales:(realType==='doughnut'||realType==='pie'||realType==='polarArea')?{}:{
+        x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}},
+        y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,font:{size:10},stepSize:1}}
+      },...opts
+    }});
+  }
+
+  function mkRank(id,entries){
+    const el=document.getElementById(id); if(!el||!entries.length) return;
+    const max=entries[0][1];
+    el.innerHTML=entries.map(([name,cnt],i)=>`<div class="rank-item">
+      <div class="rank-pos">${i+1}</div>
+      <div class="rank-bar-wrap">
+        <div class="rank-name">${esc(name)}</div>
+        <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(cnt/max*100).toFixed(1)}%"></div></div>
+      </div>
+      <div class="rank-val">${cnt} <span style="font-size:9.5px;color:var(--text-mut)">(${pct(cnt,total)}%)</span></div>
+    </div>`).join('');
+  }
+
+  function renderChart(id,field,fullLabel){
+    const type=typeMap[id]||'bar';
+    if(type==='rank'){ mkRank(id,sortedCount(data,field,12)); return; }
+    const e=sortedCount(data,field);
+    const isDonut=type==='doughnut'||type==='polarArea';
+    mkC(id,type,e.map(x=>x[0]),[{
+      data:e.map(x=>x[1]),
+      backgroundColor:isDonut?RM_PALETTE:e.map((_,i)=>RM_PALETTE[i%RM_PALETTE.length]),
+      borderWidth:isDonut?2:0,borderColor:isDonut?surfColor:undefined,
+      borderRadius:(!isDonut&&type!=='polarArea')?5:0,borderSkipped:false
+    }],isDonut?{legend:true,plugins:{tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,total)}%)`}}}}:{});
+  }
+
+  for(const id of visibleIds){
+    const type=typeMap[id];
+    switch(id){
+      case 'chartTramo':{
+        const tramos=['0-10','11-20','21-30','31-40','41-50','51-60','61-70','71-80','81-90'];
+        const ctx=document.getElementById('chartTramo')?.getContext('2d'); if(!ctx) break;
+        charts['chartTramo']=new Chart(ctx,{type:'bar',data:{labels:tramos,datasets:[
+          {label:'A favor',data:tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='A favor').length),backgroundColor:'#16a34a',borderRadius:4,borderSkipped:false,stack:'g'},
+          {label:'En contra',data:tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='En contra').length),backgroundColor:'#dc2626',borderRadius:4,borderSkipped:false,stack:'g'}
+        ]},options:{responsive:true,maintainAspectRatio:true,
+          plugins:{legend:{display:true,labels:{color:tickColor,font:{size:10},padding:12,boxWidth:10}},tooltip:{mode:'index'}},
+          scales:{x:{stacked:true,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:true,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
+        }}); break; }
+      case 'chartLV':{
+        const lD=['A favor','En contra'].map(f=>data.filter(g=>g.lv==='Local'&&g.favor===f).length);
+        const vD=['A favor','En contra'].map(f=>data.filter(g=>g.lv==='Visitante'&&g.favor===f).length);
+        mkC('chartLV','bar',['Local','Visitante'],[
+          {label:'A favor',data:[lD[0],vD[0]],backgroundColor:'#16a34a',borderRadius:5,borderSkipped:false},
+          {label:'En contra',data:[lD[1],vD[1]],backgroundColor:'#dc2626',borderRadius:5,borderSkipped:false}
+        ],{legend:true,plugins:{tooltip:{mode:'index'}}}); break; }
+      case 'chartContactos':{
+        const order=['1','2','3','4','5','6','7','8','9','10','10+'];
+        const cm=count(data,'nContactos');
+        mkC('chartContactos',type,order,[{data:order.map(k=>cm[k]||0),backgroundColor:RM_PALETTE,borderRadius:5,borderSkipped:false}]); break; }
+      case 'chartDifMarcador':{
+        const range=['-5','-4','-3','-2','-1','0','1','2','3','4','5','6','7','8','9','10'];
+        const dm={};data.forEach(g=>{const k=String(g.dif??0);dm[k]=(dm[k]||0)+1;});
+        mkC('chartDifMarcador',type,range,[{data:range.map(k=>dm[k]||0),backgroundColor:range.map(k=>Number(k)>=0?'#2563eb':'#dc2626'),borderRadius:5,borderSkipped:false}]); break; }
+      case 'chartZonaRoboXTip':{
+        const tips=[...new Set(data.map(g=>g.tipologia).filter(Boolean))];
+        const zonas=['Z1','Z2','Z3','Z4'];
+        const ctx=document.getElementById(id)?.getContext('2d'); if(!ctx) break;
+        charts[id]=new Chart(ctx,{type:'bar',data:{labels:tips,datasets:zonas.map((z,i)=>({
+          label:z,data:tips.map(t=>data.filter(g=>g.tipologia===t&&g.zonaRobo===z).length),
+          backgroundColor:RM_PALETTE[i],borderRadius:3,borderSkipped:false,stack:'z'
+        }))},options:{responsive:true,maintainAspectRatio:true,
+          plugins:{legend:{display:true,labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},tooltip:{mode:'index'}},
+          scales:{x:{stacked:true,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:true,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
+        }}); break; }
+      case 'chartTipologia': renderChart(id,'tipologia'); break;
+      case 'chartSuperficie': renderChart(id,'superficie'); break;
+      case 'chartZona':       renderChart(id,'zonaRemate'); break;
+      case 'chartTipoPase':   renderChart(id,'tipoPase'); break;
+      case 'chartZonaRobo':   renderChart(id,'zonaRobo'); break;
+      case 'chartPosicRobo':  renderChart(id,'posicRobo'); break;
+      case 'chartPrimerPase': renderChart(id,'primerPase'); break;
+      case 'chartEstilo':     mkRank(id,sortedCount(data,'estilo',12)); break;
+      case 'chartGoleador':   mkRank(id,sortedCount(data,'goleador',10)); break;
+      case 'chartRival':      mkRank(id,sortedCount(data,'rival',10)); break;
+    }
+  }
+}
+
+/* =====================================================
+   COMPARATIVAS
+   ===================================================== */
+const compCharts = {};
+
+function renderComp() {
+  const teamA=document.getElementById('compTeamA')?.value;
+  const teamB=document.getElementById('compTeamB')?.value;
+  const seasonA=document.getElementById('compSeasonA')?.value||activeSeason;
+  const seasonB=document.getElementById('compSeasonB')?.value||activeSeason;
+  const metric=document.getElementById('compMetric')?.value||'tipologia';
+  const chartType=document.getElementById('compChartType')?.value||'doughnut';
+
+  const dataA=getGoles(teamA,seasonA);
+  const dataB=getGoles(teamB,seasonB);
+
+  // Update PDF header
+  document.getElementById('pdfTitleComp').textContent=`Comparativa ${teamA}/${seasonA} vs ${teamB}/${seasonB}`;
+  document.getElementById('pdfSubComp').textContent=`Métrica: ${metric}`;
+  document.getElementById('pdfMetaComp').innerHTML=`Fecha: ${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
+
+  // Destroy old comp charts
+  Object.keys(compCharts).forEach(id=>{try{compCharts[id].destroy();}catch(e){}delete compCharts[id];});
+
+  const isDark=document.body.classList.contains('dark');
+  const gridColor=isDark?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';
+  const tickColor=isDark?'#70757f':'#8b919e';
+  const surfColor=isDark?'#1c1f26':'#fff';
+
+  const METRIC_ORDER={tramo:['0-10','11-20','21-30','31-40','41-50','51-60','61-70','71-80','81-90']};
+
+  function buildCompData(data,field){
+    const c=count(data,field);
+    const order=METRIC_ORDER[field];
+    if(order) return Object.fromEntries(order.map(k=>[k,c[k]||0]));
+    return Object.fromEntries(Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,12));
+  }
+
+  const cA=buildCompData(dataA,metric);
+  const cB=buildCompData(dataB,metric);
+  const allKeys=[...new Set([...Object.keys(cA),...Object.keys(cB)])].sort((a,b)=>(cB[b]||0)-(cA[a]||0)+(cA[a]||0)-(cB[b]||0));
+
+  function mkCompChart(id,data,color,total){
+    const isH=chartType==='bar_h'; const realType=chartType==='bar_h'?'bar':chartType;
+    const ctx=document.getElementById(id)?.getContext('2d'); if(!ctx) return;
+    const isDonut=realType==='doughnut'||realType==='polarArea';
+    compCharts[id]=new Chart(ctx,{type:realType,data:{
+      labels:Object.keys(data),
+      datasets:[{data:Object.values(data),
+        backgroundColor:isDonut?RM_PALETTE:color,
+        borderWidth:isDonut?2:0,borderColor:isDonut?surfColor:undefined,
+        borderRadius:(!isDonut)?4:0,borderSkipped:false,indexAxis:isH?'y':'x'
+      }]
+    },options:{
+      responsive:true,maintainAspectRatio:true,indexAxis:isH?'y':'x',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed?.r??c.parsed} (${pct(c.parsed?.y??c.parsed?.r??c.parsed,total)}%)`}}},
+      scales:isDonut?{}:{
+        x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}},
+        y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,font:{size:10},stepSize:1}}
+      }
+    }});
+  }
+
+  const grid=document.getElementById('compChartsGrid');
+  grid.innerHTML=`
+    <div class="comp-chart-wrap">
+      <div class="comp-chart-head"><span class="comp-dot" style="background:#2563eb"></span><span class="comp-chart-label">${teamA} · ${seasonA}</span><span style="font-size:11px;color:var(--text-mut)">${dataA.length} goles</span></div>
+      <div class="comp-chart-body"><canvas id="compChartA"></canvas></div>
+    </div>
+    <div class="comp-chart-wrap">
+      <div class="comp-chart-head"><span class="comp-dot" style="background:#dc2626"></span><span class="comp-chart-label">${teamB} · ${seasonB}</span><span style="font-size:11px;color:var(--text-mut)">${dataB.length} goles</span></div>
+      <div class="comp-chart-body"><canvas id="compChartB"></canvas></div>
+    </div>
+  `;
+
+  mkCompChart('compChartA',cA,'#2563eb',dataA.length);
+  mkCompChart('compChartB',cB,'#dc2626',dataB.length);
+
+  // Tabla comparativa
+  const tA=dataA.length||1, tB=dataB.length||1;
+  let tableHTML=`<div class="comp-chart-wrap" style="grid-column:1/-1">
+    <div class="comp-chart-head"><span class="comp-chart-label">📋 Tabla comparativa — ${metric}</span></div>
+    <div style="padding:0 2px;overflow-x:auto">
+    <table class="comp-table"><thead><tr>
+      <th>Categoría</th>
+      <th style="color:#2563eb">${teamA} ${seasonA}</th><th style="color:#2563eb">%</th>
+      <th style="color:#dc2626">${teamB} ${seasonB}</th><th style="color:#dc2626">%</th>
+      <th>Dif. %</th>
+    </tr></thead><tbody>`;
+
+  allKeys.forEach(k=>{
+    const vA=cA[k]||0, vB=cB[k]||0;
+    const pA=parseFloat(pct(vA,tA)), pB=parseFloat(pct(vB,tB));
+    const diff=(pA-pB).toFixed(1);
+    const diffCls=parseFloat(diff)>0?'diff-pos':parseFloat(diff)<0?'diff-neg':'diff-neu';
+    const diffStr=parseFloat(diff)>0?'+'+diff+'%':diff+'%';
+    tableHTML+=`<tr><td style="font-weight:600">${esc(k)}</td><td>${vA}</td><td>${pA}%</td><td>${vB}</td><td>${pB}%</td><td class="${diffCls}">${diffStr}</td></tr>`;
+  });
+
+  tableHTML+=`</tbody></table></div></div>`;
+  document.getElementById('compTableWrap').innerHTML=tableHTML;
+}
+
+/* =====================================================
+   PDF EXPORT
+   ===================================================== */
+function exportPDF() {
+  // Update PDF header before print
+  const teamsLabel=[activeTeam,...extraTeams].join(', ');
+  document.getElementById('pdfTitle').textContent=`Tipología de Goles — ${TEAM_FULL[activeTeam]||activeTeam}`;
+  document.getElementById('pdfSub').textContent=`Temporada ${activeSeason} · ${new Date().toLocaleDateString('es-ES')}`;
+  window.print();
+}
+
+function exportCompPDF() {
+  const tA=document.getElementById('compTeamA')?.value;
+  const tB=document.getElementById('compTeamB')?.value;
+  const sA=document.getElementById('compSeasonA')?.value;
+  const sB=document.getElementById('compSeasonB')?.value;
+  document.getElementById('pdfTitleComp').textContent=`Comparativa ${TEAM_FULL[tA]||tA} vs ${TEAM_FULL[tB]||tB}`;
+  document.getElementById('pdfSubComp').textContent=`${sA} vs ${sB} · ${new Date().toLocaleDateString('es-ES')}`;
+  window.print();
+}
+
+/* =====================================================
+   SEED DATA — Castilla 25/26
+   ===================================================== */
+const SEED_DATA=[
   {competicion:"Amistoso",favor:"A favor",jornada:"J16",rival:"Racing Ferrol",nivel:"Nivel 3",lv:"Local",dif:0,goleador:"Diego Aguado",minuto:49,tramo:"41-50",tipologia:"Juego posicional",estilo:"Saque de banda y centro",zonaRobo:"Z3",posicRobo:"Carril central",primerPase:"Hacia adelante",nPases:"4",tiempoTransicion:16,tipoPase:"Aereo",superficie:"Cabeza",nContactos:"8",zonaRemate:"2º palo (espalda 2º central)"},
   {competicion:"Torneo",favor:"En contra",jornada:"J33",rival:"Sevilla Atlético",nivel:"Nivel 3",lv:"Visitante",dif:-3,goleador:"Diego Aguado",minuto:38,tramo:"31-40",tipologia:"Balón parado",estilo:"Saque de banda + tiro",zonaRobo:"Z3",posicRobo:"Carril central",primerPase:"Hacia adelante",nPases:"9",tiempoTransicion:4,tipoPase:"Raso",superficie:"Pie Izquierdo",nContactos:"6",zonaRemate:"Penalti"},
   {competicion:"Liga",favor:"En contra",jornada:"J1",rival:"Barcelona Atlètic",nivel:"Nivel 2",lv:"Visitante",dif:2,goleador:"Yáñez",minuto:24,tramo:"21-30",tipologia:"Juego posicional",estilo:"Saque de banda + tiro",zonaRobo:"Z4",posicRobo:"Carril central",primerPase:"Hacia adelante",nPases:"10+",tiempoTransicion:12,tipoPase:"Aereo",superficie:"Cabeza",nContactos:"6",zonaRemate:"Vértice"},
@@ -1651,835 +1772,32 @@ const SEED_DATA = [
   {competicion:"Amistoso",favor:"En contra",jornada:"J38",rival:"Real Madrid B",nivel:"Nivel 1",lv:"Visitante",dif:3,goleador:"Lorenzo",minuto:28,tramo:"21-30",tipologia:"Juego posicional",estilo:"Saque de banda y centro",zonaRobo:"Z3",posicRobo:"Banda",primerPase:"Hacia detrás",nPases:"4",tiempoTransicion:6,tipoPase:"Aereo",superficie:"Pie Izquierdo",nContactos:"7",zonaRemate:"Vértice"}
 ];
 
-/* =====================================================
-   INIT
-   ===================================================== */
-document.addEventListener('DOMContentLoaded', () => {
-  // Rellenar select jornadas (formulario manual y filtro dashboard)
-  const selJ = document.getElementById('f-jornada');
-  const selJD = document.getElementById('df-jornada');
-  for (let i = 1; i <= 38; i++) {
-    const val = 'J' + i;
-    if (selJ) { const o = document.createElement('option'); o.value = val; o.textContent = val; selJ.appendChild(o); }
-    if (selJD) { const o = document.createElement('option'); o.value = val; o.textContent = val; selJD.appendChild(o); }
-  }
-
-  // Cargar layout guardado
-  loadLayoutState();
-  updateBlockBadges();
-
-  // Cargar localStorage si existe
-  // =====================================================
-  // FIREBASE: reemplazar localStorage por Firestore aquí
-  // fbCargarSesion('tipologia-goles').then(data => { goles = data; ... })
-  // =====================================================
-  const saved = localStorage.getItem('tipologia-goles-v1');
-  if (saved) {
-    try { goles = JSON.parse(saved); } catch(e) { goles = []; }
-  }
-
-  updateBadge();
-  renderTabla();
-
-  // Dark mode persistente
-  if (localStorage.getItem('tg-dark') === '1') {
-    document.body.classList.add('dark');
-    document.getElementById('darkBtn').innerHTML = '☀';
-  }
-
-  // Drag & drop
-  const dz = document.getElementById('dropZone');
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-  dz.addEventListener('drop', e => {
-    e.preventDefault();
-    dz.classList.remove('drag-over');
-    const f = e.dataTransfer.files[0];
-    if (f) processFile(f);
-  });
-});
-
-/* =====================================================
-   NAVEGACIÓN
-   ===================================================== */
-function showPanel(name, btn) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
-  btn.classList.add('active');
-  if (name === 'dashboard') renderDashboard();
-  if (name === 'tabla') renderTabla();
-}
-
-function toggleDark() {
-  document.body.classList.toggle('dark');
-  const on = document.body.classList.contains('dark');
-  document.getElementById('darkBtn').innerHTML = on ? '☀' : '☾';
-  localStorage.setItem('tg-dark', on ? '1' : '0');
-}
-
-/* =====================================================
-   IMPORTAR CSV
-   ===================================================== */
-function handleFileSelect(e) {
-  const f = e.target.files[0];
-  if (f) processFile(f);
-}
-
-function processFile(file) {
-  Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
-    complete: (res) => {
-      if (!res.data.length) { showImportStatus('err', '❌ El archivo está vacío o no es válido.'); return; }
-      const mapped = res.data.map(mapCSVRow).filter(Boolean);
-      if (!mapped.length) { showImportStatus('err', '❌ No se reconoció ninguna fila válida. Revisa las columnas.'); return; }
-      goles = [...goles, ...mapped];
-      saveData();
-      updateBadge();
-      renderTabla();
-      showImportStatus('ok', `✅ ${mapped.length} goles importados correctamente.`);
-      document.getElementById('importInfo').style.display = 'grid';
-      document.getElementById('infoRegistros').textContent = mapped.length;
-      document.getElementById('infoCols').textContent = res.meta.fields?.length || '—';
-      document.getElementById('infoFile').textContent = file.name.length > 12 ? file.name.slice(0,12)+'…' : file.name;
-    },
-    error: () => showImportStatus('err', '❌ Error al leer el archivo.')
-  });
-}
-
-function mapCSVRow(row) {
-  const get = (...keys) => {
-    for (const k of keys) {
-      const val = row[k] ?? row[k.toLowerCase()] ?? row[k.toUpperCase()];
-      if (val !== undefined && val !== '') return String(val).trim();
-    }
-    return '';
-  };
-  return {
-    competicion: get('Competición','Competicion'),
-    favor: get('A favor / En contra','A FAVOR/EN CONTRA'),
-    jornada: get('Jornada','JORNADA'),
-    rival: get('Rival','RIVAL'),
-    nivel: get('Nivel rival','NIVEL RIVAL'),
-    lv: get('Local/Visitante','LOCAL/VISITANTE'),
-    dif: get('Diferencia en marcador','DIFERENCIA EN MARCADOR'),
-    goleador: get('Goleador','GOLEADOR'),
-    minuto: parseInt(get('Minuto','MINUTO')) || 0,
-    tramo: get('Tramo minuto','TRAMO MINUTO'),
-    tipologia: get('Tipología','Tipologia','TIPOLOGÍA'),
-    estilo: get('Estilo','ESTILO'),
-    zonaRobo: get('Zona de Robo','ZONA DE ROBO'),
-    posicRobo: get('Posicionamiento del robo','POSICIONAMIENTO DEL ROBO'),
-    primerPase: get('Primer pase','PRIMER PASE'),
-    nPases: get('Nº Pases','Nº PASES'),
-    tiempoTransicion: parseInt(get('Tiempo en Transición','TIEMPO EN TRANSICIÓN')) || 0,
-    tipoPase: get('Tipo de Pase','TIPO DE PASE'),
-    superficie: get('Superficie de remate','SUPERFICIE DE REMATE'),
-    nContactos: get('Nº Contactos','Nº CONTACTOS'),
-    zonaRemate: get('Zona remate','ZONA REMATE'),
-    _id: Date.now() + Math.random()
-  };
-}
-
-function showImportStatus(type, msg) {
-  const el = document.getElementById('importStatus');
-  el.className = 'import-status ' + type;
-  el.innerHTML = msg;
-}
-
 function loadSeedData() {
-  goles = SEED_DATA.map(g => ({ ...g, _id: Date.now() + Math.random() }));
-  saveData();
-  updateBadge();
-  renderTabla();
-  showImportStatus('ok', `✅ ${goles.length} goles de ejemplo cargados (Castilla 25/26).`);
-  document.getElementById('importInfo').style.display = 'grid';
-  document.getElementById('infoRegistros').textContent = goles.length;
-  document.getElementById('infoCols').textContent = 21;
-  document.getElementById('infoFile').textContent = 'Seed data';
-  showToast('✅ 50 goles cargados');
-}
-
-function exportCSV() {
-  if (!goles.length) { showToast('Sin datos para exportar'); return; }
-  const headers = ['competicion','favor','jornada','rival','nivel','lv','dif','goleador',
-    'minuto','tramo','tipologia','estilo','zonaRobo','posicRobo','primerPase',
-    'nPases','tiempoTransicion','tipoPase','superficie','nContactos','zonaRemate'];
-  const rows = [headers.join(','), ...goles.map(g =>
-    headers.map(h => '"' + String(g[h] ?? '').replace(/"/g,'""') + '"').join(',')
-  )];
-  const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'tipologia-goles.csv';
-  a.click();
-}
-
-/* =====================================================
-   REGISTRO MANUAL
-   ===================================================== */
-function selectChip(el, groupId, hiddenId) {
-  document.querySelectorAll('#' + groupId + ' .chip').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById(hiddenId).value = el.dataset.val;
-}
-
-function guardarGol(continuar) {
-  const g = {
-    _id: Date.now() + Math.random(),
-    competicion: v('f-competicion'),
-    favor: v('f-favor'),
-    jornada: v('f-jornada'),
-    rival: v('f-rival'),
-    nivel: v('f-nivel'),
-    lv: v('f-lv'),
-    dif: v('f-dif'),
-    goleador: v('f-goleador'),
-    minuto: parseInt(v('f-minuto')) || 0,
-    tramo: calcTramo(parseInt(v('f-minuto'))),
-    tipologia: v('f-tipologia'),
-    estilo: v('f-estilo'),
-    zonaRobo: v('f-zona-robo'),
-    posicRobo: v('f-posic-robo'),
-    primerPase: v('f-primer-pase'),
-    nPases: v('f-n-pases'),
-    tiempoTransicion: parseInt(v('f-tiempo')) || 0,
-    tipoPase: v('f-tipo-pase'),
-    superficie: v('f-superficie'),
-    nContactos: v('f-contactos'),
-    zonaRemate: v('f-zona-remate')
-  };
-
-  // Validación mínima
-  if (!g.competicion || !g.favor || !g.tipologia) {
-    showToast('⚠️ Rellena Competición, A favor/En contra y Tipología', 'orange');
-    return;
-  }
-
-  goles.push(g);
-  saveData();
-  updateBadge();
-  showToast('⚽ Gol guardado');
-
-  if (continuar) resetForm();
-  else { resetForm(); }
-}
-
-function v(id) {
-  const el = document.getElementById(id);
-  return el ? el.value.trim() : '';
-}
-
-function calcTramo(min) {
-  if (!min) return '';
-  if (min <= 10) return '0-10';
-  if (min <= 20) return '11-20';
-  if (min <= 30) return '21-30';
-  if (min <= 40) return '31-40';
-  if (min <= 50) return '41-50';
-  if (min <= 60) return '51-60';
-  if (min <= 70) return '61-70';
-  if (min <= 80) return '71-80';
-  return '81-90';
-}
-
-function resetForm() {
-  document.querySelectorAll('.field-select').forEach(s => s.value = '');
-  document.querySelectorAll('.field-input').forEach(i => i.value = '');
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
-  document.getElementById('f-favor').value = '';
-  document.getElementById('f-lv').value = '';
-}
-
-/* =====================================================
-   TABLA
-   ===================================================== */
-function getFiltered() {
-  const q = (document.getElementById('tableSearch')?.value || '').toLowerCase();
-  const comp = document.getElementById('filterComp')?.value || '';
-  const tipo = document.getElementById('filterTipo')?.value || '';
-  const favor = document.getElementById('filterFavor')?.value || '';
-
-  return goles.filter(g => {
-    if (comp && g.competicion !== comp) return false;
-    if (tipo && g.tipologia !== tipo) return false;
-    if (favor && g.favor !== favor) return false;
-    if (q) {
-      const str = [g.rival,g.goleador,g.tipologia,g.estilo,g.zonaRemate].join(' ').toLowerCase();
-      if (!str.includes(q)) return false;
-    }
-    return true;
-  });
-}
-
-function renderTabla() {
-  let data = getFiltered();
-
-  if (sortField) {
-    data = [...data].sort((a, b) => {
-      const av = a[sortField] ?? ''; const bv = b[sortField] ?? '';
-      if (typeof av === 'number') return (av - bv) * sortDir;
-      return String(av).localeCompare(String(bv)) * sortDir;
-    });
-  }
-
-  const tbody = document.getElementById('tableBody');
-  const empty = document.getElementById('tableEmpty');
-  document.getElementById('tableCount').textContent = data.length + ' registros';
-
-  if (!data.length) {
-    tbody.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-  empty.style.display = 'none';
-
-  tbody.innerHTML = data.map(g => `
-    <tr>
-      <td><span class="badge badge-blue">${esc(g.competicion)}</span></td>
-      <td><span class="badge ${g.favor === 'A favor' ? 'badge-green' : 'badge-red'}">${esc(g.favor)}</span></td>
-      <td>${esc(g.jornada)}</td>
-      <td style="font-weight:600">${esc(g.rival)}</td>
-      <td>${esc(g.nivel)}</td>
-      <td>${esc(g.lv)}</td>
-      <td>${esc(g.goleador)}</td>
-      <td style="font-weight:700;color:var(--rm-blue)">${g.minuto || '—'}'</td>
-      <td>${esc(g.tramo)}</td>
-      <td>${esc(g.tipologia)}</td>
-      <td style="color:var(--text-sec)">${esc(g.estilo)}</td>
-      <td>${esc(g.superficie)}</td>
-      <td>${esc(g.zonaRemate)}</td>
-      <td><button class="btn-del" onclick="eliminarGol('${g._id}')">✕</button></td>
-    </tr>
-  `).join('');
-}
-
-function sortTabla(field) {
-  const map = { rival:'rival', goleador:'goleador', tipologia:'tipologia',
-    competicion:'competicion', jornada:'jornada', favor:'favor',
-    nivel:'nivel', lv:'lv', minuto:'minuto', tramo:'tramo',
-    estilo:'estilo', superficie:'superficie', zonaRemate:'zonaRemate' };
-  const f = map[field] || field;
-  if (sortField === f) sortDir *= -1; else { sortField = f; sortDir = 1; }
-  document.querySelectorAll('.data-table th').forEach(th => {
-    th.classList.remove('sort-asc','sort-desc');
-  });
-  event.currentTarget.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
-  renderTabla();
-}
-
-function eliminarGol(id) {
-  goles = goles.filter(g => String(g._id) !== String(id));
-  saveData(); updateBadge(); renderTabla();
-  showToast('🗑️ Gol eliminado');
-}
-
-function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-/* =====================================================
-   DASHBOARD — CATÁLOGO DE GRÁFICOS
-   Cada entrada define id, título, bloque, tipo, ancho
-   ===================================================== */
-const CHART_CATALOG = [
-  // GENERALES
-  { id:'chartTramo',      title:'Goles por tramo de minuto', icon:'⏱️', bloque:'Generales',        full:true,  visible:true  },
-  { id:'chartLV',         title:'Local vs Visitante',        icon:'🏠', bloque:'Generales',        full:false, visible:true  },
-  { id:'chartGoleador',   title:'Ranking goleadores',        icon:'👤', bloque:'Generales',        full:false, visible:true  },
-  { id:'chartRival',      title:'Goles por rival',           icon:'🆚', bloque:'Generales',        full:false, visible:false },
-  // TÁCTICOS
-  { id:'chartTipologia',  title:'Goles por tipología',       icon:'⚽', bloque:'Tácticos',         full:false, visible:true  },
-  { id:'chartEstilo',     title:'Ranking de estilos',        icon:'🎯', bloque:'Tácticos',         full:true,  visible:true  },
-  { id:'chartZonaRobo',   title:'Zona de robo',              icon:'🗺️', bloque:'Tácticos',         full:false, visible:true  },
-  { id:'chartPosicRobo',  title:'Posicionamiento del robo',  icon:'📌', bloque:'Tácticos',         full:false, visible:false },
-  { id:'chartPrimerPase', title:'Primer pase',               icon:'➡️', bloque:'Tácticos',         full:false, visible:false },
-  { id:'chartZonaRoboXTip','title':'Zona robo × Tipología', icon:'📊', bloque:'Tácticos',         full:true,  visible:false },
-  // TÉCNICO-TÁCTICOS
-  { id:'chartSuperficie', title:'Superficie de remate',      icon:'🦶', bloque:'Técnico-tácticos', full:false, visible:true  },
-  { id:'chartZona',       title:'Zona de remate',            icon:'📍', bloque:'Técnico-tácticos', full:false, visible:true  },
-  { id:'chartTipoPase',   title:'Tipo de pase',              icon:'🧭', bloque:'Técnico-tácticos', full:false, visible:true  },
-  { id:'chartContactos',  title:'Nº de contactos',           icon:'🔢', bloque:'Técnico-tácticos', full:false, visible:false },
-  { id:'chartDifMarcador','title':'Diferencia en marcador',  icon:'📈', bloque:'Técnico-tácticos', full:false, visible:false },
-];
-
-// Layout activo (orden + visibilidad) — se persiste en localStorage
-let layoutState = CHART_CATALOG.map(c => ({ id: c.id, visible: c.visible }));
-
-// Estado temporal del editor (antes de aplicar)
-let editorState = [];
-
-function loadLayoutState() {
-  // FIREBASE: reemplazar por fbCargarSesion('tg-layout')
-  const saved = localStorage.getItem('tg-layout-v1');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      // Merge: mantener nuevas entradas del catálogo aunque no estén en el save
-      layoutState = CHART_CATALOG.map(c => {
-        const s = parsed.find(p => p.id === c.id);
-        return s ? { id: c.id, visible: s.visible } : { id: c.id, visible: c.visible };
-      });
-    } catch(e) {}
-  }
-}
-
-function saveLayoutState() {
-  // FIREBASE: reemplazar por fbGuardarSesion('tg-layout', layoutState)
-  localStorage.setItem('tg-layout-v1', JSON.stringify(layoutState));
-}
-
-/* =====================================================
-   FILTROS — estado global
-   ===================================================== */
-const DASH_FILTERS = {
-  // Generales
-  'df-competicion': { field: 'competicion', label: 'Competición', bloque: 'generales' },
-  'df-favor':       { field: 'favor',       label: 'A/EC',        bloque: 'generales' },
-  'df-lv':          { field: 'lv',          label: 'L/V',         bloque: 'generales' },
-  'df-nivel':       { field: 'nivel',       label: 'Nivel',       bloque: 'generales' },
-  'df-jornada':     { field: 'jornada',     label: 'Jornada',     bloque: 'generales' },
-  // Tácticos
-  'df-tipologia':   { field: 'tipologia',   label: 'Tipología',   bloque: 'tacticos' },
-  'df-zona-robo':   { field: 'zonaRobo',    label: 'Zona robo',   bloque: 'tacticos' },
-  'df-posic-robo':  { field: 'posicRobo',   label: 'Posic.robo',  bloque: 'tacticos' },
-  'df-primer-pase': { field: 'primerPase',  label: 'Primer pase', bloque: 'tacticos' },
-  // Técnico-tácticos
-  'df-tipo-pase':   { field: 'tipoPase',    label: 'Tipo pase',   bloque: 'tecnico' },
-  'df-superficie':  { field: 'superficie',  label: 'Superficie',  bloque: 'tecnico' },
-  'df-zona-remate': { field: 'zonaRemate',  label: 'Zona remate', bloque: 'tecnico' },
-  'df-contactos':   { field: 'nContactos',  label: 'Contactos',   bloque: 'tecnico' },
-  'df-estilo':      { field: 'estilo',      label: 'Estilo',      bloque: 'tecnico' },
-};
-
-function onDashFilter(el, label) {
-  el.classList.toggle('active', el.value !== '');
-  updateBlockBadges();
-  updateActiveChips();
-  renderDashboard();
-}
-
-function getDashData() {
-  let data = [...goles];
-  for (const [selId, cfg] of Object.entries(DASH_FILTERS)) {
-    const el = document.getElementById(selId);
-    const val = el?.value || '';
-    if (val) data = data.filter(g => g[cfg.field] === val);
-  }
-  return data;
-}
-
-function resetDashFilters() {
-  for (const selId of Object.keys(DASH_FILTERS)) {
-    const el = document.getElementById(selId);
-    if (el) { el.value = ''; el.classList.remove('active'); }
-  }
-  updateBlockBadges();
-  updateActiveChips();
-  renderDashboard();
-}
-
-function updateBlockBadges() {
-  const bloques = { generales: 0, tacticos: 0, tecnico: 0 };
-  for (const [selId, cfg] of Object.entries(DASH_FILTERS)) {
-    const val = document.getElementById(selId)?.value || '';
-    if (val) bloques[cfg.bloque]++;
-  }
-  document.getElementById('badge-generales').textContent = bloques.generales || '';
-  document.getElementById('badge-generales').style.display = bloques.generales ? '' : 'none';
-  document.getElementById('badge-tacticos').textContent = bloques.tacticos || '';
-  document.getElementById('badge-tacticos').style.display = bloques.tacticos ? '' : 'none';
-  document.getElementById('badge-tecnico').textContent = bloques.tecnico || '';
-  document.getElementById('badge-tecnico').style.display = bloques.tecnico ? '' : 'none';
-}
-
-function updateActiveChips() {
-  const container = document.getElementById('activeFilterChips');
-  if (!container) return;
-  const chips = [];
-  for (const [selId, cfg] of Object.entries(DASH_FILTERS)) {
-    const val = document.getElementById(selId)?.value || '';
-    if (val) chips.push(`<span class="dash-active-chip" onclick="clearFilter('${selId}')">${cfg.label}: ${esc(val)} <span class="x">✕</span></span>`);
-  }
-  container.innerHTML = chips.join('');
-}
-
-function clearFilter(selId) {
-  const el = document.getElementById(selId);
-  if (el) { el.value = ''; el.classList.remove('active'); }
-  updateBlockBadges();
-  updateActiveChips();
-  renderDashboard();
-}
-
-function toggleFilterPanel() {
-  const panel = document.getElementById('dashFilterPanel');
-  panel.classList.toggle('open');
-  const btn = document.getElementById('btnToggleFilters');
-  btn.textContent = panel.classList.contains('open') ? '🔼 Filtros' : '🔽 Filtros';
-}
-
-function toggleBlock(id) {
-  document.getElementById(id).classList.toggle('expanded');
-}
-
-/* =====================================================
-   EDITOR DE LAYOUT
-   ===================================================== */
-function openEditor() {
-  editorState = layoutState.map(s => ({ ...s }));
-  renderEditorList();
-  document.getElementById('editorOverlay').classList.add('open');
-  document.getElementById('editorSidebar').classList.add('open');
-}
-
-function closeEditor() {
-  document.getElementById('editorOverlay').classList.remove('open');
-  document.getElementById('editorSidebar').classList.remove('open');
-}
-
-function renderEditorList() {
-  const body = document.getElementById('editorBody');
-  const bloques = [...new Set(CHART_CATALOG.map(c => c.bloque))];
-  let html = '';
-  for (const bloque of bloques) {
-    html += `<div class="editor-section-title">${bloque}</div>`;
-    const items = editorState
-      .map((s, idx) => ({ ...s, idx, cat: CHART_CATALOG.find(c => c.id === s.id) }))
-      .filter(s => s.cat?.bloque === bloque);
-
-    for (let i = 0; i < items.length; i++) {
-      const { id, visible, idx, cat } = items[i];
-      const isFirst = i === 0;
-      const isLast = i === items.length - 1;
-      html += `
-        <div class="chart-item ${visible ? 'active' : ''}" id="ei-${id}">
-          <button class="chart-item-toggle" onclick="toggleChartVisible('${id}')" title="${visible ? 'Ocultar' : 'Mostrar'}"></button>
-          <div class="chart-item-info">
-            <div class="chart-item-name">${cat?.icon || ''} ${cat?.title || id}</div>
-            <div class="chart-item-sub">${cat?.full ? 'Ancho completo' : 'Media columna'}</div>
-          </div>
-          <div class="chart-item-order">
-            <button class="btn-order" onclick="moveChart('${id}',-1)" ${isFirst?'disabled':''}>▲</button>
-            <button class="btn-order" onclick="moveChart('${id}',1)" ${isLast?'disabled':''}>▼</button>
-          </div>
-        </div>`;
-    }
-  }
-  body.innerHTML = html;
-}
-
-function toggleChartVisible(id) {
-  const s = editorState.find(e => e.id === id);
-  if (s) s.visible = !s.visible;
-  renderEditorList();
-}
-
-function moveChart(id, dir) {
-  // Solo mueve dentro del mismo bloque
-  const cat = CHART_CATALOG.find(c => c.id === id);
-  const bloqueIds = CHART_CATALOG.filter(c => c.bloque === cat.bloque).map(c => c.id);
-  const globalIdx = editorState.findIndex(e => e.id === id);
-  const bloqueIdxs = editorState
-    .map((e, i) => ({ ...e, i }))
-    .filter(e => bloqueIds.includes(e.id));
-  const posInBloque = bloqueIdxs.findIndex(e => e.id === id);
-  const targetPosInBloque = posInBloque + dir;
-  if (targetPosInBloque < 0 || targetPosInBloque >= bloqueIdxs.length) return;
-  const targetGlobalIdx = bloqueIdxs[targetPosInBloque].i;
-  [editorState[globalIdx], editorState[targetGlobalIdx]] = [editorState[targetGlobalIdx], editorState[globalIdx]];
-  renderEditorList();
-}
-
-function applyLayout() {
-  layoutState = editorState.map(s => ({ ...s }));
-  saveLayoutState();
-  closeEditor();
-  renderDashboard();
-  showToast('📊 Informe actualizado');
-}
-
-function resetLayout() {
-  editorState = CHART_CATALOG.map(c => ({ id: c.id, visible: c.visible }));
-  renderEditorList();
-}
-
-/* =====================================================
-   DASHBOARD — RENDER PRINCIPAL
-   ===================================================== */
-const RM_PALETTE = [
-  '#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe',
-  '#1d4ed8','#1e40af','#1e3a8a','#dbeafe','#eff6ff'
-];
-
-function count(data, field) {
-  const acc = {};
-  data.forEach(g => { const v = g[field] || 'Sin datos'; acc[v] = (acc[v] || 0) + 1; });
-  return acc;
-}
-function sortedCount(data, field, limit = 999) {
-  return Object.entries(count(data, field)).sort((a,b) => b[1]-a[1]).slice(0, limit);
-}
-
-function renderDashboard() {
-  const data = getDashData();
-  const isDark = document.body.classList.contains('dark');
-  const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
-  const tickColor = isDark ? '#70757f' : '#8b919e';
-  const total = data.length;
-
-  // KPIs
-  if (!data.length) {
-    document.getElementById('kpiGrid').innerHTML =
-      '<div class="empty-state" style="grid-column:1/-1"><div class="icon">📊</div><p>Sin datos. Carga goles o ajusta los filtros.</p></div>';
-    document.getElementById('chartsDynamic').innerHTML = '';
-    return;
-  }
-
-  const aFavor = data.filter(g => g.favor === 'A favor').length;
-  const enContra = data.filter(g => g.favor === 'En contra').length;
-  const local = data.filter(g => g.lv === 'Local').length;
-  const visitante = data.filter(g => g.lv === 'Visitante').length;
-
-  document.getElementById('kpiGrid').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Total goles</div><div class="kpi-value">${total}</div><div class="kpi-sub">registros</div></div>
-    <div class="kpi-card green"><div class="kpi-label">A favor</div><div class="kpi-value" style="color:var(--green)">${aFavor}</div><div class="kpi-sub">${pct(aFavor,total)}%</div></div>
-    <div class="kpi-card red"><div class="kpi-label">En contra</div><div class="kpi-value" style="color:var(--red)">${enContra}</div><div class="kpi-sub">${pct(enContra,total)}%</div></div>
-    <div class="kpi-card"><div class="kpi-label">Local</div><div class="kpi-value">${local}</div><div class="kpi-sub">${pct(local,total)}%</div></div>
-    <div class="kpi-card orange"><div class="kpi-label">Visitante</div><div class="kpi-value" style="color:var(--orange)">${visitante}</div><div class="kpi-sub">${pct(visitante,total)}%</div></div>
-  `;
-
-  // Destruir todos los charts activos
-  for (const id of Object.keys(charts)) {
-    try { charts[id].destroy(); } catch(e){}
-    delete charts[id];
-  }
-
-  // Construir HTML dinámico según layoutState
-  const visibleIds = layoutState.filter(s => s.visible).map(s => s.id);
-  let html = '';
-  for (const id of visibleIds) {
-    const cat = CHART_CATALOG.find(c => c.id === id);
-    if (!cat) continue;
-    const isRank = ['chartEstilo','chartGoleador','chartRival'].includes(id);
-    const fullCls = cat.full ? 'full-width' : '';
-    const tallCls = cat.full ? 'tall' : '';
-    const inner = isRank
-      ? `<div class="rank-list" id="${id}"></div>`
-      : `<canvas id="${id}"></canvas>`;
-    html += `
-      <div class="chart-card ${fullCls}">
-        <div class="chart-head"><span class="chart-title">${cat.icon} ${cat.title}</span></div>
-        <div class="chart-body ${tallCls}">${inner}</div>
-      </div>`;
-  }
-  document.getElementById('chartsDynamic').innerHTML = html;
-
-  // Helper mkChart
-  function mkChart(id, type, labels, datasets, opts = {}) {
-    const ctx = document.getElementById(id)?.getContext('2d');
-    if (!ctx) return;
-    charts[id] = new Chart(ctx, {
-      type, data: { labels, datasets },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: {
-          legend: { display: opts.legend ?? false,
-            labels: { color: tickColor, font: { size: 11 }, padding: 12, boxWidth: 12 } },
-          tooltip: { callbacks: {
-            label: c => ` ${c.parsed?.y ?? c.parsed} (${pct(c.parsed?.y ?? c.parsed, total)}%)`
-          }}
-        },
-        scales: (type === 'doughnut' || type === 'pie') ? {} : {
-          x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } },
-          y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 }, stepSize: 1 } }
-        },
-        ...opts
-      }
-    });
-  }
-
-  function mkRank(id, entries) {
-    const el = document.getElementById(id);
-    if (!el || !entries.length) return;
-    const max = entries[0][1];
-    el.innerHTML = entries.map(([name, cnt], i) => `
-      <div class="rank-item">
-        <div class="rank-pos">${i+1}</div>
-        <div class="rank-bar-wrap">
-          <div class="rank-name">${esc(name)}</div>
-          <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(cnt/max*100).toFixed(1)}%"></div></div>
-        </div>
-        <div class="rank-val">${cnt} <span style="font-size:10px;color:var(--text-mut)">(${pct(cnt,total)}%)</span></div>
-      </div>`).join('');
-  }
-
-  // Renderizar cada gráfico activo
-  for (const id of visibleIds) {
-    switch(id) {
-
-      case 'chartTramo': {
-        const tramos = ['0-10','11-20','21-30','31-40','41-50','51-60','61-70','71-80','81-90'];
-        const ctx = document.getElementById('chartTramo')?.getContext('2d');
-        if (!ctx) break;
-        charts['chartTramo'] = new Chart(ctx, {
-          type: 'bar',
-          data: { labels: tramos, datasets: [
-            { label:'A favor', data: tramos.map(t => data.filter(g=>g.tramo===t && g.favor==='A favor').length),
-              backgroundColor:'#16a34a', borderRadius:4, borderSkipped:false, stack:'g' },
-            { label:'En contra', data: tramos.map(t => data.filter(g=>g.tramo===t && g.favor==='En contra').length),
-              backgroundColor:'#dc2626', borderRadius:4, borderSkipped:false, stack:'g' }
-          ]},
-          options: { responsive:true, maintainAspectRatio:true,
-            plugins: { legend: { display:true, labels:{ color:tickColor, font:{size:11}, padding:16, boxWidth:12 }},
-              tooltip: { mode:'index' }},
-            scales: {
-              x:{ stacked:true, grid:{color:gridColor}, ticks:{color:tickColor} },
-              y:{ stacked:true, beginAtZero:true, grid:{color:gridColor}, ticks:{color:tickColor, stepSize:1} }
-            }}
-        }); break;
-      }
-
-      case 'chartLV': {
-        const localD = ['A favor','En contra'].map(f => data.filter(g=>g.lv==='Local'&&g.favor===f).length);
-        const visitD = ['A favor','En contra'].map(f => data.filter(g=>g.lv==='Visitante'&&g.favor===f).length);
-        mkChart('chartLV','bar',['Local','Visitante'],[
-          { label:'A favor', data:[localD[0],visitD[0]], backgroundColor:'#16a34a', borderRadius:6, borderSkipped:false },
-          { label:'En contra', data:[localD[1],visitD[1]], backgroundColor:'#dc2626', borderRadius:6, borderSkipped:false }
-        ], { legend:true, plugins:{ tooltip:{mode:'index'} }}); break;
-      }
-
-      case 'chartTipologia': {
-        const e = sortedCount(data,'tipologia');
-        mkChart('chartTipologia','doughnut', e.map(x=>x[0]),
-          [{ data:e.map(x=>x[1]), backgroundColor:RM_PALETTE, borderWidth:2, borderColor: isDark?'#1c1f26':'#fff' }],
-          { legend:true, plugins:{ tooltip:{ callbacks:{ label: c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,total)}%)`}}}}); break;
-      }
-
-      case 'chartSuperficie': {
-        const e = sortedCount(data,'superficie');
-        mkChart('chartSuperficie','bar', e.map(x=>x[0]),
-          [{ data:e.map(x=>x[1]), backgroundColor:e.map((_,i)=>RM_PALETTE[i%RM_PALETTE.length]), borderRadius:6, borderSkipped:false }]); break;
-      }
-
-      case 'chartZona': {
-        const e = sortedCount(data,'zonaRemate');
-        mkChart('chartZona','bar', e.map(x=>x[0]),
-          [{ data:e.map(x=>x[1]), backgroundColor:e.map((_,i)=>RM_PALETTE[i%RM_PALETTE.length]), borderRadius:6, borderSkipped:false }],
-          { indexAxis:'y' }); break;
-      }
-
-      case 'chartTipoPase': {
-        const e = sortedCount(data,'tipoPase');
-        mkChart('chartTipoPase','doughnut', e.map(x=>x[0]),
-          [{ data:e.map(x=>x[1]), backgroundColor:['#2563eb','#16a34a','#ea580c','#9333ea'], borderWidth:2, borderColor: isDark?'#1c1f26':'#fff' }],
-          { legend:true, plugins:{ tooltip:{ callbacks:{ label: c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,total)}%)`}}}}); break;
-      }
-
-      case 'chartZonaRobo': {
-        const e = sortedCount(data,'zonaRobo');
-        mkChart('chartZonaRobo','doughnut', e.map(x=>x[0]),
-          [{ data:e.map(x=>x[1]), backgroundColor:['#2563eb','#3b82f6','#93c5fd','#bfdbfe'], borderWidth:2, borderColor: isDark?'#1c1f26':'#fff' }],
-          { legend:true, plugins:{ tooltip:{ callbacks:{ label: c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,total)}%)`}}}}); break;
-      }
-
-      case 'chartEstilo':
-        mkRank('chartEstilo', sortedCount(data,'estilo',12)); break;
-
-      case 'chartGoleador':
-        mkRank('chartGoleador', sortedCount(data,'goleador',10)); break;
-
-      case 'chartRival':
-        mkRank('chartRival', sortedCount(data,'rival',10)); break;
-
-      case 'chartPosicRobo': {
-        const e = sortedCount(data,'posicRobo');
-        mkChart('chartPosicRobo','doughnut', e.map(x=>x[0]),
-          [{ data:e.map(x=>x[1]), backgroundColor:['#2563eb','#ea580c'], borderWidth:2, borderColor: isDark?'#1c1f26':'#fff' }],
-          { legend:true, plugins:{ tooltip:{ callbacks:{ label: c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,total)}%)`}}}}); break;
-      }
-
-      case 'chartPrimerPase': {
-        const e = sortedCount(data,'primerPase');
-        mkChart('chartPrimerPase','bar', e.map(x=>x[0]),
-          [{ data:e.map(x=>x[1]), backgroundColor:e.map((_,i)=>RM_PALETTE[i%RM_PALETTE.length]), borderRadius:6, borderSkipped:false }]); break;
-      }
-
-      case 'chartContactos': {
-        const order = ['1','2','3','4','5','6','7','8','9','10','10+'];
-        const cMap = count(data,'nContactos');
-        mkChart('chartContactos','bar', order,
-          [{ data:order.map(k=>cMap[k]||0), backgroundColor:RM_PALETTE, borderRadius:6, borderSkipped:false }]); break;
-      }
-
-      case 'chartDifMarcador': {
-        const range = ['-5','-4','-3','-2','-1','0','1','2','3','4','5','6','7','8','9','10'];
-        const dMap = count(data, g => String(g.dif ?? ''));
-        const dMapFixed = {};
-        data.forEach(g => { const k = String(g.dif ?? 0); dMapFixed[k] = (dMapFixed[k]||0)+1; });
-        mkChart('chartDifMarcador','bar', range,
-          [{ data:range.map(k=>dMapFixed[k]||0), backgroundColor:range.map(k=>Number(k)>=0?'#2563eb':'#dc2626'), borderRadius:5, borderSkipped:false }]); break;
-      }
-
-      case 'chartZonaRoboXTip': {
-        const tipologias = [...new Set(data.map(g=>g.tipologia).filter(Boolean))];
-        const zonas = ['Z1','Z2','Z3','Z4'];
-        const colors = ['#2563eb','#16a34a','#ea580c','#9333ea'];
-        const ctx = document.getElementById('chartZonaRoboXTip')?.getContext('2d');
-        if (!ctx) break;
-        charts['chartZonaRoboXTip'] = new Chart(ctx, {
-          type:'bar',
-          data: { labels: tipologias, datasets: zonas.map((z,i)=>({
-            label:z, data: tipologias.map(t => data.filter(g=>g.tipologia===t&&g.zonaRobo===z).length),
-            backgroundColor:colors[i], borderRadius:4, borderSkipped:false, stack:'z'
-          }))},
-          options: { responsive:true, maintainAspectRatio:true,
-            plugins:{ legend:{display:true, labels:{color:tickColor, font:{size:11}, padding:12, boxWidth:12}}, tooltip:{mode:'index'}},
-            scales:{
-              x:{stacked:true, grid:{color:gridColor}, ticks:{color:tickColor}},
-              y:{stacked:true, beginAtZero:true, grid:{color:gridColor}, ticks:{color:tickColor, stepSize:1}}
-            }}
-        }); break;
-      }
-    }
-  }
-}
-
-function pct(n, total) {
-  if (!total) return '0';
-  return (n / total * 100).toFixed(1);
-}
-
-/* =====================================================
-   PERSISTENCIA localStorage
-   FIREBASE: sustituir estas funciones por llamadas
-   a fbGuardarSesion / fbCargarSesion cuando proceda
-   ===================================================== */
-function saveData() {
-  try {
-    localStorage.setItem('tipologia-goles-v1', JSON.stringify(goles));
-  } catch(e) {
-    console.warn('localStorage lleno — considera conectar Firebase');
-  }
-}
-
-function updateBadge() {
-  const b = document.getElementById('badge-count');
-  if (b) b.textContent = goles.length;
+  const data = SEED_DATA.map(g=>({...g,_id:Date.now()+Math.random()}));
+  setGoles('CAS','25/26',data);
+  activeTeam='CAS'; activeSeason='25/26';
+  document.querySelectorAll('.team-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('.team-tab')?.classList.add('active');
+  document.getElementById('seasonSelect').value='25/26';
+  updateBadge(); renderTabla();
+  showImportStatus('ok',`✅ 50 goles cargados — CAS · 25/26`);
+  document.getElementById('importInfo').style.display='grid';
+  document.getElementById('infoReg').textContent=50;
+  document.getElementById('infoCols').textContent=21;
+  document.getElementById('infoFile').textContent='Seed data';
+  showToast('⚽ 50 goles cargados en CAS 25/26');
 }
 
 /* =====================================================
    TOAST
    ===================================================== */
 let toastTimer;
-function showToast(msg, type = 'green') {
-  const t = document.getElementById('toast');
-  t.style.background = type === 'orange' ? 'var(--orange)' : 'var(--green)';
-  t.textContent = msg;
-  t.classList.add('show');
+function showToast(msg,type='green'){
+  const t=document.getElementById('toast');
+  t.style.background=type==='orange'?'var(--orange)':type==='red'?'var(--red)':'var(--green)';
+  t.textContent=msg; t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
 }
 </script>
 </body>

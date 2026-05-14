@@ -492,9 +492,40 @@ tr:hover .btn-del{opacity:1}
       <select class="season-select" id="seasonSelect" onchange="onSeasonChange()"></select>
     </div>
     <button class="btn-add-season" onclick="openAddSeason()" title="Nueva temporada">＋</button>
+    <!-- Sync indicator -->
+    <div title="Estado sincronización" style="display:flex;align-items:center;gap:4px">
+      <div class="sync-dot off" id="syncDot"></div>
+      <span id="syncLabel" style="font-size:10px;color:rgba(255,255,255,.5);display:none"></span>
+    </div>
+    <!-- Auth button -->
+    <button class="auth-btn" id="authBtn" onclick="handleAuthClick()">
+      <span id="authBtnText">Entrar</span>
+    </button>
     <button class="btn-icon" onclick="toggleDark()" id="darkBtn" title="Modo oscuro">☾</button>
   </div>
 </header>
+
+<!-- AUTH OVERLAY — login con Google -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-card-logo">
+      <img src="https://raw.githubusercontent.com/PabliVM/Promociones/main/rm__.png"
+           crossorigin="anonymous" alt="RM" onerror="this.style.display='none'">
+    </div>
+    <div class="auth-card-title">Tipología de Goles</div>
+    <div class="auth-card-sub">
+      Real Madrid Cantera CF<br>
+      Inicia sesión con tu cuenta de Google para<br>sincronizar los datos en la nube.
+    </div>
+    <button class="btn-google" onclick="loginGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
+      Continuar con Google
+    </button>
+    <div style="margin-top:12px;font-size:11px;color:var(--text-mut)">
+      Solo usuarios autorizados pueden acceder.
+    </div>
+  </div>
+</div>
 
 <!-- NAV EQUIPOS -->
 <nav class="nav-teams" id="navTeams"></nav>
@@ -1037,7 +1068,7 @@ const CHART_CATALOG = [
   {id:'chartTipologia',  title:'Goles por tipología',       icon:'⚽', bloque:'Tácticos',         full:false, visible:true,  chartType:'doughnut'},
   {id:'chartEstilo',     title:'Ranking de estilos',        icon:'🎯', bloque:'Tácticos',         full:true,  visible:true,  chartType:'rank'},
   {id:'chartZonaRobo',   title:'Zonas de robo',             icon:'🗺️', bloque:'Tácticos',         full:false, visible:true,  chartType:'svg'},
-  {id:'chartPosicRobo',  title:'Carriles de robo',          icon:'📌', bloque:'Tácticos',         full:false, visible:false, chartType:'svg'},
+  {id:'chartPosicRobo',  title:'Carriles de robo',          icon:'📌', bloque:'Tácticos',         full:false, visible:true,  chartType:'bar'},
   {id:'chartPrimerPase', title:'Primer pase',               icon:'➡️', bloque:'Tácticos',         full:false, visible:false, chartType:'bar'},
   {id:'chartZonaRoboXTip',title:'Zona robo × Tipología',   icon:'📊', bloque:'Tácticos',         full:true,  visible:false, chartType:'bar'},
   {id:'chartSuperficie', title:'Superficie de remate',      icon:'🦶', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'svg'},
@@ -1080,18 +1111,159 @@ let extraTeams = [];    // equipos adicionales en informe
 const charts = {};
 
 /* =====================================================
-   PERSISTENCIA
-   FIREBASE: reemplazar funciones save/load por fbGuardarSesion/fbCargarSesion
+   PERSISTENCIA — Firebase Firestore + localStorage cache
+   Estructura Firestore:
+     goles/{equipo}_{temporada}/registros/{_id}  → objeto gol
+     meta/seasons                                → { list: [...] }
+     meta/layout                                 → { state: [...] }
    ===================================================== */
-function saveAll() {
+
+let fbUser = null;    // usuario autenticado actual
+let unsubListeners = {};  // listeners onSnapshot activos
+
+// ── Helpers Firestore ────────────────────────────────────────────────────────
+function dbKey(team, season) { return team + '_' + season.replace(/\//g,'_'); }
+
+function fbAvailable() { return window._fbReady && fbUser !== null; }
+
+function setSyncState(state, label='') {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  if (!dot) return;
+  dot.className = 'sync-dot ' + state;
+  if (lbl) { lbl.textContent = label; lbl.style.display = label ? 'block' : 'none'; }
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+function handleAuthClick() {
+  if (fbUser) {
+    // Mostrar menú de logout
+    if (confirm('¿Cerrar sesión de ' + fbUser.email + '?')) logoutGoogle();
+  } else {
+    document.getElementById('authOverlay').classList.add('open');
+  }
+}
+
+async function loginGoogle() {
+  try {
+    const { auth, signInWithPopup, GoogleAuthProvider } = window._fb;
+    await signInWithPopup(auth, new GoogleAuthProvider());
+    document.getElementById('authOverlay').classList.remove('open');
+  } catch(e) {
+    console.error('Login error:', e);
+    showToast('❌ Error al iniciar sesión', 'red');
+  }
+}
+
+async function logoutGoogle() {
+  try {
+    const { auth, signOut } = window._fb;
+    await signOut(auth);
+    fbUser = null;
+    updateAuthUI(null);
+    setSyncState('off');
+  } catch(e) { console.error('Logout error:', e); }
+}
+
+function updateAuthUI(user) {
+  const btn = document.getElementById('authBtn');
+  const txt = document.getElementById('authBtnText');
+  if (!btn) return;
+  if (user) {
+    txt.innerHTML = user.photoURL
+      ? `<img src="${user.photoURL}" class="auth-avatar"> ${user.displayName?.split(' ')[0] || user.email}`
+      : `👤 ${user.displayName?.split(' ')[0] || user.email}`;
+    setSyncState('ok');
+  } else {
+    txt.innerHTML = 'Entrar';
+    setSyncState('off');
+  }
+}
+
+// ── GUARDAR goles en Firestore (batch write) ─────────────────────────────────
+async function fbSaveGoles(team, season, arr) {
+  if (!fbAvailable()) return;
+  const { db, collection, doc, writeBatch } = window._fb;
+  setSyncState('syncing');
+  try {
+    const colRef = collection(db, 'goles', dbKey(team,season), 'registros');
+    // Borrar todos y reescribir en batch (máx 500 por batch)
+    const existing = await getDocs_safe(colRef);
+    const BATCH_SIZE = 400;
+    let batch = writeBatch(db);
+    let ops = 0;
+    // Borrar existentes
+    for (const d of existing) {
+      batch.delete(d.ref);
+      ops++;
+      if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(db); ops = 0; }
+    }
+    // Escribir nuevos
+    for (const g of arr) {
+      const ref = doc(colRef, String(g._id).replace('.','_'));
+      batch.set(ref, g);
+      ops++;
+      if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(db); ops = 0; }
+    }
+    if (ops > 0) await batch.commit();
+    setSyncState('ok');
+  } catch(e) {
+    console.error('fbSaveGoles error:', e);
+    setSyncState('err', 'Error sync');
+  }
+}
+
+async function getDocs_safe(colRef) {
+  try {
+    const { getDocs } = window._fb;
+    const snap = await getDocs(colRef);
+    return snap.docs;
+  } catch(e) { return []; }
+}
+
+// ── CARGAR goles desde Firestore ─────────────────────────────────────────────
+async function fbLoadGoles(team, season) {
+  if (!fbAvailable()) return null;
+  const { db, collection, getDocs } = window._fb;
+  try {
+    const colRef = collection(db, 'goles', dbKey(team,season), 'registros');
+    const snap = await getDocs(colRef);
+    return snap.docs.map(d => d.data());
+  } catch(e) {
+    console.error('fbLoadGoles error:', e);
+    return null;
+  }
+}
+
+// ── GUARDAR meta (seasons, layout) ──────────────────────────────────────────
+async function fbSaveMeta(key, value) {
+  if (!fbAvailable()) return;
+  const { db, doc, setDoc } = window._fb;
+  try {
+    await setDoc(doc(db, 'meta', key), { data: JSON.stringify(value) });
+  } catch(e) { console.error('fbSaveMeta error:', e); }
+}
+
+async function fbLoadMeta(key) {
+  if (!fbAvailable()) return null;
+  const { db, doc, getDoc } = window._fb;
+  try {
+    const snap = await getDoc(doc(db, 'meta', key));
+    if (!snap.exists()) return null;
+    return JSON.parse(snap.data().data);
+  } catch(e) { return null; }
+}
+
+// ── API pública de persistencia (usada por el resto del código) ──────────────
+function saveLocal() {
   try {
     localStorage.setItem('tg-db-v2', JSON.stringify(db));
     localStorage.setItem('tg-seasons-v2', JSON.stringify(seasons));
     localStorage.setItem('tg-layout-v2', JSON.stringify(layoutState));
-  } catch(e) { console.warn('localStorage lleno'); }
+  } catch(e) {}
 }
 
-function loadAll() {
+function loadLocal() {
   try {
     const d = localStorage.getItem('tg-db-v2');
     if (d) db = JSON.parse(d);
@@ -1102,22 +1274,94 @@ function loadAll() {
       const parsed = JSON.parse(l);
       layoutState = CHART_CATALOG.map(c => {
         const p = parsed.find(x => x.id === c.id);
-        return p ? {id:c.id, visible:p.visible, chartType:p.chartType||c.chartType} : {id:c.id, visible:c.visible, chartType:c.chartType};
+        return p ? {id:c.id, visible:p.visible, chartType:p.chartType||c.chartType}
+                 : {id:c.id, visible:c.visible, chartType:c.chartType};
       });
     }
   } catch(e) {}
 }
 
-function dbKey(team, season) { return team + '_' + season; }
+// saveAll: localStorage + Firestore
+function saveAll() {
+  saveLocal();
+  // Firestore async (no bloquea UI)
+  if (fbAvailable()) {
+    fbSaveGoles(activeTeam, activeSeason, currentGoles());
+    fbSaveMeta('seasons', seasons);
+    fbSaveMeta('layout', layoutState);
+  }
+}
+
+// loadAll: localStorage primero (rápido), luego Firestore en paralelo
+async function loadAll() {
+  loadLocal();
+  if (!seasons.length) seasons = [...DEFAULT_SEASONS];
+}
+
+// Cuando el usuario se autentica: cargar datos desde Firestore y mezclar con local
+async function onUserAuthenticated(user) {
+  fbUser = user;
+  updateAuthUI(user);
+  setSyncState('syncing');
+  try {
+    // Cargar temporadas desde Firestore
+    const fbSeasons = await fbLoadMeta('seasons');
+    if (fbSeasons && Array.isArray(fbSeasons)) {
+      // Fusionar: añadir las de Firestore que no estén en local
+      fbSeasons.forEach(s => { if (!seasons.includes(s)) seasons.push(s); });
+      saveLocal();
+      buildSeasonSelect();
+      buildCompSelects();
+    }
+    // Cargar layout desde Firestore
+    const fbLayout = await fbLoadMeta('layout');
+    if (fbLayout && Array.isArray(fbLayout)) {
+      layoutState = CHART_CATALOG.map(c => {
+        const p = fbLayout.find(x => x.id === c.id);
+        return p ? {id:c.id, visible:p.visible, chartType:p.chartType||c.chartType}
+                 : {id:c.id, visible:c.visible, chartType:c.chartType};
+      });
+      saveLocal();
+    }
+    // Cargar goles del equipo/temporada activo
+    await syncCurrentTeam();
+    setSyncState('ok');
+  } catch(e) {
+    console.error('onUserAuthenticated error:', e);
+    setSyncState('err');
+  }
+}
+
+// Sincronizar equipo+temporada activo desde Firestore
+async function syncCurrentTeam() {
+  const fbGoles = await fbLoadGoles(activeTeam, activeSeason);
+  if (fbGoles !== null) {
+    // Firestore es fuente de verdad cuando hay conexión
+    db[dbKey(activeTeam, activeSeason)] = fbGoles;
+    saveLocal();
+    updateBadge();
+    renderTabla();
+    // Re-renderizar dashboard si está activo
+    if (document.getElementById('panel-informes')?.classList.contains('active')) {
+      renderDashboard();
+    }
+  }
+}
+
 function getGoles(team, season) { return db[dbKey(team, season)] || []; }
-function setGoles(team, season, arr) { db[dbKey(team, season)] = arr; saveAll(); }
 function currentGoles() { return getGoles(activeTeam, activeSeason); }
+
+function setGoles(team, season, arr) {
+  db[dbKey(team, season)] = arr;
+  saveAll();
+}
 
 /* =====================================================
    INIT
    ===================================================== */
-document.addEventListener('DOMContentLoaded', () => {
-  loadAll();
+document.addEventListener('DOMContentLoaded', async () => {
+  // Cargar datos locales primero (instantáneo)
+  await loadAll();
   if (!seasons.length) seasons = [...DEFAULT_SEASONS];
 
   buildSeasonSelect();
@@ -1140,14 +1384,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('darkBtn').innerHTML = '☀';
   }
 
-  // Restaurar gráficos tras imprimir: Chart.js re-adapta al layout de pantalla
+  // Restaurar gráficos tras imprimir
   window.addEventListener('afterprint', () => {
-    // Eliminar dimensiones forzadas de todos los canvas
     document.querySelectorAll('.chart-body canvas, .comp-chart-body canvas').forEach(c => {
-      c.style.width  = '';
-      c.style.height = '';
+      c.style.width = ''; c.style.height = '';
     });
-    // Re-renderizar en modo pantalla
     for (const chart of Object.values(charts)) {
       try { chart.options.animation = false; chart.resize(); chart.update('none'); } catch(e) {}
     }
@@ -1155,6 +1396,30 @@ document.addEventListener('DOMContentLoaded', () => {
       try { chart.options.animation = false; chart.resize(); chart.update('none'); } catch(e) {}
     }
   });
+
+  // Inicializar Firebase Auth cuando el SDK esté listo
+  function initFirebaseAuth() {
+    if (!window._fb) return;
+    const { auth, onAuthStateChanged } = window._fb;
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        await onUserAuthenticated(user);
+      } else {
+        fbUser = null;
+        updateAuthUI(null);
+        setSyncState('off');
+        // Sin sesión: mostrar overlay de login automáticamente
+        // (comenta esta línea si prefieres que no sea obligatorio)
+        // document.getElementById('authOverlay').classList.add('open');
+      }
+    });
+  }
+
+  if (window._fbReady) {
+    initFirebaseAuth();
+  } else {
+    window.addEventListener('firebase-ready', initFirebaseAuth, { once: true });
+  }
 });
 
 /* =====================================================
@@ -1171,6 +1436,7 @@ function onSeasonChange() {
   buildMultiTeamChecks();
   updateBadge();
   renderTabla();
+  if (fbAvailable()) syncCurrentTeam();
 }
 
 function buildTeamNav() {
@@ -1187,6 +1453,8 @@ function switchTeam(team, btn) {
   buildMultiTeamChecks();
   updateBadge();
   renderTabla();
+  // Sincronizar desde Firestore al cambiar de equipo
+  if (fbAvailable()) syncCurrentTeam();
 }
 
 function buildJornadaSelect() {
@@ -1254,6 +1522,7 @@ function addSeason() {
   seasons.push(val);
   activeSeason = val;
   saveAll();
+  if (fbAvailable()) fbSaveMeta('seasons', seasons);
   buildSeasonSelect();
   buildCompSelects();
   closeModal('modalSeason');
@@ -1723,7 +1992,7 @@ function moveChart(id,dir){
   renderEditorList();
 }
 
-function applyLayout(){layoutState=editorState.map(s=>({...s}));saveAll();closeEditor();renderDashboard();showToast('📊 Informe actualizado');}
+function applyLayout(){layoutState=editorState.map(s=>({...s}));saveAll();if(fbAvailable())fbSaveMeta('layout',layoutState);closeEditor();renderDashboard();showToast('📊 Informe actualizado');}
 function resetLayout(){editorState=CHART_CATALOG.map(c=>({id:c.id,visible:c.visible,chartType:c.chartType}));renderEditorList();}
 
 /* =====================================================
@@ -1872,7 +2141,7 @@ function renderDashboard() {
       case 'chartTipologia': renderChart(id,'tipologia'); break;
       case 'chartSuperficie': renderSuperficieSVG(id, data); break;
       case 'chartZonaRobo':   renderZonaRoboSVG(id, data); break;
-      case 'chartPosicRobo':  renderCarrilesSVG(id, data); break;
+      case 'chartPosicRobo':  renderChart(id,'posicRobo'); break;
       case 'chartZona':       renderChart(id,'zonaRemate'); break;
       case 'chartTipoPase':   renderChart(id,'tipoPase'); break;
       case 'chartPrimerPase': renderChart(id,'primerPase'); break;
@@ -2237,168 +2506,132 @@ function renderZonaRoboSVG(containerId, data) {
 }
 
 /* ── CARRILES DE ROBO: campo dividido en Banda / Central / Banda ── */
-function renderCarrilesSVG(containerId, data) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
+/* ── CARRILES DE ROBO: barras horizontales simples ── */
+// Esta función usa el sistema Chart.js estándar vía renderChart()
+// No necesita función propia.
 
-  const carriles = ['Banda','Carril central'];
-  const counts = carriles.map(c => data.filter(g => g.posicRobo === c).length);
-  const total  = counts.reduce((a,b)=>a+b,0) || 1;
-  const isDark = document.body.classList.contains('dark');
-
-  // Banda sup, Centro, Banda inf
-  const bandaCount   = counts[0];  // Banda (suma de ambas bandas)
-  const centralCount = counts[1];
-  const bandaPct   = ((bandaCount/total)*100).toFixed(1);
-  const centralPct = ((centralCount/total)*100).toFixed(1);
-  // Dividir banda en dos mitades iguales para visualización
-  const bandaHalf = bandaCount/2;
-
-  const W=280, H=220, PAD=28;
-  const FW=W-PAD*2, FH=H-PAD*2;
-  // 3 franjas verticales: banda(25%), central(50%), banda(25%)
-  const BW=FW*0.28, CW=FW*0.44;
-
-  function zoneColor(ratio) {
-    const r = Math.round(20+ratio*200);
-    const g = Math.round(80+ratio*80);
-    const b = Math.round(120-ratio*100);
-    return `rgb(${r},${g},${b})`;
-  }
-  const bandaRatio   = bandaCount/(Math.max(bandaCount,centralCount)||1);
-  const centralRatio = centralCount/(Math.max(bandaCount,centralCount)||1);
-
-  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <filter id="crShadow"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity=".3"/></filter>
-  </defs>
-  <!-- Campo base -->
-  <rect x="${PAD}" y="${PAD}" width="${FW}" height="${FH}" rx="4" fill="#1a6b2e"/>
-  <!-- Banda superior -->
-  <rect x="${PAD}" y="${PAD}" width="${BW}" height="${FH}" fill="${zoneColor(bandaRatio)}" opacity=".8" class="field-zone"/>
-  <!-- Carril central -->
-  <rect x="${PAD+BW}" y="${PAD}" width="${CW}" height="${FH}" fill="${zoneColor(centralRatio)}" opacity=".8" class="field-zone"/>
-  <!-- Banda inferior -->
-  <rect x="${PAD+BW+CW}" y="${PAD}" width="${BW}" height="${FH}" fill="${zoneColor(bandaRatio)}" opacity=".8" class="field-zone"/>
-  <!-- Separadores -->
-  <line x1="${PAD+BW}" y1="${PAD}" x2="${PAD+BW}" y2="${PAD+FH}" stroke="rgba(255,255,255,.4)" stroke-width="1.5" stroke-dasharray="4,3"/>
-  <line x1="${PAD+BW+CW}" y1="${PAD}" x2="${PAD+BW+CW}" y2="${PAD+FH}" stroke="rgba(255,255,255,.4)" stroke-width="1.5" stroke-dasharray="4,3"/>
-  <!-- Contorno -->
-  <rect x="${PAD}" y="${PAD}" width="${FW}" height="${FH}" rx="4" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>
-  <!-- Líneas campo -->
-  <line x1="${PAD+FW/2}" y1="${PAD}" x2="${PAD+FW/2}" y2="${PAD+FH}" stroke="rgba(255,255,255,.2)" stroke-width="1" stroke-dasharray="3,3"/>
-  <rect x="${PAD}" y="${PAD+FH*0.25}" width="${FW*0.2}" height="${FH*0.5}" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
-  <rect x="${PAD+FW*0.8}" y="${PAD+FH*0.25}" width="${FW*0.2}" height="${FH*0.5}" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
-  <!-- Valores Banda izq -->
-  <text x="${PAD+BW/2}" y="${PAD+FH/2-8}" text-anchor="middle" class="heat-label" font-size="18" filter="url(#crShadow)">${Math.round(bandaHalf)}</text>
-  <text x="${PAD+BW/2}" y="${PAD+FH/2+10}" text-anchor="middle" class="heat-pct" font-size="11">${(bandaPct/2).toFixed(1)}%</text>
-  <!-- Valores Central -->
-  <text x="${PAD+BW+CW/2}" y="${PAD+FH/2-8}" text-anchor="middle" class="heat-label" font-size="22" filter="url(#crShadow)">${centralCount}</text>
-  <text x="${PAD+BW+CW/2}" y="${PAD+FH/2+12}" text-anchor="middle" class="heat-pct" font-size="13">${centralPct}%</text>
-  <!-- Valores Banda der -->
-  <text x="${PAD+BW+CW+BW/2}" y="${PAD+FH/2-8}" text-anchor="middle" class="heat-label" font-size="18" filter="url(#crShadow)">${Math.round(bandaHalf)}</text>
-  <text x="${PAD+BW+CW+BW/2}" y="${PAD+FH/2+10}" text-anchor="middle" class="heat-pct" font-size="11">${(bandaPct/2).toFixed(1)}%</text>
-  <!-- Etiquetas debajo -->
-  <text x="${PAD+BW/2}" y="${PAD+FH+16}" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="10" font-weight="700" fill="${isDark?'#9095a0':'#5a6170'}">Banda</text>
-  <text x="${PAD+BW+CW/2}" y="${PAD+FH+16}" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="10" font-weight="700" fill="${isDark?'#9095a0':'#5a6170'}">Central</text>
-  <text x="${PAD+BW+CW+BW/2}" y="${PAD+FH+16}" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="10" font-weight="700" fill="${isDark?'#9095a0':'#5a6170'}">Banda</text>
-</svg>`;
-
-  el.innerHTML = svg;
-}
-
-/* ── SUPERFICIE DE REMATE: botas + cabeza visuales ── */
+/* ── SUPERFICIE DE REMATE: siluetas pie/cabeza con porcentaje ── */
 function renderSuperficieSVG(containerId, data) {
   const el = document.getElementById(containerId);
   if (!el) return;
 
   const cats = [
-    {key:'Pie derecho',  label:'Pie Der.'},
-    {key:'Pie Izquierdo',label:'Pie Izq.'},
-    {key:'Cabeza',       label:'Cabeza'},
-    {key:'Otros',        label:'Otros'},
+    { key:'Pie derecho',   label:'Pie Derecho',   color:'#2563eb' },
+    { key:'Pie Izquierdo', label:'Pie Izquierdo',  color:'#dc2626' },
+    { key:'Cabeza',        label:'Cabeza',          color:'#16a34a' },
+    { key:'Otros',         label:'Otros',           color:'#ea580c' },
   ];
+
   const counts = cats.map(c => data.filter(g => g.superficie === c.key).length);
-  const total  = counts.reduce((a,b)=>a+b,0) || 1;
+  const total  = counts.reduce((a,b) => a+b, 0) || 1;
   const maxC   = Math.max(...counts) || 1;
   const isDark = document.body.classList.contains('dark');
+  const tc     = isDark ? '#9095a0' : '#5a6170';
 
-  const W=260, H=210, PAD=14;
-  const baseColor = '#2563eb';
+  // Layout: 4 columnas iguales
+  const W = 320, H = 200;
+  const colW = W / 4;
+  const iconMaxH = 90;   // altura máxima del icono
+  const iconBaseY = 140; // línea de base de los iconos
 
-  // Función bota derecha (path simplificado orientado a la derecha)
-  function bootPathRight(cx, cy, scale) {
-    // Bota estilizada apuntando a la derecha
-    const s = scale;
-    return `M${cx-28*s},${cy+22*s}
-      L${cx-28*s},${cy-8*s}
-      Q${cx-20*s},${cy-22*s} ${cx},${cy-20*s}
-      Q${cx+22*s},${cy-18*s} ${cx+28*s},${cy-8*s}
-      L${cx+30*s},${cy+4*s}
-      Q${cx+28*s},${cy+16*s} ${cx+14*s},${cy+18*s}
-      L${cx-10*s},${cy+22*s}
-      L${cx-28*s},${cy+22*s}Z`;
-  }
-  // Bota izquierda (espejada)
-  function bootPathLeft(cx, cy, scale) {
-    const s = scale;
-    return `M${cx+28*s},${cy+22*s}
-      L${cx+28*s},${cy-8*s}
-      Q${cx+20*s},${cy-22*s} ${cx},${cy-20*s}
-      Q${cx-22*s},${cy-18*s} ${cx-28*s},${cy-8*s}
-      L${cx-30*s},${cy+4*s}
-      Q${cx-28*s},${cy+16*s} ${cx-14*s},${cy+18*s}
-      L${cx+10*s},${cy+22*s}
-      L${cx+28*s},${cy+22*s}Z`;
+  // ── Paths SVG reales basados en las siluetas de las fotos ──
+
+  // Suela de zapato derecho (apuntando hacia la derecha, ligeramente inclinado)
+  // Basado en la silueta proporcionada: forma ovalada con tacón
+  function shoeRightPath(cx, cy, s) {
+    return `M ${cx-32*s} ${cy+18*s}
+      C ${cx-38*s} ${cy+8*s}  ${cx-36*s} ${cy-18*s} ${cx-18*s} ${cy-28*s}
+      C ${cx-2*s}  ${cy-36*s} ${cx+16*s} ${cy-34*s} ${cx+28*s} ${cy-22*s}
+      C ${cx+36*s} ${cy-12*s} ${cx+34*s} ${cy+4*s}  ${cx+22*s} ${cy+14*s}
+      C ${cx+10*s} ${cy+22*s} ${cx-6*s}  ${cy+24*s} ${cx-14*s} ${cy+20*s}
+      C ${cx-18*s} ${cy+24*s} ${cx-24*s} ${cy+28*s} ${cx-30*s} ${cy+24*s}
+      C ${cx-36*s} ${cy+20*s} ${cx-36*s} ${cy+14*s} ${cx-32*s} ${cy+18*s} Z`;
   }
 
-  // Posiciones de cada icono
-  const layout = [
-    {x:68,  y:105, type:'bootR'},  // Pie derecho
-    {x:192, y:105, type:'bootL'},  // Pie izquierdo
-    {x:128, y:48,  type:'head'},   // Cabeza
-    {x:128, y:170, type:'other'},  // Otros
-  ];
+  // Suela zapato izquierdo (espejo horizontal del derecho)
+  function shoeLeftPath(cx, cy, s) {
+    return `M ${cx+32*s} ${cy+18*s}
+      C ${cx+38*s} ${cy+8*s}  ${cx+36*s} ${cy-18*s} ${cx+18*s} ${cy-28*s}
+      C ${cx+2*s}  ${cy-36*s} ${cx-16*s} ${cy-34*s} ${cx-28*s} ${cy-22*s}
+      C ${cx-36*s} ${cy-12*s} ${cx-34*s} ${cy+4*s}  ${cx-22*s} ${cy+14*s}
+      C ${cx-10*s} ${cy+22*s} ${cx+6*s}  ${cy+24*s} ${cx+14*s} ${cy+20*s}
+      C ${cx+18*s} ${cy+24*s} ${cx+24*s} ${cy+28*s} ${cx+30*s} ${cy+24*s}
+      C ${cx+36*s} ${cy+20*s} ${cx+36*s} ${cy+14*s} ${cx+32*s} ${cy+18*s} Z`;
+  }
+
+  // Silueta de cabeza masculina (perfil frontal)
+  function headPath(cx, cy, s) {
+    // Cabeza + hombros basado en la silueta proporcionada
+    return `M ${cx} ${cy-38*s}
+      C ${cx-22*s} ${cy-38*s} ${cx-32*s} ${cy-24*s} ${cx-30*s} ${cy-10*s}
+      C ${cx-28*s} ${cy+2*s}  ${cx-22*s} ${cy+10*s} ${cx-18*s} ${cy+14*s}
+      C ${cx-16*s} ${cy+18*s} ${cx-16*s} ${cy+22*s} ${cx-22*s} ${cy+26*s}
+      C ${cx-34*s} ${cy+32*s} ${cx-44*s} ${cy+40*s} ${cx-44*s} ${cy+50*s}
+      L ${cx+44*s} ${cy+50*s}
+      C ${cx+44*s} ${cy+40*s} ${cx+34*s} ${cy+32*s} ${cx+22*s} ${cy+26*s}
+      C ${cx+16*s} ${cy+22*s} ${cx+16*s} ${cy+18*s} ${cx+18*s} ${cy+14*s}
+      C ${cx+22*s} ${cy+10*s} ${cx+28*s} ${cy+2*s}  ${cx+30*s} ${cy-10*s}
+      C ${cx+32*s} ${cy-24*s} ${cx+22*s} ${cy-38*s} ${cx} ${cy-38*s} Z`;
+  }
 
   let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="supShadow"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity=".2"/></filter>
+    <filter id="supSh"><feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-opacity=".18"/></filter>
   </defs>`;
 
   cats.forEach((cat, i) => {
-    const cnt = counts[i];
-    const pct = ((cnt/total)*100).toFixed(1);
-    const ratio = cnt/maxC;
-    const scale = 0.5 + ratio*0.7;  // tamaño proporcional
-    const opacity = 0.25 + ratio*0.75;
-    const {x, y, type} = layout[i];
-    const color = i===0?'#2563eb':i===1?'#dc2626':i===2?'#16a34a':'#ea580c';
+    const cnt   = counts[i];
+    const pct   = ((cnt/total)*100).toFixed(1);
+    const ratio = cnt / maxC;
+    // Escala: mínimo 0.38 si hay datos, 0.22 si no hay
+    const scale = cnt > 0 ? 0.38 + ratio * 0.52 : 0.22;
+    const opacity = cnt > 0 ? 0.3 + ratio * 0.7 : 0.15;
+    const cx = colW * i + colW / 2;
+    const cy = iconBaseY - iconMaxH * 0.15;  // posición vertical base del icono
 
-    if (type==='bootR') {
-      svg += `<path d="${bootPathRight(x,y,scale)}" fill="${color}" opacity="${opacity}" filter="url(#supShadow)"/>`;
-    } else if (type==='bootL') {
-      svg += `<path d="${bootPathLeft(x,y,scale)}" fill="${color}" opacity="${opacity}" filter="url(#supShadow)"/>`;
-    } else if (type==='head') {
-      const r = 14*scale;
-      svg += `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}" opacity="${opacity}" filter="url(#supShadow)"/>`;
-      // Cabeza línea cuello
-      svg += `<line x1="${x}" y1="${y+r}" x2="${x}" y2="${y+r+6*scale}" stroke="${color}" stroke-width="${3*scale}" opacity="${opacity*0.7}"/>`;
+    // Icono según tipo
+    if (i === 0) {
+      // Pie derecho — suela
+      svg += `<path d="${shoeRightPath(cx, cy, scale)}"
+        fill="${cat.color}" opacity="${opacity}" filter="url(#supSh)"/>`;
+    } else if (i === 1) {
+      // Pie izquierdo — espejo
+      svg += `<path d="${shoeLeftPath(cx, cy, scale)}"
+        fill="${cat.color}" opacity="${opacity}" filter="url(#supSh)"/>`;
+    } else if (i === 2) {
+      // Cabeza
+      svg += `<path d="${headPath(cx, cy, scale)}"
+        fill="${cat.color}" opacity="${opacity}" filter="url(#supSh)"/>`;
     } else {
-      const s = 12*scale;
-      svg += `<rect x="${x-s}" y="${y-s}" width="${s*2}" height="${s*2}" rx="${s*0.4}" fill="${color}" opacity="${opacity*0.7}" filter="url(#supShadow)"/>`;
+      // Otros — rombo
+      const rs = 18 * scale;
+      svg += `<polygon points="${cx},${cy-rs} ${cx+rs},${cy} ${cx},${cy+rs} ${cx-rs},${cy}"
+        fill="${cat.color}" opacity="${opacity * 0.8}" filter="url(#supSh)"/>`;
     }
 
-    // Etiqueta número grande encima del icono
-    const labelY = type==='head' ? y-18*scale-10 : (type==='other' ? y-14*scale-8 : y-24*scale-8);
+    // Número grande centrado en el icono
     svg += `
-  <text x="${x}" y="${labelY}" text-anchor="middle" font-family="'Segoe UI',sans-serif"
-    font-size="${11+ratio*8}" font-weight="800" fill="${color}" opacity="${0.4+ratio*0.6}">${cnt}</text>
-  <text x="${x}" y="${H-4}" text-anchor="middle" font-family="'Segoe UI',sans-serif"
-    font-size="9.5" font-weight="700" fill="${isDark?'#9095a0':'#5a6170'}">${cat.label} ${pct}%</text>`;
+  <text x="${cx}" y="${cy + 5}" text-anchor="middle"
+    font-family="'Segoe UI',sans-serif" font-size="${Math.round(9 + ratio*10)}"
+    font-weight="900" fill="#fff" opacity="${cnt > 0 ? 0.95 : 0}"
+    filter="url(#supSh)">${cnt > 0 ? cnt : ''}</text>`;
+
+    // Porcentaje + etiqueta debajo
+    svg += `
+  <text x="${cx}" y="${H - 26}" text-anchor="middle"
+    font-family="'Segoe UI',sans-serif" font-size="14" font-weight="800"
+    fill="${cnt > 0 ? cat.color : tc}">${pct}%</text>
+  <text x="${cx}" y="${H - 10}" text-anchor="middle"
+    font-family="'Segoe UI',sans-serif" font-size="9" font-weight="600"
+    fill="${tc}">${cat.label}</text>`;
   });
 
-  // Línea divisoria vertical central (sutil)
-  svg += `<line x1="${W/2}" y1="8" x2="${W/2}" y2="${H-18}" stroke="${isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.05)'}" stroke-width="1" stroke-dasharray="3,3"/>`;
+  // Separadores verticales sutiles
+  for (let i = 1; i < 4; i++) {
+    svg += `<line x1="${colW*i}" y1="8" x2="${colW*i}" y2="${H-32}"
+      stroke="${isDark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.04)'}"
+      stroke-width="1" stroke-dasharray="3,3"/>`;
+  }
 
   svg += `
 </svg>`;

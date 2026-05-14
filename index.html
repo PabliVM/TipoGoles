@@ -295,6 +295,25 @@ tr:hover .btn-del{opacity:1}
 /* SPINNER */
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+/* SVG CHARTS */
+.svg-chart-wrap { width:100%; overflow:visible; }
+.svg-chart-wrap svg { width:100%; height:auto; display:block; }
+.field-zone { transition: opacity .2s; cursor:default; }
+.field-zone:hover { opacity:.85; }
+.field-line { stroke: rgba(255,255,255,.25); stroke-width:1; }
+.field-grass { fill:#1a6b2e; }
+.field-grass-alt { fill:#1e7a34; }
+.heat-label { font-family:'Segoe UI',sans-serif; font-weight:800; fill:#fff;
+              text-shadow: 0 1px 3px rgba(0,0,0,.5); pointer-events:none; }
+.heat-pct { font-family:'Segoe UI',sans-serif; font-weight:600; fill:rgba(255,255,255,.85); }
+.field-marking { fill:none; stroke:rgba(255,255,255,.4); stroke-width:1.2; }
+.carril-label { font-family:'Segoe UI',sans-serif; font-size:10px; font-weight:700;
+                fill:var(--text-sec); }
+/* Botas superficie */
+.boot-group { cursor:default; }
+.boot-label { font-family:'Segoe UI',sans-serif; font-weight:700; text-anchor:middle; fill:var(--text); }
+.boot-pct-label { font-family:'Segoe UI',sans-serif; font-weight:800; text-anchor:middle; }
+
 @media print {
   @page { size: A4 portrait; margin: 10mm 12mm; }
 
@@ -442,7 +461,6 @@ tr:hover .btn-del{opacity:1}
   <button class="mod-tab" onclick="showMod('bbdd',this)">🗄️ BBDD <span class="mod-badge" id="badge-count">0</span></button>
   <button class="mod-tab" onclick="showMod('informes',this)">📊 Informes</button>
   <button class="mod-tab" onclick="showMod('comparativas',this)">⚖️ Comparativas</button>
-  <button class="mod-tab" onclick="showMod('foto',this)">📷 Foto</button>
 </nav>
 
 <main class="main">
@@ -911,119 +929,6 @@ tr:hover .btn-del{opacity:1}
 <!-- ===================================================
      PANEL: FOTO — Importar gol desde foto de formulario
 =================================================== -->
-<div id="panel-foto" class="panel">
-  <div style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px">
-
-    <!-- Config API Key -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title"><span class="card-icon">🔑</span> API Key Anthropic</div>
-        <button class="btn btn-secondary btn-sm" onclick="toggleApiKey()">Mostrar / Ocultar</button>
-      </div>
-      <div class="card-body" style="display:flex;gap:8px;align-items:center">
-        <input class="field-input" type="password" id="apiKeyInput"
-               placeholder="sk-ant-api03-..."
-               style="flex:1;font-family:monospace;font-size:11px"
-               oninput="saveApiKey()">
-        <span id="apiKeyStatus" style="font-size:11px;color:var(--text-mut);white-space:nowrap"></span>
-      </div>
-      <div style="padding:0 16px 10px;font-size:11px;color:var(--text-mut);line-height:1.6">
-        La key se guarda solo en este navegador (localStorage). Nunca se envía a ningún servidor excepto a <code style="background:var(--rm-bg);color:var(--rm);padding:1px 4px;border-radius:3px">api.anthropic.com</code>.
-      </div>
-    </div>
-
-    <!-- Captura foto -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title"><span class="card-icon">📷</span> Capturar formulario</div>
-        <a href="formulario-tipologia.html" target="_blank"
-           style="font-size:11.5px;color:var(--rm);font-weight:600;text-decoration:none">
-          🖨️ Abrir formulario imprimible
-        </a>
-      </div>
-      <div class="card-body">
-
-        <!-- Preview zona -->
-        <div id="photoPreviewWrap" style="display:none;margin-bottom:12px">
-          <img id="photoPreview"
-               style="width:100%;max-height:320px;object-fit:contain;border-radius:var(--r);border:1px solid var(--border);background:var(--surface-alt)">
-        </div>
-
-        <!-- Captura desde cámara o archivo -->
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-          <label class="btn btn-primary" style="cursor:pointer">
-            📷 Hacer foto
-            <input type="file" accept="image/*" capture="environment"
-                   id="cameraInput" style="display:none" onchange="handlePhotoInput(event)">
-          </label>
-          <label class="btn btn-secondary" style="cursor:pointer">
-            🖼️ Subir imagen
-            <input type="file" accept="image/jpeg,image/png,image/webp"
-                   id="fileInput" style="display:none" onchange="handlePhotoInput(event)">
-          </label>
-          <button class="btn btn-secondary" id="btnAnalizarFoto"
-                  onclick="analizarFoto()" style="display:none">
-            🔍 Analizar formulario
-          </button>
-        </div>
-
-        <!-- Estado del análisis -->
-        <div id="fotoStatus" style="display:none;padding:9px 12px;border-radius:var(--r);font-size:12px;font-weight:600;margin-bottom:10px"></div>
-
-        <!-- Spinner -->
-        <div id="fotoSpinner" style="display:none;text-align:center;padding:20px">
-          <div style="font-size:28px;animation:spin 1s linear infinite;display:inline-block">⚙️</div>
-          <div style="font-size:12px;color:var(--text-mut);margin-top:8px">Analizando formulario con IA...</div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- Resultado extraído -->
-    <div class="card" id="fotoResultCard" style="display:none">
-      <div class="card-header">
-        <div class="card-title"><span class="card-icon">✅</span> Datos extraídos</div>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-green btn-sm" onclick="guardarGolFoto()">💾 Guardar gol</button>
-          <button class="btn btn-secondary btn-sm" onclick="editarGolFoto()">✏️ Revisar en formulario</button>
-        </div>
-      </div>
-      <div class="card-body">
-        <div id="fotoResultGrid"
-             style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">
-        </div>
-        <!-- Confianza del análisis -->
-        <div id="fotoConfianza" style="margin-top:10px;padding:7px 10px;border-radius:var(--rs);font-size:11px"></div>
-        <!-- Texto bruto devuelto por la IA (colapsable) -->
-        <details style="margin-top:8px">
-          <summary style="font-size:11px;color:var(--text-mut);cursor:pointer">Ver respuesta completa de la IA</summary>
-          <pre id="fotoRawText" style="font-size:10px;color:var(--text-sec);background:var(--surface-alt);padding:8px;border-radius:var(--rs);margin-top:6px;white-space:pre-wrap;overflow-x:auto"></pre>
-        </details>
-      </div>
-    </div>
-
-    <!-- Instrucciones -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title"><span class="card-icon">ℹ️</span> Cómo usar</div>
-      </div>
-      <div class="card-body">
-        <ol style="padding-left:16px;line-height:2;font-size:12px;color:var(--text-sec)">
-          <li>Imprime el <strong>formulario de tipología</strong> (botón arriba a la derecha)</li>
-          <li>Rellénalo a mano durante o después del partido — marca ✓ en las casillas</li>
-          <li>Haz una foto con el móvil: <strong>buena luz, sin sombras, encuadrado</strong></li>
-          <li>Pulsa <strong>"Hacer foto"</strong> o sube la imagen</li>
-          <li>Pulsa <strong>"Analizar formulario"</strong></li>
-          <li>Revisa los datos extraídos y guarda</li>
-        </ol>
-        <div style="margin-top:10px;padding:8px 10px;background:var(--orange-bg);border-radius:var(--rs);font-size:11px;color:var(--orange)">
-          ⚠️ La API key debe ser de <strong>Anthropic</strong> (console.anthropic.com). El modelo usado es <code>claude-opus-4-5</code> con visión.
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
 
 
 </main>
@@ -1086,11 +991,11 @@ const CHART_CATALOG = [
   {id:'chartRival',      title:'Goles por rival',           icon:'🆚', bloque:'Generales',        full:false, visible:false, chartType:'rank'},
   {id:'chartTipologia',  title:'Goles por tipología',       icon:'⚽', bloque:'Tácticos',         full:false, visible:true,  chartType:'doughnut'},
   {id:'chartEstilo',     title:'Ranking de estilos',        icon:'🎯', bloque:'Tácticos',         full:true,  visible:true,  chartType:'rank'},
-  {id:'chartZonaRobo',   title:'Zona de robo',              icon:'🗺️', bloque:'Tácticos',         full:false, visible:true,  chartType:'doughnut'},
-  {id:'chartPosicRobo',  title:'Posicionamiento del robo',  icon:'📌', bloque:'Tácticos',         full:false, visible:false, chartType:'doughnut'},
+  {id:'chartZonaRobo',   title:'Zonas de robo',             icon:'🗺️', bloque:'Tácticos',         full:true,  visible:true,  chartType:'svg'},
+  {id:'chartPosicRobo',  title:'Carriles de robo',          icon:'📌', bloque:'Tácticos',         full:false, visible:true,  chartType:'svg'},
   {id:'chartPrimerPase', title:'Primer pase',               icon:'➡️', bloque:'Tácticos',         full:false, visible:false, chartType:'bar'},
   {id:'chartZonaRoboXTip',title:'Zona robo × Tipología',   icon:'📊', bloque:'Tácticos',         full:true,  visible:false, chartType:'bar'},
-  {id:'chartSuperficie', title:'Superficie de remate',      icon:'🦶', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar'},
+  {id:'chartSuperficie', title:'Superficie de remate',      icon:'🦶', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'svg'},
   {id:'chartZona',       title:'Zona de remate',            icon:'📍', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar'},
   {id:'chartTipoPase',   title:'Tipo de pase',              icon:'🧭', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'doughnut'},
   {id:'chartContactos',  title:'Nº de contactos',           icon:'🔢', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar'},
@@ -1327,7 +1232,6 @@ function showMod(name, btn) {
   if (name === 'informes') renderDashboard();
   if (name === 'bbdd') renderTabla();
   if (name === 'comparativas') renderComp();
-  if (name === 'foto') loadApiKey();
 }
 
 function toggleDark() {
@@ -1826,10 +1730,14 @@ function renderDashboard() {
   let html='';
   for(const id of visibleIds){
     const cat=CHART_CATALOG.find(c=>c.id===id); if(!cat) continue;
+    const isSVG = cat.chartType==='svg';
     const isRank=['rank'].includes(typeMap[id])||['chartEstilo','chartGoleador','chartRival'].includes(id)&&typeMap[id]==='rank';
     const fullCls=cat.full?'full-width':'';
     const tallCls=cat.full?'tall':'';
-    const inner=isRank?`<div class="rank-list" id="${id}"></div>`:`<canvas id="${id}"></canvas>`;
+    let inner;
+    if(isSVG) inner=`<div class="svg-chart-wrap" id="${id}"></div>`;
+    else if(isRank) inner=`<div class="rank-list" id="${id}"></div>`;
+    else inner=`<canvas id="${id}"></canvas>`;
     html+=`<div class="chart-card ${fullCls}"><div class="chart-head"><span class="chart-title">${cat.icon} ${cat.title}</span></div><div class="chart-body ${tallCls}">${inner}</div></div>`;
   }
   document.getElementById('chartsDynamic').innerHTML=html;
@@ -1917,11 +1825,11 @@ function renderDashboard() {
           scales:{x:{stacked:true,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:true,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
         }}); break; }
       case 'chartTipologia': renderChart(id,'tipologia'); break;
-      case 'chartSuperficie': renderChart(id,'superficie'); break;
+      case 'chartSuperficie': renderSuperficieSVG(id, data); break;
+      case 'chartZonaRobo':   renderZonaRoboSVG(id, data); break;
+      case 'chartPosicRobo':  renderCarrilesSVG(id, data); break;
       case 'chartZona':       renderChart(id,'zonaRemate'); break;
       case 'chartTipoPase':   renderChart(id,'tipoPase'); break;
-      case 'chartZonaRobo':   renderChart(id,'zonaRobo'); break;
-      case 'chartPosicRobo':  renderChart(id,'posicRobo'); break;
       case 'chartPrimerPase': renderChart(id,'primerPase'); break;
       case 'chartEstilo':     mkRank(id,sortedCount(data,'estilo',12)); break;
       case 'chartGoleador':   mkRank(id,sortedCount(data,'goleador',10)); break;
@@ -2180,327 +2088,276 @@ function loadSeedData() {
   showToast('⚽ 50 goles cargados en CAS 2025/2026');
 }
 
+
 /* =====================================================
-   MÓDULO FOTO — Análisis de formulario con Claude Vision
+   SVG VISUALIZERS
    ===================================================== */
 
-let fotoImageBase64 = null;
-let fotoMediaType = 'image/jpeg';
-let fotoExtractedData = null;
+/* ── ZONA DE ROBO: campo horizontal dividido en Z1-Z4 ── */
+function renderZonaRoboSVG(containerId, data) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
 
-// API Key persistida en localStorage
-function saveApiKey() {
-  const key = document.getElementById('apiKeyInput').value.trim();
-  if (key) {
-    localStorage.setItem('tg-apikey', key);
-    document.getElementById('apiKeyStatus').textContent = '✅ Guardada';
-    document.getElementById('apiKeyStatus').style.color = 'var(--green)';
-  }
-}
+  const zones = ['Z1','Z2','Z3','Z4'];
+  const labels = ['Z1\nDefensiva','Z2\nMedio-def.','Z3\nMedio-of.','Z4\nOfensiva'];
+  const counts = zones.map(z => data.filter(g => g.zonaRobo === z).length);
+  const total  = counts.reduce((a,b)=>a+b,0) || 1;
+  const maxC   = Math.max(...counts) || 1;
 
-function toggleApiKey() {
-  const input = document.getElementById('apiKeyInput');
-  input.type = input.type === 'password' ? 'text' : 'password';
-}
+  const isDark = document.body.classList.contains('dark');
 
-function loadApiKey() {
-  const key = localStorage.getItem('tg-apikey') || '';
-  const input = document.getElementById('apiKeyInput');
-  if (input) {
-    input.value = key;
-    if (key) {
-      document.getElementById('apiKeyStatus').textContent = '✅ Guardada';
-      document.getElementById('apiKeyStatus').style.color = 'var(--green)';
+  // Colores de calor: de azul oscuro (0%) a amarillo-naranja (100%)
+  function heatColor(ratio) {
+    // Escala: 0→azul oscuro, 0.5→verde, 1→rojo-naranja
+    const stops = [
+      [0,    [20,  80, 120]],
+      [0.25, [30, 140,  60]],
+      [0.5,  [60, 180,  40]],
+      [0.75, [220,160,  20]],
+      [1,    [220,  60,  20]],
+    ];
+    let lo = stops[0], hi = stops[stops.length-1];
+    for (let i=0; i<stops.length-1; i++) {
+      if (ratio >= stops[i][0] && ratio <= stops[i+1][0]) { lo=stops[i]; hi=stops[i+1]; break; }
     }
-  }
-}
-
-// loadApiKey se llama desde el propio panel foto al montarse
-
-function handlePhotoInput(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  fotoMediaType = file.type || 'image/jpeg';
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const dataUrl = e.target.result;
-    fotoImageBase64 = dataUrl.split(',')[1]; // quitar prefijo data:image/...;base64,
-
-    // Mostrar preview
-    document.getElementById('photoPreview').src = dataUrl;
-    document.getElementById('photoPreviewWrap').style.display = 'block';
-    document.getElementById('btnAnalizarFoto').style.display = 'inline-flex';
-    document.getElementById('fotoResultCard').style.display = 'none';
-    setFotoStatus('', '');
-  };
-  reader.readAsDataURL(file);
-  // Reset inputs para poder subir la misma imagen dos veces
-  event.target.value = '';
-}
-
-async function analizarFoto() {
-  const apiKey = document.getElementById('apiKeyInput').value.trim()
-                 || localStorage.getItem('tg-apikey') || '';
-
-  if (!apiKey) {
-    setFotoStatus('err', '❌ Introduce tu API key de Anthropic primero.');
-    return;
-  }
-  if (!fotoImageBase64) {
-    setFotoStatus('err', '❌ Primero selecciona una imagen.');
-    return;
+    const t = lo[0]===hi[0] ? 0 : (ratio-lo[0])/(hi[0]-lo[0]);
+    const r = Math.round(lo[1][0]+(hi[1][0]-lo[1][0])*t);
+    const g = Math.round(lo[1][1]+(hi[1][1]-lo[1][1])*t);
+    const b = Math.round(lo[1][2]+(hi[1][2]-lo[1][2])*t);
+    return `rgb(${r},${g},${b})`;
   }
 
-  // UI loading
-  document.getElementById('fotoSpinner').style.display = 'block';
-  document.getElementById('btnAnalizarFoto').disabled = true;
-  document.getElementById('fotoResultCard').style.display = 'none';
-  setFotoStatus('', '');
+  const W=560, H=200, PAD=30;
+  const FW=W-PAD*2, FH=H-PAD*2;
+  const ZW=FW/4;
 
-  const PROMPT = `Eres un asistente de análisis deportivo. Analiza este formulario de registro de gol del Real Madrid Cantera y extrae todos los campos marcados.
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="zrShadow"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity=".3"/></filter>
+  </defs>
+  <!-- Campo base -->
+  <rect x="${PAD}" y="${PAD}" width="${FW}" height="${FH}" rx="4" fill="#1a6b2e"/>
+  <!-- Césped alternado -->`;
 
-El formulario tiene checkboxes □ (vacío) y casillas marcadas ✓ o ✗ o tachadas/rellenas.
-Las líneas ___ contienen texto escrito a mano.
+  // Zonas con calor
+  zones.forEach((z,i) => {
+    const ratio = counts[i]/maxC;
+    const x = PAD + i*ZW;
+    const color = heatColor(ratio);
+    const pct = ((counts[i]/total)*100).toFixed(1);
+    const cx = x + ZW/2;
+    const cy = PAD + FH/2;
+    const linesY = [labels[i].split('\n')[0], labels[i].split('\n')[1]];
 
-Devuelve ÚNICAMENTE un objeto JSON válido con exactamente estas claves (sin texto adicional, sin markdown, sin explicaciones):
+    svg += `
+  <rect x="${x}" y="${PAD}" width="${ZW}" height="${FH}" fill="${color}" opacity=".82" class="field-zone"/>`;
 
-{
-  "competicion": "Liga" | "Torneo" | "Amistoso" | "",
-  "favor": "A favor" | "En contra" | "",
-  "jornada": "J1".."J38" | "",
-  "rival": "nombre del rival escrito" | "",
-  "nivel": "Nivel 1" | "Nivel 2" | "Nivel 3" | "Nivel 4" | "",
-  "lv": "Local" | "Visitante" | "",
-  "dif": número entero o "",
-  "goleador": "nombre escrito" | "",
-  "minuto": número entero o 0,
-  "tramo": "0-10"|"11-20"|"21-30"|"31-40"|"41-50"|"51-60"|"61-70"|"71-80"|"81-90" | "",
-  "tipologia": "Balón parado"|"Transiciones"|"Juego directo"|"Juego posicional"|"Otros" | "",
-  "estilo": valor exacto marcado o "",
-  "zonaRobo": "Z1"|"Z2"|"Z3"|"Z4" | "",
-  "posicRobo": "Carril central"|"Banda" | "",
-  "primerPase": "Horizontal"|"Hacia detrás"|"Hacia adelante" | "",
-  "nPases": "1".."10"|"10+" | "",
-  "tiempoTransicion": número entero o 0,
-  "tipoPase": "Aereo"|"Raso" | "",
-  "superficie": "Cabeza"|"Pie Izquierdo"|"Pie derecho"|"Otros" | "",
-  "nContactos": "1".."10"|"10+" | "",
-  "zonaRemate": "1er palo"|"2º palo"|"2º palo (espalda 2º central)"|"Penalti"|"Vértice"|"Fuera del área"|"Área pequeña" | "",
-  "confianza": "alta"|"media"|"baja",
-  "notas": "observaciones si algo no está claro" | ""
+    // Separadores verticales
+    if (i>0) svg += `<line x1="${x}" y1="${PAD}" x2="${x}" y2="${PAD+FH}" stroke="rgba(255,255,255,.3)" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+
+    // Número grande
+    svg += `
+  <text x="${cx}" y="${cy-16}" text-anchor="middle" class="heat-label" font-size="28" filter="url(#zrShadow)">${counts[i]}</text>
+  <text x="${cx}" y="${cy+8}" text-anchor="middle" class="heat-pct" font-size="13">${pct}%</text>
+  <text x="${cx}" y="${PAD+FH-22}" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="11" font-weight="700" fill="rgba(255,255,255,.7)">${linesY[0]}</text>
+  <text x="${cx}" y="${PAD+FH-9}" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="10" fill="rgba(255,255,255,.55)">${linesY[1]}</text>`;
+  });
+
+  // Marcas del campo: líneas laterales, central, área
+  svg += `
+  <!-- Contorno campo -->
+  <rect x="${PAD}" y="${PAD}" width="${FW}" height="${FH}" rx="4" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5" class="field-marking"/>
+  <!-- Línea central -->
+  <line x1="${PAD+FW/2}" y1="${PAD}" x2="${PAD+FW/2}" y2="${PAD+FH}" stroke="rgba(255,255,255,.35)" stroke-width="1" stroke-dasharray="3,3"/>
+  <!-- Área pequeña izq -->
+  <rect x="${PAD}" y="${PAD+FH*0.3}" width="${FW*0.08}" height="${FH*0.4}" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1"/>
+  <!-- Área grande izq -->
+  <rect x="${PAD}" y="${PAD+FH*0.15}" width="${FW*0.18}" height="${FH*0.7}" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1"/>
+  <!-- Área pequeña der -->
+  <rect x="${PAD+FW*0.92}" y="${PAD+FH*0.3}" width="${FW*0.08}" height="${FH*0.4}" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1"/>
+  <!-- Área grande der -->
+  <rect x="${PAD+FW*0.82}" y="${PAD+FH*0.15}" width="${FW*0.18}" height="${FH*0.7}" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1"/>
+  <!-- Círculo central -->
+  <circle cx="${PAD+FW/2}" cy="${PAD+FH/2}" r="${FH*0.22}" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+  <!-- Etiquetas Z -->`;
+
+  zones.forEach((z,i) => {
+    const x = PAD + i*ZW + ZW/2;
+    svg += `<text x="${x}" y="${PAD-8}" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="12" font-weight="800" fill="${isDark?'#9095a0':'#5a6170'}">${z}</text>`;
+  });
+
+  svg += `
+</svg>`;
+  el.innerHTML = svg;
 }
 
-Reglas:
-- Si una casilla está claramente marcada, devuelve ese valor.
-- Si no puedes leer un campo, devuelve "".
-- "confianza" es tu evaluación global de la legibilidad del formulario.
-- "tramo" calcúlalo tú a partir del minuto si no está marcado.
-- Para estilo, los códigos del formulario significan: "JC paredes" = "Juego combinativo (paredes)", "JC último pase" = "Juego combinativo (último pase)", "SB + centro" = "Saque de banda y centro", "SB + combinativo" = "Saque de banda y combinativo", "SB + tiro" = "Saque de banda + tiro".`;
+/* ── CARRILES DE ROBO: campo dividido en Banda / Central / Banda ── */
+function renderCarrilesSVG(containerId, data) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
 
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-opus-4-5',
-        max_tokens: 1024,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: fotoMediaType,
-                data: fotoImageBase64,
-              }
-            },
-            { type: 'text', text: PROMPT }
-          ]
-        }]
-      })
-    });
+  const carriles = ['Banda','Carril central'];
+  const counts = carriles.map(c => data.filter(g => g.posicRobo === c).length);
+  const total  = counts.reduce((a,b)=>a+b,0) || 1;
+  const isDark = document.body.classList.contains('dark');
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `HTTP ${response.status}`);
-    }
+  // Banda sup, Centro, Banda inf
+  const bandaCount   = counts[0];  // Banda (suma de ambas bandas)
+  const centralCount = counts[1];
+  const bandaPct   = ((bandaCount/total)*100).toFixed(1);
+  const centralPct = ((centralCount/total)*100).toFixed(1);
+  // Dividir banda en dos mitades iguales para visualización
+  const bandaHalf = bandaCount/2;
 
-    const data = await response.json();
-    const rawText = data.content?.[0]?.text || '';
+  const W=280, H=220, PAD=28;
+  const FW=W-PAD*2, FH=H-PAD*2;
+  // 3 franjas verticales: banda(25%), central(50%), banda(25%)
+  const BW=FW*0.28, CW=FW*0.44;
 
-    document.getElementById('fotoRawText').textContent = rawText;
-
-    // Parsear JSON de la respuesta
-    let parsed;
-    try {
-      // Extraer JSON aunque venga con texto alrededor
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('No se encontró JSON en la respuesta');
-      parsed = JSON.parse(jsonMatch[0]);
-    } catch(parseErr) {
-      throw new Error('La IA devolvió un formato inesperado. Inténtalo de nuevo.');
-    }
-
-    fotoExtractedData = parsed;
-    renderFotoResult(parsed);
-
-  } catch(err) {
-    setFotoStatus('err', '❌ Error: ' + err.message);
-    console.error('Foto API error:', err);
-  } finally {
-    document.getElementById('fotoSpinner').style.display = 'none';
-    document.getElementById('btnAnalizarFoto').disabled = false;
+  function zoneColor(ratio) {
+    const r = Math.round(20+ratio*200);
+    const g = Math.round(80+ratio*80);
+    const b = Math.round(120-ratio*100);
+    return `rgb(${r},${g},${b})`;
   }
+  const bandaRatio   = bandaCount/(Math.max(bandaCount,centralCount)||1);
+  const centralRatio = centralCount/(Math.max(bandaCount,centralCount)||1);
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="crShadow"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity=".3"/></filter>
+  </defs>
+  <!-- Campo base -->
+  <rect x="${PAD}" y="${PAD}" width="${FW}" height="${FH}" rx="4" fill="#1a6b2e"/>
+  <!-- Banda superior -->
+  <rect x="${PAD}" y="${PAD}" width="${BW}" height="${FH}" fill="${zoneColor(bandaRatio)}" opacity=".8" class="field-zone"/>
+  <!-- Carril central -->
+  <rect x="${PAD+BW}" y="${PAD}" width="${CW}" height="${FH}" fill="${zoneColor(centralRatio)}" opacity=".8" class="field-zone"/>
+  <!-- Banda inferior -->
+  <rect x="${PAD+BW+CW}" y="${PAD}" width="${BW}" height="${FH}" fill="${zoneColor(bandaRatio)}" opacity=".8" class="field-zone"/>
+  <!-- Separadores -->
+  <line x1="${PAD+BW}" y1="${PAD}" x2="${PAD+BW}" y2="${PAD+FH}" stroke="rgba(255,255,255,.4)" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="${PAD+BW+CW}" y1="${PAD}" x2="${PAD+BW+CW}" y2="${PAD+FH}" stroke="rgba(255,255,255,.4)" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <!-- Contorno -->
+  <rect x="${PAD}" y="${PAD}" width="${FW}" height="${FH}" rx="4" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>
+  <!-- Líneas campo -->
+  <line x1="${PAD+FW/2}" y1="${PAD}" x2="${PAD+FW/2}" y2="${PAD+FH}" stroke="rgba(255,255,255,.2)" stroke-width="1" stroke-dasharray="3,3"/>
+  <rect x="${PAD}" y="${PAD+FH*0.25}" width="${FW*0.2}" height="${FH*0.5}" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+  <rect x="${PAD+FW*0.8}" y="${PAD+FH*0.25}" width="${FW*0.2}" height="${FH*0.5}" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+  <!-- Valores Banda izq -->
+  <text x="${PAD+BW/2}" y="${PAD+FH/2-8}" text-anchor="middle" class="heat-label" font-size="18" filter="url(#crShadow)">${Math.round(bandaHalf)}</text>
+  <text x="${PAD+BW/2}" y="${PAD+FH/2+10}" text-anchor="middle" class="heat-pct" font-size="11">${(bandaPct/2).toFixed(1)}%</text>
+  <!-- Valores Central -->
+  <text x="${PAD+BW+CW/2}" y="${PAD+FH/2-8}" text-anchor="middle" class="heat-label" font-size="22" filter="url(#crShadow)">${centralCount}</text>
+  <text x="${PAD+BW+CW/2}" y="${PAD+FH/2+12}" text-anchor="middle" class="heat-pct" font-size="13">${centralPct}%</text>
+  <!-- Valores Banda der -->
+  <text x="${PAD+BW+CW+BW/2}" y="${PAD+FH/2-8}" text-anchor="middle" class="heat-label" font-size="18" filter="url(#crShadow)">${Math.round(bandaHalf)}</text>
+  <text x="${PAD+BW+CW+BW/2}" y="${PAD+FH/2+10}" text-anchor="middle" class="heat-pct" font-size="11">${(bandaPct/2).toFixed(1)}%</text>
+  <!-- Etiquetas debajo -->
+  <text x="${PAD+BW/2}" y="${PAD+FH+16}" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="10" font-weight="700" fill="${isDark?'#9095a0':'#5a6170'}">Banda</text>
+  <text x="${PAD+BW+CW/2}" y="${PAD+FH+16}" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="10" font-weight="700" fill="${isDark?'#9095a0':'#5a6170'}">Central</text>
+  <text x="${PAD+BW+CW+BW/2}" y="${PAD+FH+16}" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="10" font-weight="700" fill="${isDark?'#9095a0':'#5a6170'}">Banda</text>
+</svg>`;
+
+  el.innerHTML = svg;
 }
 
-function renderFotoResult(data) {
-  const LABELS = {
-    competicion:'Competición', favor:'A favor/EC', jornada:'Jornada',
-    rival:'Rival', nivel:'Nivel rival', lv:'Local/Visitante',
-    dif:'Dif. marcador', goleador:'Goleador', minuto:'Minuto', tramo:'Tramo',
-    tipologia:'Tipología', estilo:'Estilo', zonaRobo:'Zona robo',
-    posicRobo:'Posic. robo', primerPase:'Primer pase', nPases:'Nº pases',
-    tiempoTransicion:'T. transición', tipoPase:'Tipo pase',
-    superficie:'Superficie', nContactos:'Nº contactos', zonaRemate:'Zona remate',
-  };
+/* ── SUPERFICIE DE REMATE: botas + cabeza visuales ── */
+function renderSuperficieSVG(containerId, data) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
 
-  const grid = document.getElementById('fotoResultGrid');
-  grid.innerHTML = Object.entries(LABELS).map(([key, label]) => {
-    const val = data[key];
-    const isEmpty = val === '' || val === null || val === undefined || val === 0;
-    return `<div style="background:var(--surface-alt);border:1px solid ${isEmpty?'var(--border)':'var(--rm)'};
-                 border-radius:var(--rs);padding:7px 9px;">
-      <div style="font-size:9.5px;font-weight:700;color:${isEmpty?'var(--text-mut)':'var(--rm)'};
-                  text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px">${label}</div>
-      <div style="font-size:12px;font-weight:600;color:${isEmpty?'var(--text-faint)':'var(--text)'};
-                  min-height:16px">${isEmpty ? '—' : esc(String(val))}</div>
-    </div>`;
-  }).join('');
+  const cats = [
+    {key:'Pie derecho',  label:'Pie Der.'},
+    {key:'Pie Izquierdo',label:'Pie Izq.'},
+    {key:'Cabeza',       label:'Cabeza'},
+    {key:'Otros',        label:'Otros'},
+  ];
+  const counts = cats.map(c => data.filter(g => g.superficie === c.key).length);
+  const total  = counts.reduce((a,b)=>a+b,0) || 1;
+  const maxC   = Math.max(...counts) || 1;
+  const isDark = document.body.classList.contains('dark');
 
-  // Confianza
-  const conf = data.confianza || 'media';
-  const confColors = { alta: 'var(--green)', media: 'var(--orange)', baja: 'var(--red)' };
-  const confBg = { alta: 'var(--green-bg)', media: 'var(--orange-bg)', baja: 'var(--red-bg)' };
-  let confHTML = `<span style="background:${confBg[conf]};color:${confColors[conf]};
-    font-weight:700;padding:2px 8px;border-radius:10px;font-size:11px">
-    Confianza: ${conf.toUpperCase()}</span>`;
-  if (data.notas) confHTML += `<span style="margin-left:10px;font-size:11px;color:var(--text-sec)">📝 ${esc(data.notas)}</span>`;
-  document.getElementById('fotoConfianza').innerHTML = confHTML;
+  const W=260, H=210, PAD=14;
+  const baseColor = '#2563eb';
 
-  document.getElementById('fotoResultCard').style.display = 'block';
-  setFotoStatus('ok', `✅ Formulario analizado · ${Object.values(LABELS).filter((_,i)=>data[Object.keys(LABELS)[i]]!=='').length} campos extraídos`);
-}
-
-function guardarGolFoto() {
-  if (!fotoExtractedData) return;
-  const d = fotoExtractedData;
-  const g = {
-    _id: Date.now() + Math.random(),
-    competicion: d.competicion || '',
-    favor:       d.favor || '',
-    jornada:     d.jornada || '',
-    rival:       d.rival || '',
-    nivel:       d.nivel || '',
-    lv:          d.lv || '',
-    dif:         String(d.dif ?? ''),
-    goleador:    d.goleador || '',
-    minuto:      parseInt(d.minuto) || 0,
-    tramo:       d.tramo || calcTramo(parseInt(d.minuto) || 0),
-    tipologia:   d.tipologia || '',
-    estilo:      d.estilo || '',
-    zonaRobo:    d.zonaRobo || '',
-    posicRobo:   d.posicRobo || '',
-    primerPase:  d.primerPase || '',
-    nPases:      d.nPases || '',
-    tiempoTransicion: parseInt(d.tiempoTransicion) || 0,
-    tipoPase:    d.tipoPase || '',
-    superficie:  d.superficie || '',
-    nContactos:  d.nContactos || '',
-    zonaRemate:  d.zonaRemate || '',
-  };
-
-  if (!g.tipologia && !g.competicion) {
-    setFotoStatus('err', '⚠️ El análisis no extrajo datos suficientes. Revisa la foto.');
-    return;
+  // Función bota derecha (path simplificado orientado a la derecha)
+  function bootPathRight(cx, cy, scale) {
+    // Bota estilizada apuntando a la derecha
+    const s = scale;
+    return `M${cx-28*s},${cy+22*s}
+      L${cx-28*s},${cy-8*s}
+      Q${cx-20*s},${cy-22*s} ${cx},${cy-20*s}
+      Q${cx+22*s},${cy-18*s} ${cx+28*s},${cy-8*s}
+      L${cx+30*s},${cy+4*s}
+      Q${cx+28*s},${cy+16*s} ${cx+14*s},${cy+18*s}
+      L${cx-10*s},${cy+22*s}
+      L${cx-28*s},${cy+22*s}Z`;
+  }
+  // Bota izquierda (espejada)
+  function bootPathLeft(cx, cy, scale) {
+    const s = scale;
+    return `M${cx+28*s},${cy+22*s}
+      L${cx+28*s},${cy-8*s}
+      Q${cx+20*s},${cy-22*s} ${cx},${cy-20*s}
+      Q${cx-22*s},${cy-18*s} ${cx-28*s},${cy-8*s}
+      L${cx-30*s},${cy+4*s}
+      Q${cx-28*s},${cy+16*s} ${cx-14*s},${cy+18*s}
+      L${cx+10*s},${cy+22*s}
+      L${cx+28*s},${cy+22*s}Z`;
   }
 
-  const arr = currentGoles();
-  arr.push(g);
-  setGoles(activeTeam, activeSeason, arr);
-  updateBadge();
-  showToast(`⚽ Gol guardado desde foto — ${activeTeam} ${activeSeason}`);
-  setFotoStatus('ok', `✅ Gol guardado en ${activeTeam} · ${activeSeason}`);
-  document.getElementById('fotoResultCard').style.display = 'none';
-  fotoExtractedData = null;
-  fotoImageBase64 = null;
-  document.getElementById('photoPreviewWrap').style.display = 'none';
-  document.getElementById('btnAnalizarFoto').style.display = 'none';
-}
+  // Posiciones de cada icono
+  const layout = [
+    {x:68,  y:105, type:'bootR'},  // Pie derecho
+    {x:192, y:105, type:'bootL'},  // Pie izquierdo
+    {x:128, y:48,  type:'head'},   // Cabeza
+    {x:128, y:170, type:'other'},  // Otros
+  ];
 
-function editarGolFoto() {
-  if (!fotoExtractedData) return;
-  const d = fotoExtractedData;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="supShadow"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity=".2"/></filter>
+  </defs>`;
 
-  // Navegar a Registro y rellenar el formulario
-  const regBtn = document.querySelector('.mod-tab:nth-child(2)');
-  if (regBtn) showMod('registro', regBtn);
+  cats.forEach((cat, i) => {
+    const cnt = counts[i];
+    const pct = ((cnt/total)*100).toFixed(1);
+    const ratio = cnt/maxC;
+    const scale = 0.5 + ratio*0.7;  // tamaño proporcional
+    const opacity = 0.25 + ratio*0.75;
+    const {x, y, type} = layout[i];
+    const color = i===0?'#2563eb':i===1?'#dc2626':i===2?'#16a34a':'#ea580c';
 
-  // Rellenar campos del formulario de registro
-  setTimeout(() => {
-    const setVal = (id, val) => { const el=document.getElementById(id); if(el&&val) el.value=val; };
-    setVal('f-comp',        d.competicion);
-    setVal('f-jornada',     d.jornada);
-    setVal('f-rival',       d.rival);
-    setVal('f-nivel',       d.nivel);
-    setVal('f-dif',         d.dif);
-    setVal('f-goleador',    d.goleador);
-    setVal('f-minuto',      d.minuto);
-    setVal('f-tipologia',   d.tipologia);
-    setVal('f-estilo',      d.estilo);
-    setVal('f-zona-robo',   d.zonaRobo);
-    setVal('f-posic-robo',  d.posicRobo);
-    setVal('f-primer-pase', d.primerPase);
-    setVal('f-n-pases',     d.nPases);
-    setVal('f-tiempo',      d.tiempoTransicion);
-    setVal('f-tipo-pase',   d.tipoPase);
-    setVal('f-superficie',  d.superficie);
-    setVal('f-contactos',   d.nContactos);
-    setVal('f-zona-remate', d.zonaRemate);
-
-    // Chips favor
-    if (d.favor) {
-      const chip = document.querySelector(`#chips-favor .chip[data-val="${d.favor}"]`);
-      if (chip) { document.querySelectorAll('#chips-favor .chip').forEach(c=>c.classList.remove('selected')); chip.classList.add('selected'); document.getElementById('f-favor').value=d.favor; }
-    }
-    // Chips lv
-    if (d.lv) {
-      const chip = document.querySelector(`#chips-lv .chip[data-val="${d.lv}"]`);
-      if (chip) { document.querySelectorAll('#chips-lv .chip').forEach(c=>c.classList.remove('selected')); chip.classList.add('selected'); document.getElementById('f-lv').value=d.lv; }
+    if (type==='bootR') {
+      svg += `<path d="${bootPathRight(x,y,scale)}" fill="${color}" opacity="${opacity}" filter="url(#supShadow)"/>`;
+    } else if (type==='bootL') {
+      svg += `<path d="${bootPathLeft(x,y,scale)}" fill="${color}" opacity="${opacity}" filter="url(#supShadow)"/>`;
+    } else if (type==='head') {
+      const r = 14*scale;
+      svg += `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}" opacity="${opacity}" filter="url(#supShadow)"/>`;
+      // Cabeza línea cuello
+      svg += `<line x1="${x}" y1="${y+r}" x2="${x}" y2="${y+r+6*scale}" stroke="${color}" stroke-width="${3*scale}" opacity="${opacity*0.7}"/>`;
+    } else {
+      const s = 12*scale;
+      svg += `<rect x="${x-s}" y="${y-s}" width="${s*2}" height="${s*2}" rx="${s*0.4}" fill="${color}" opacity="${opacity*0.7}" filter="url(#supShadow)"/>`;
     }
 
-    showToast('✏️ Datos cargados en el formulario — revisa y guarda');
-  }, 100);
-}
+    // Etiqueta número grande encima del icono
+    const labelY = type==='head' ? y-18*scale-10 : (type==='other' ? y-14*scale-8 : y-24*scale-8);
+    svg += `
+  <text x="${x}" y="${labelY}" text-anchor="middle" font-family="'Segoe UI',sans-serif"
+    font-size="${11+ratio*8}" font-weight="800" fill="${color}" opacity="${0.4+ratio*0.6}">${cnt}</text>
+  <text x="${x}" y="${H-4}" text-anchor="middle" font-family="'Segoe UI',sans-serif"
+    font-size="9.5" font-weight="700" fill="${isDark?'#9095a0':'#5a6170'}">${cat.label} ${pct}%</text>`;
+  });
 
-function setFotoStatus(type, msg) {
-  const el = document.getElementById('fotoStatus');
-  if (!msg) { el.style.display='none'; return; }
-  el.style.display = 'block';
-  const styles = {
-    ok:  'background:var(--green-bg);color:var(--green)',
-    err: 'background:var(--red-bg);color:var(--red)',
-    '': 'background:var(--surface-alt);color:var(--text-sec)',
-  };
-  el.style.cssText = (styles[type] || styles['']) + ';padding:9px 12px;border-radius:var(--r);font-size:12px;font-weight:600;margin-bottom:10px';
-  el.textContent = msg;
+  // Línea divisoria vertical central (sutil)
+  svg += `<line x1="${W/2}" y1="8" x2="${W/2}" y2="${H-18}" stroke="${isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.05)'}" stroke-width="1" stroke-dasharray="3,3"/>`;
+
+  svg += `
+</svg>`;
+  el.innerHTML = svg;
 }
 
 /* =====================================================

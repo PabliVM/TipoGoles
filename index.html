@@ -623,37 +623,271 @@ tr:hover .btn-del { opacity: 1; }
 .rank-bar-fill { height: 100%; background: var(--rm-blue); border-radius: 3px; transition: width .6s ease; }
 .rank-val { font-size: 12px; font-weight: 700; color: var(--text); min-width: 28px; text-align: right; }
 
-/* DASHBOARD FILTER BAR */
-.dash-filters {
+/* =====================================================
+   DASHBOARD — FILTROS EN BLOQUES + EDITOR DE LAYOUT
+   ===================================================== */
+
+/* Barra superior del dashboard */
+.dash-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.dash-topbar-left {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.dash-active-filters {
+  display: flex; gap: 5px; flex-wrap: wrap; align-items: center;
+}
+.dash-active-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--rm-blue-bg);
+  color: var(--rm-blue);
+  border: 1px solid rgba(37,99,235,.2);
+  border-radius: 20px;
+  padding: 2px 8px 2px 8px;
+  font-size: 11px; font-weight: 600;
+  cursor: pointer;
+  transition: background var(--tr);
+}
+.dash-active-chip:hover { background: var(--red-bg); color: var(--red); border-color: rgba(220,38,38,.2); }
+.dash-active-chip .x { font-size: 10px; margin-left: 2px; }
+
+/* Panel de filtros por bloques */
+.dash-filter-panel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--rl);
-  padding: 12px 16px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
   margin-bottom: 14px;
+  overflow: hidden;
+  display: none;
 }
-.dash-filter-label {
-  font-size: 11px;
-  font-weight: 700;
+.dash-filter-panel.open { display: block; }
+
+.filter-block {
+  border-bottom: 1px solid var(--border-light);
+}
+.filter-block:last-child { border-bottom: none; }
+
+.filter-block-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--tr);
+}
+.filter-block-header:hover { background: var(--surface-alt); }
+
+.filter-block-title {
+  font-size: 12px; font-weight: 700;
+  color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+}
+.filter-block-title .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--rm-blue);
+}
+.filter-block-title .dot.green { background: var(--green); }
+.filter-block-title .dot.orange { background: var(--orange); }
+.filter-block-badge {
+  font-size: 10px; font-weight: 700;
+  background: var(--rm-blue);
+  color: #fff;
+  padding: 1px 6px; border-radius: 10px;
+  min-width: 18px; text-align: center;
+}
+.filter-block-arrow {
+  font-size: 11px; color: var(--text-mut);
+  transition: transform var(--tr);
+}
+.filter-block.expanded .filter-block-arrow { transform: rotate(180deg); }
+
+.filter-block-body {
+  display: none;
+  padding: 12px 16px 14px;
+  background: var(--surface-alt);
+}
+.filter-block.expanded .filter-block-body { display: block; }
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.filter-field { display: flex; flex-direction: column; gap: 4px; }
+.filter-field-label {
+  font-size: 10.5px; font-weight: 700;
   color: var(--text-mut);
-  text-transform: uppercase;
-  letter-spacing: .4px;
-  white-space: nowrap;
+  text-transform: uppercase; letter-spacing: .3px;
 }
+.filter-field-select {
+  height: 30px; padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px; font-family: var(--font);
+  outline: none; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  transition: border-color var(--tr);
+}
+.filter-field-select:focus { border-color: var(--rm-blue); }
+.filter-field-select.active { border-color: var(--rm-blue); background: var(--rm-blue-bg); color: var(--rm-blue); font-weight:600; }
+
+.filter-actions {
+  display: flex; gap: 8px; margin-top: 12px;
+}
+
+/* =====================================================
+   EDITOR DE LAYOUT — PANEL LATERAL
+   ===================================================== */
+.editor-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 400;
+  display: none;
+  backdrop-filter: blur(2px);
+}
+.editor-overlay.open { display: block; }
+
+.editor-sidebar {
+  position: fixed;
+  top: 0; right: 0;
+  width: 340px; height: 100%;
+  background: var(--surface);
+  z-index: 500;
+  box-shadow: -4px 0 24px rgba(0,0,0,.18);
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+}
+.editor-sidebar.open { transform: translateX(0); }
+
+.editor-head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.editor-head-title {
+  font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; gap: 8px;
+}
+.editor-close {
+  width: 28px; height: 28px;
+  border-radius: 50%; border: none;
+  background: var(--surface-alt);
+  color: var(--text-mut);
+  cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--tr);
+}
+.editor-close:hover { background: var(--red-bg); color: var(--red); }
+
+.editor-body {
+  flex: 1; overflow-y: auto; padding: 12px;
+}
+.editor-body::-webkit-scrollbar { width: 4px; }
+.editor-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.editor-section-title {
+  font-size: 10px; font-weight: 700; color: var(--text-mut);
+  text-transform: uppercase; letter-spacing: .5px;
+  margin: 10px 0 6px;
+  padding: 0 4px;
+}
+
+.chart-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  margin-bottom: 5px;
+  background: var(--surface);
+  transition: border-color var(--tr), background var(--tr);
+  cursor: default;
+}
+.chart-item.active { border-color: var(--rm-blue); background: var(--rm-blue-bg); }
+
+.chart-item-toggle {
+  width: 32px; height: 18px;
+  border-radius: 9px;
+  border: none;
+  background: var(--border);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--tr);
+}
+.chart-item-toggle::after {
+  content: '';
+  position: absolute;
+  left: 2px; top: 2px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left var(--tr);
+}
+.chart-item.active .chart-item-toggle { background: var(--rm-blue); }
+.chart-item.active .chart-item-toggle::after { left: 16px; }
+
+.chart-item-info { flex: 1; min-width: 0; }
+.chart-item-name {
+  font-size: 12px; font-weight: 600;
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chart-item-sub { font-size: 10.5px; color: var(--text-mut); }
+
+.chart-item-order {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.btn-order {
+  width: 20px; height: 16px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface-alt);
+  color: var(--text-mut);
+  font-size: 9px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--tr);
+}
+.btn-order:hover:not(:disabled) { background: var(--rm-blue-bg); color: var(--rm-blue); border-color: var(--rm-blue); }
+.btn-order:disabled { opacity: .3; cursor: default; }
+
+.editor-foot {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Contenedor dinámico de charts */
+.charts-dynamic {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.chart-card.full-width { grid-column: 1 / -1; }
+
+@media (max-width: 640px) {
+  .editor-sidebar { width: 100%; }
+  .charts-dynamic { grid-template-columns: 1fr; }
+}
+
+/* dash-filter-select legacy compat */
 .dash-filter-select {
-  height: 30px;
-  padding: 0 8px;
+  height: 30px; padding: 0 8px;
   border: 1px solid var(--border);
   border-radius: var(--rs);
   background: var(--surface-alt);
   color: var(--text);
-  font-size: 12px;
-  font-family: var(--font);
-  outline: none;
-  cursor: pointer;
+  font-size: 12px; font-family: var(--font);
+  outline: none; cursor: pointer;
 }
 .dash-filter-select:focus { border-color: var(--rm-blue); }
 
@@ -1105,72 +1339,235 @@ tr:hover .btn-del { opacity: 1; }
        =================================================== -->
   <div id="panel-dashboard" class="panel">
 
-    <!-- Filtros dashboard -->
-    <div class="dash-filters">
-      <span class="dash-filter-label">Filtros</span>
-      <select class="dash-filter-select" id="dashComp" onchange="renderDashboard()">
-        <option value="">Todas las competiciones</option>
-        <option>Liga</option><option>Torneo</option><option>Amistoso</option>
-      </select>
-      <select class="dash-filter-select" id="dashLV" onchange="renderDashboard()">
-        <option value="">Local + Visitante</option>
-        <option>Local</option><option>Visitante</option>
-      </select>
-      <select class="dash-filter-select" id="dashFavor" onchange="renderDashboard()">
-        <option value="">A favor + En contra</option>
-        <option value="A favor">A favor</option>
-        <option value="En contra">En contra</option>
-      </select>
+    <!-- Barra superior: chips activos + botones acción -->
+    <div class="dash-topbar">
+      <div class="dash-topbar-left">
+        <button class="btn btn-secondary" id="btnToggleFilters" onclick="toggleFilterPanel()"
+                style="height:30px;padding:0 12px;font-size:12px;gap:5px;">
+          🔽 Filtros
+        </button>
+        <button class="btn btn-secondary" onclick="resetDashFilters()"
+                style="height:30px;padding:0 12px;font-size:12px;">
+          ✕ Limpiar
+        </button>
+        <div class="dash-active-filters" id="activeFilterChips"></div>
+      </div>
+      <button class="btn btn-primary" onclick="openEditor()"
+              style="height:30px;padding:0 12px;font-size:12px;gap:5px;">
+        ⚙️ Editar informe
+      </button>
     </div>
+
+    <!-- Panel de filtros por bloques (colapsable) -->
+    <div class="dash-filter-panel" id="dashFilterPanel">
+
+      <!-- BLOQUE 1: GENERALES -->
+      <div class="filter-block expanded" id="block-generales">
+        <div class="filter-block-header" onclick="toggleBlock('block-generales')">
+          <div class="filter-block-title">
+            <span class="dot"></span>
+            GENERALES
+            <span class="filter-block-badge" id="badge-generales">0</span>
+          </div>
+          <span class="filter-block-arrow">▾</span>
+        </div>
+        <div class="filter-block-body">
+          <div class="filter-row">
+            <div class="filter-field">
+              <label class="filter-field-label">Competición</label>
+              <select class="filter-field-select" id="df-competicion" onchange="onDashFilter(this,'Competición')">
+                <option value="">Todas</option>
+                <option>Liga</option><option>Torneo</option><option>Amistoso</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label">A favor / En contra</label>
+              <select class="filter-field-select" id="df-favor" onchange="onDashFilter(this,'A/EC')">
+                <option value="">Todos</option>
+                <option value="A favor">A favor</option>
+                <option value="En contra">En contra</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label">Local / Visitante</label>
+              <select class="filter-field-select" id="df-lv" onchange="onDashFilter(this,'L/V')">
+                <option value="">Todos</option>
+                <option>Local</option><option>Visitante</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label">Nivel rival</label>
+              <select class="filter-field-select" id="df-nivel" onchange="onDashFilter(this,'Nivel')">
+                <option value="">Todos</option>
+                <option>Nivel 1</option><option>Nivel 2</option>
+                <option>Nivel 3</option><option>Nivel 4</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label">Jornada</label>
+              <select class="filter-field-select" id="df-jornada" onchange="onDashFilter(this,'Jornada')">
+                <option value="">Todas</option>
+                <!-- JS rellena -->
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOQUE 2: TÁCTICOS -->
+      <div class="filter-block" id="block-tacticos">
+        <div class="filter-block-header" onclick="toggleBlock('block-tacticos')">
+          <div class="filter-block-title">
+            <span class="dot green"></span>
+            TÁCTICOS
+            <span class="filter-block-badge" id="badge-tacticos" style="background:var(--green)">0</span>
+          </div>
+          <span class="filter-block-arrow">▾</span>
+        </div>
+        <div class="filter-block-body">
+          <div class="filter-row">
+            <div class="filter-field">
+              <label class="filter-field-label">Tipología</label>
+              <select class="filter-field-select" id="df-tipologia" onchange="onDashFilter(this,'Tipología')">
+                <option value="">Todas</option>
+                <option>Balón parado</option>
+                <option>Transiciones</option>
+                <option>Juego directo</option>
+                <option>Juego posicional</option>
+                <option>Otros</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label">Zona de robo</label>
+              <select class="filter-field-select" id="df-zona-robo" onchange="onDashFilter(this,'Zona robo')">
+                <option value="">Todas</option>
+                <option>Z1</option><option>Z2</option><option>Z3</option><option>Z4</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label">Posic. del robo</label>
+              <select class="filter-field-select" id="df-posic-robo" onchange="onDashFilter(this,'Posic.robo')">
+                <option value="">Todas</option>
+                <option>Carril central</option><option>Banda</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label">Primer pase</label>
+              <select class="filter-field-select" id="df-primer-pase" onchange="onDashFilter(this,'Primer pase')">
+                <option value="">Todos</option>
+                <option>Horizontal</option>
+                <option>Hacia detrás</option>
+                <option>Hacia adelante</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOQUE 3: TÉCNICO-TÁCTICOS -->
+      <div class="filter-block" id="block-tecnico">
+        <div class="filter-block-header" onclick="toggleBlock('block-tecnico')">
+          <div class="filter-block-title">
+            <span class="dot orange"></span>
+            TÉCNICO-TÁCTICOS
+            <span class="filter-block-badge" id="badge-tecnico" style="background:var(--orange)">0</span>
+          </div>
+          <span class="filter-block-arrow">▾</span>
+        </div>
+        <div class="filter-block-body">
+          <div class="filter-row">
+            <div class="filter-field">
+              <label class="filter-field-label">Tipo de pase</label>
+              <select class="filter-field-select" id="df-tipo-pase" onchange="onDashFilter(this,'Tipo pase')">
+                <option value="">Todos</option>
+                <option>Aereo</option><option>Raso</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label">Superficie remate</label>
+              <select class="filter-field-select" id="df-superficie" onchange="onDashFilter(this,'Superficie')">
+                <option value="">Todas</option>
+                <option>Cabeza</option>
+                <option>Pie Izquierdo</option>
+                <option>Pie derecho</option>
+                <option>Otros</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label">Zona remate</label>
+              <select class="filter-field-select" id="df-zona-remate" onchange="onDashFilter(this,'Zona remate')">
+                <option value="">Todas</option>
+                <option>1er palo</option>
+                <option>2º palo</option>
+                <option>2º palo (espalda 2º central)</option>
+                <option>Penalti</option>
+                <option>Vértice</option>
+                <option>Fuera del área</option>
+                <option>Área pequeña</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label">Nº Contactos</label>
+              <select class="filter-field-select" id="df-contactos" onchange="onDashFilter(this,'Contactos')">
+                <option value="">Todos</option>
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option>
+                <option>9</option><option>10</option><option>10+</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label">Estilo</label>
+              <select class="filter-field-select" id="df-estilo" onchange="onDashFilter(this,'Estilo')">
+                <option value="">Todos</option>
+                <option>Centro retrasado</option>
+                <option>Centro profundidad</option>
+                <option>Juego combinativo (paredes)</option>
+                <option>Juego combinativo (último pase)</option>
+                <option>Acción individual</option>
+                <option>Falta directa</option>
+                <option>Falta indirecta</option>
+                <option>Córner directo</option>
+                <option>Córner no directo</option>
+                <option>Saque de banda y centro</option>
+                <option>Saque de banda y combinativo</option>
+                <option>Penalti</option>
+                <option>Transicion</option>
+                <option>Juego directo</option>
+                <option>Saque de banda + tiro</option>
+                <option>Propia puerta</option>
+                <option>Equilibrio</option>
+                <option>Otros</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /dash-filter-panel -->
 
     <!-- KPIs -->
     <div class="kpi-grid" id="kpiGrid"></div>
 
-    <!-- Charts -->
-    <div class="charts-grid">
+    <!-- Gráficos dinámicos — JS construye según layout -->
+    <div class="charts-dynamic" id="chartsDynamic"></div>
 
-      <div class="chart-card">
-        <div class="chart-head"><span class="chart-title">⚽ Goles por Tipología</span></div>
-        <div class="chart-body"><canvas id="chartTipologia"></canvas></div>
-      </div>
+  </div>
 
-      <div class="chart-card">
-        <div class="chart-head"><span class="chart-title">🦶 Superficie de remate</span></div>
-        <div class="chart-body"><canvas id="chartSuperficie"></canvas></div>
-      </div>
-
-      <div class="chart-card full">
-        <div class="chart-head"><span class="chart-title">⏱️ Goles por tramo de minuto</span></div>
-        <div class="chart-body tall"><canvas id="chartTramo"></canvas></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-head"><span class="chart-title">📍 Zona de remate</span></div>
-        <div class="chart-body"><canvas id="chartZona"></canvas></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-head"><span class="chart-title">🧭 Tipo de pase</span></div>
-        <div class="chart-body"><canvas id="chartTipoPase"></canvas></div>
-      </div>
-
-      <div class="chart-card full">
-        <div class="chart-head"><span class="chart-title">🎯 Ranking de Estilos</span></div>
-        <div class="chart-body">
-          <div class="rank-list" id="rankEstilos"></div>
-        </div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-head"><span class="chart-title">🗺️ Zona de robo</span></div>
-        <div class="chart-body"><canvas id="chartZonaRobo"></canvas></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-head"><span class="chart-title">🏠 Local vs Visitante</span></div>
-        <div class="chart-body"><canvas id="chartLV"></canvas></div>
-      </div>
-
+  <!-- ===================================================
+       EDITOR SIDEBAR
+       =================================================== -->
+  <div class="editor-overlay" id="editorOverlay" onclick="closeEditor()"></div>
+  <div class="editor-sidebar" id="editorSidebar">
+    <div class="editor-head">
+      <div class="editor-head-title">⚙️ Editar informe</div>
+      <button class="editor-close" onclick="closeEditor()">✕</button>
+    </div>
+    <div class="editor-body" id="editorBody">
+      <!-- JS construye la lista de gráficos -->
+    </div>
+    <div class="editor-foot">
+      <button class="btn btn-primary" onclick="applyLayout()" style="flex:1">✅ Aplicar</button>
+      <button class="btn btn-secondary" onclick="resetLayout()" style="flex:0 0 auto">↺ Reset</button>
     </div>
   </div>
 
@@ -1258,13 +1655,18 @@ const SEED_DATA = [
    INIT
    ===================================================== */
 document.addEventListener('DOMContentLoaded', () => {
-  // Rellenar select jornadas
+  // Rellenar select jornadas (formulario manual y filtro dashboard)
   const selJ = document.getElementById('f-jornada');
+  const selJD = document.getElementById('df-jornada');
   for (let i = 1; i <= 38; i++) {
-    const o = document.createElement('option');
-    o.value = 'J' + i; o.textContent = 'J' + i;
-    selJ.appendChild(o);
+    const val = 'J' + i;
+    if (selJ) { const o = document.createElement('option'); o.value = val; o.textContent = val; selJ.appendChild(o); }
+    if (selJD) { const o = document.createElement('option'); o.value = val; o.textContent = val; selJD.appendChild(o); }
   }
+
+  // Cargar layout guardado
+  loadLayoutState();
+  updateBlockBadges();
 
   // Cargar localStorage si existe
   // =====================================================
@@ -1578,51 +1980,263 @@ function esc(s) {
 }
 
 /* =====================================================
-   DASHBOARD
+   DASHBOARD — CATÁLOGO DE GRÁFICOS
+   Cada entrada define id, título, bloque, tipo, ancho
    ===================================================== */
+const CHART_CATALOG = [
+  // GENERALES
+  { id:'chartTramo',      title:'Goles por tramo de minuto', icon:'⏱️', bloque:'Generales',        full:true,  visible:true  },
+  { id:'chartLV',         title:'Local vs Visitante',        icon:'🏠', bloque:'Generales',        full:false, visible:true  },
+  { id:'chartGoleador',   title:'Ranking goleadores',        icon:'👤', bloque:'Generales',        full:false, visible:true  },
+  { id:'chartRival',      title:'Goles por rival',           icon:'🆚', bloque:'Generales',        full:false, visible:false },
+  // TÁCTICOS
+  { id:'chartTipologia',  title:'Goles por tipología',       icon:'⚽', bloque:'Tácticos',         full:false, visible:true  },
+  { id:'chartEstilo',     title:'Ranking de estilos',        icon:'🎯', bloque:'Tácticos',         full:true,  visible:true  },
+  { id:'chartZonaRobo',   title:'Zona de robo',              icon:'🗺️', bloque:'Tácticos',         full:false, visible:true  },
+  { id:'chartPosicRobo',  title:'Posicionamiento del robo',  icon:'📌', bloque:'Tácticos',         full:false, visible:false },
+  { id:'chartPrimerPase', title:'Primer pase',               icon:'➡️', bloque:'Tácticos',         full:false, visible:false },
+  { id:'chartZonaRoboXTip','title':'Zona robo × Tipología', icon:'📊', bloque:'Tácticos',         full:true,  visible:false },
+  // TÉCNICO-TÁCTICOS
+  { id:'chartSuperficie', title:'Superficie de remate',      icon:'🦶', bloque:'Técnico-tácticos', full:false, visible:true  },
+  { id:'chartZona',       title:'Zona de remate',            icon:'📍', bloque:'Técnico-tácticos', full:false, visible:true  },
+  { id:'chartTipoPase',   title:'Tipo de pase',              icon:'🧭', bloque:'Técnico-tácticos', full:false, visible:true  },
+  { id:'chartContactos',  title:'Nº de contactos',           icon:'🔢', bloque:'Técnico-tácticos', full:false, visible:false },
+  { id:'chartDifMarcador','title':'Diferencia en marcador',  icon:'📈', bloque:'Técnico-tácticos', full:false, visible:false },
+];
 
-// Paleta corporativa RM
+// Layout activo (orden + visibilidad) — se persiste en localStorage
+let layoutState = CHART_CATALOG.map(c => ({ id: c.id, visible: c.visible }));
+
+// Estado temporal del editor (antes de aplicar)
+let editorState = [];
+
+function loadLayoutState() {
+  // FIREBASE: reemplazar por fbCargarSesion('tg-layout')
+  const saved = localStorage.getItem('tg-layout-v1');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      // Merge: mantener nuevas entradas del catálogo aunque no estén en el save
+      layoutState = CHART_CATALOG.map(c => {
+        const s = parsed.find(p => p.id === c.id);
+        return s ? { id: c.id, visible: s.visible } : { id: c.id, visible: c.visible };
+      });
+    } catch(e) {}
+  }
+}
+
+function saveLayoutState() {
+  // FIREBASE: reemplazar por fbGuardarSesion('tg-layout', layoutState)
+  localStorage.setItem('tg-layout-v1', JSON.stringify(layoutState));
+}
+
+/* =====================================================
+   FILTROS — estado global
+   ===================================================== */
+const DASH_FILTERS = {
+  // Generales
+  'df-competicion': { field: 'competicion', label: 'Competición', bloque: 'generales' },
+  'df-favor':       { field: 'favor',       label: 'A/EC',        bloque: 'generales' },
+  'df-lv':          { field: 'lv',          label: 'L/V',         bloque: 'generales' },
+  'df-nivel':       { field: 'nivel',       label: 'Nivel',       bloque: 'generales' },
+  'df-jornada':     { field: 'jornada',     label: 'Jornada',     bloque: 'generales' },
+  // Tácticos
+  'df-tipologia':   { field: 'tipologia',   label: 'Tipología',   bloque: 'tacticos' },
+  'df-zona-robo':   { field: 'zonaRobo',    label: 'Zona robo',   bloque: 'tacticos' },
+  'df-posic-robo':  { field: 'posicRobo',   label: 'Posic.robo',  bloque: 'tacticos' },
+  'df-primer-pase': { field: 'primerPase',  label: 'Primer pase', bloque: 'tacticos' },
+  // Técnico-tácticos
+  'df-tipo-pase':   { field: 'tipoPase',    label: 'Tipo pase',   bloque: 'tecnico' },
+  'df-superficie':  { field: 'superficie',  label: 'Superficie',  bloque: 'tecnico' },
+  'df-zona-remate': { field: 'zonaRemate',  label: 'Zona remate', bloque: 'tecnico' },
+  'df-contactos':   { field: 'nContactos',  label: 'Contactos',   bloque: 'tecnico' },
+  'df-estilo':      { field: 'estilo',      label: 'Estilo',      bloque: 'tecnico' },
+};
+
+function onDashFilter(el, label) {
+  el.classList.toggle('active', el.value !== '');
+  updateBlockBadges();
+  updateActiveChips();
+  renderDashboard();
+}
+
+function getDashData() {
+  let data = [...goles];
+  for (const [selId, cfg] of Object.entries(DASH_FILTERS)) {
+    const el = document.getElementById(selId);
+    const val = el?.value || '';
+    if (val) data = data.filter(g => g[cfg.field] === val);
+  }
+  return data;
+}
+
+function resetDashFilters() {
+  for (const selId of Object.keys(DASH_FILTERS)) {
+    const el = document.getElementById(selId);
+    if (el) { el.value = ''; el.classList.remove('active'); }
+  }
+  updateBlockBadges();
+  updateActiveChips();
+  renderDashboard();
+}
+
+function updateBlockBadges() {
+  const bloques = { generales: 0, tacticos: 0, tecnico: 0 };
+  for (const [selId, cfg] of Object.entries(DASH_FILTERS)) {
+    const val = document.getElementById(selId)?.value || '';
+    if (val) bloques[cfg.bloque]++;
+  }
+  document.getElementById('badge-generales').textContent = bloques.generales || '';
+  document.getElementById('badge-generales').style.display = bloques.generales ? '' : 'none';
+  document.getElementById('badge-tacticos').textContent = bloques.tacticos || '';
+  document.getElementById('badge-tacticos').style.display = bloques.tacticos ? '' : 'none';
+  document.getElementById('badge-tecnico').textContent = bloques.tecnico || '';
+  document.getElementById('badge-tecnico').style.display = bloques.tecnico ? '' : 'none';
+}
+
+function updateActiveChips() {
+  const container = document.getElementById('activeFilterChips');
+  if (!container) return;
+  const chips = [];
+  for (const [selId, cfg] of Object.entries(DASH_FILTERS)) {
+    const val = document.getElementById(selId)?.value || '';
+    if (val) chips.push(`<span class="dash-active-chip" onclick="clearFilter('${selId}')">${cfg.label}: ${esc(val)} <span class="x">✕</span></span>`);
+  }
+  container.innerHTML = chips.join('');
+}
+
+function clearFilter(selId) {
+  const el = document.getElementById(selId);
+  if (el) { el.value = ''; el.classList.remove('active'); }
+  updateBlockBadges();
+  updateActiveChips();
+  renderDashboard();
+}
+
+function toggleFilterPanel() {
+  const panel = document.getElementById('dashFilterPanel');
+  panel.classList.toggle('open');
+  const btn = document.getElementById('btnToggleFilters');
+  btn.textContent = panel.classList.contains('open') ? '🔼 Filtros' : '🔽 Filtros';
+}
+
+function toggleBlock(id) {
+  document.getElementById(id).classList.toggle('expanded');
+}
+
+/* =====================================================
+   EDITOR DE LAYOUT
+   ===================================================== */
+function openEditor() {
+  editorState = layoutState.map(s => ({ ...s }));
+  renderEditorList();
+  document.getElementById('editorOverlay').classList.add('open');
+  document.getElementById('editorSidebar').classList.add('open');
+}
+
+function closeEditor() {
+  document.getElementById('editorOverlay').classList.remove('open');
+  document.getElementById('editorSidebar').classList.remove('open');
+}
+
+function renderEditorList() {
+  const body = document.getElementById('editorBody');
+  const bloques = [...new Set(CHART_CATALOG.map(c => c.bloque))];
+  let html = '';
+  for (const bloque of bloques) {
+    html += `<div class="editor-section-title">${bloque}</div>`;
+    const items = editorState
+      .map((s, idx) => ({ ...s, idx, cat: CHART_CATALOG.find(c => c.id === s.id) }))
+      .filter(s => s.cat?.bloque === bloque);
+
+    for (let i = 0; i < items.length; i++) {
+      const { id, visible, idx, cat } = items[i];
+      const isFirst = i === 0;
+      const isLast = i === items.length - 1;
+      html += `
+        <div class="chart-item ${visible ? 'active' : ''}" id="ei-${id}">
+          <button class="chart-item-toggle" onclick="toggleChartVisible('${id}')" title="${visible ? 'Ocultar' : 'Mostrar'}"></button>
+          <div class="chart-item-info">
+            <div class="chart-item-name">${cat?.icon || ''} ${cat?.title || id}</div>
+            <div class="chart-item-sub">${cat?.full ? 'Ancho completo' : 'Media columna'}</div>
+          </div>
+          <div class="chart-item-order">
+            <button class="btn-order" onclick="moveChart('${id}',-1)" ${isFirst?'disabled':''}>▲</button>
+            <button class="btn-order" onclick="moveChart('${id}',1)" ${isLast?'disabled':''}>▼</button>
+          </div>
+        </div>`;
+    }
+  }
+  body.innerHTML = html;
+}
+
+function toggleChartVisible(id) {
+  const s = editorState.find(e => e.id === id);
+  if (s) s.visible = !s.visible;
+  renderEditorList();
+}
+
+function moveChart(id, dir) {
+  // Solo mueve dentro del mismo bloque
+  const cat = CHART_CATALOG.find(c => c.id === id);
+  const bloqueIds = CHART_CATALOG.filter(c => c.bloque === cat.bloque).map(c => c.id);
+  const globalIdx = editorState.findIndex(e => e.id === id);
+  const bloqueIdxs = editorState
+    .map((e, i) => ({ ...e, i }))
+    .filter(e => bloqueIds.includes(e.id));
+  const posInBloque = bloqueIdxs.findIndex(e => e.id === id);
+  const targetPosInBloque = posInBloque + dir;
+  if (targetPosInBloque < 0 || targetPosInBloque >= bloqueIdxs.length) return;
+  const targetGlobalIdx = bloqueIdxs[targetPosInBloque].i;
+  [editorState[globalIdx], editorState[targetGlobalIdx]] = [editorState[targetGlobalIdx], editorState[globalIdx]];
+  renderEditorList();
+}
+
+function applyLayout() {
+  layoutState = editorState.map(s => ({ ...s }));
+  saveLayoutState();
+  closeEditor();
+  renderDashboard();
+  showToast('📊 Informe actualizado');
+}
+
+function resetLayout() {
+  editorState = CHART_CATALOG.map(c => ({ id: c.id, visible: c.visible }));
+  renderEditorList();
+}
+
+/* =====================================================
+   DASHBOARD — RENDER PRINCIPAL
+   ===================================================== */
 const RM_PALETTE = [
   '#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe',
   '#1d4ed8','#1e40af','#1e3a8a','#dbeafe','#eff6ff'
 ];
-const RM_GREENS = ['#16a34a','#22c55e','#4ade80','#86efac','#bbf7d0'];
-const RM_REDS   = ['#dc2626','#ef4444','#f87171','#fca5a5','#fecaca'];
-
-function getDashData() {
-  const comp = document.getElementById('dashComp')?.value || '';
-  const lv   = document.getElementById('dashLV')?.value || '';
-  const fav  = document.getElementById('dashFavor')?.value || '';
-  return goles.filter(g => {
-    if (comp && g.competicion !== comp) return false;
-    if (lv   && g.lv !== lv) return false;
-    if (fav  && g.favor !== fav) return false;
-    return true;
-  });
-}
 
 function count(data, field) {
   const acc = {};
   data.forEach(g => { const v = g[field] || 'Sin datos'; acc[v] = (acc[v] || 0) + 1; });
   return acc;
 }
-
 function sortedCount(data, field, limit = 999) {
-  const c = count(data, field);
-  return Object.entries(c).sort((a,b) => b[1]-a[1]).slice(0, limit);
+  return Object.entries(count(data, field)).sort((a,b) => b[1]-a[1]).slice(0, limit);
 }
 
 function renderDashboard() {
   const data = getDashData();
+  const isDark = document.body.classList.contains('dark');
+  const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
+  const tickColor = isDark ? '#70757f' : '#8b919e';
+  const total = data.length;
 
+  // KPIs
   if (!data.length) {
     document.getElementById('kpiGrid').innerHTML =
-      '<div class="empty-state" style="grid-column:1/-1"><div class="icon">📊</div><p>Sin datos. Carga goles primero.</p></div>';
+      '<div class="empty-state" style="grid-column:1/-1"><div class="icon">📊</div><p>Sin datos. Carga goles o ajusta los filtros.</p></div>';
+    document.getElementById('chartsDynamic').innerHTML = '';
     return;
   }
 
-  // KPIs
-  const total = data.length;
   const aFavor = data.filter(g => g.favor === 'A favor').length;
   const enContra = data.filter(g => g.favor === 'En contra').length;
   const local = data.filter(g => g.lv === 'Local').length;
@@ -1636,29 +2250,48 @@ function renderDashboard() {
     <div class="kpi-card orange"><div class="kpi-label">Visitante</div><div class="kpi-value" style="color:var(--orange)">${visitante}</div><div class="kpi-sub">${pct(visitante,total)}%</div></div>
   `;
 
-  // Chart.js helpers
-  const isDark = document.body.classList.contains('dark');
-  const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
-  const tickColor = isDark ? '#70757f' : '#8b919e';
+  // Destruir todos los charts activos
+  for (const id of Object.keys(charts)) {
+    try { charts[id].destroy(); } catch(e){}
+    delete charts[id];
+  }
 
+  // Construir HTML dinámico según layoutState
+  const visibleIds = layoutState.filter(s => s.visible).map(s => s.id);
+  let html = '';
+  for (const id of visibleIds) {
+    const cat = CHART_CATALOG.find(c => c.id === id);
+    if (!cat) continue;
+    const isRank = ['chartEstilo','chartGoleador','chartRival'].includes(id);
+    const fullCls = cat.full ? 'full-width' : '';
+    const tallCls = cat.full ? 'tall' : '';
+    const inner = isRank
+      ? `<div class="rank-list" id="${id}"></div>`
+      : `<canvas id="${id}"></canvas>`;
+    html += `
+      <div class="chart-card ${fullCls}">
+        <div class="chart-head"><span class="chart-title">${cat.icon} ${cat.title}</span></div>
+        <div class="chart-body ${tallCls}">${inner}</div>
+      </div>`;
+  }
+  document.getElementById('chartsDynamic').innerHTML = html;
+
+  // Helper mkChart
   function mkChart(id, type, labels, datasets, opts = {}) {
-    if (charts[id]) { charts[id].destroy(); delete charts[id]; }
     const ctx = document.getElementById(id)?.getContext('2d');
     if (!ctx) return;
     charts[id] = new Chart(ctx, {
-      type,
-      data: { labels, datasets },
+      type, data: { labels, datasets },
       options: {
-        responsive: true,
-        maintainAspectRatio: true,
+        responsive: true, maintainAspectRatio: true,
         plugins: {
           legend: { display: opts.legend ?? false,
-            labels: { color: tickColor, font: { size: 11 }, padding: 12 } },
+            labels: { color: tickColor, font: { size: 11 }, padding: 12, boxWidth: 12 } },
           tooltip: { callbacks: {
-            label: ctx => ` ${ctx.parsed.y ?? ctx.parsed} goles (${pct(ctx.parsed.y ?? ctx.parsed, total)}%)`
+            label: c => ` ${c.parsed?.y ?? c.parsed} (${pct(c.parsed?.y ?? c.parsed, total)}%)`
           }}
         },
-        scales: type === 'doughnut' || type === 'pie' ? {} : {
+        scales: (type === 'doughnut' || type === 'pie') ? {} : {
           x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } },
           y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 }, stepSize: 1 } }
         },
@@ -1667,113 +2300,150 @@ function renderDashboard() {
     });
   }
 
-  // Tipología
-  const tipEntries = sortedCount(data, 'tipologia');
-  mkChart('chartTipologia', 'doughnut',
-    tipEntries.map(e=>e[0]),
-    [{ data: tipEntries.map(e=>e[1]), backgroundColor: RM_PALETTE, borderWidth: 2, borderColor: isDark ? '#1c1f26' : '#fff' }],
-    { legend: true, plugins: { tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} goles (${pct(ctx.parsed,total)}%)` }}}}
-  );
-
-  // Superficie remate
-  const supEntries = sortedCount(data, 'superficie');
-  mkChart('chartSuperficie', 'bar',
-    supEntries.map(e=>e[0]),
-    [{ data: supEntries.map(e=>e[1]),
-       backgroundColor: supEntries.map((_,i) => RM_PALETTE[i % RM_PALETTE.length]),
-       borderRadius: 6, borderSkipped: false }]
-  );
-
-  // Tramos de minuto
-  const tramos = ['0-10','11-20','21-30','31-40','41-50','51-60','61-70','71-80','81-90'];
-  const tramoCounts = tramos.map(t => data.filter(g => g.tramo === t).length);
-  const tramoAF = tramos.map(t => data.filter(g => g.tramo === t && g.favor === 'A favor').length);
-  const tramoEC = tramos.map(t => data.filter(g => g.tramo === t && g.favor === 'En contra').length);
-
-  if (charts['chartTramo']) { charts['chartTramo'].destroy(); delete charts['chartTramo']; }
-  const ctxT = document.getElementById('chartTramo')?.getContext('2d');
-  if (ctxT) {
-    charts['chartTramo'] = new Chart(ctxT, {
-      type: 'bar',
-      data: {
-        labels: tramos,
-        datasets: [
-          { label: 'A favor', data: tramoAF, backgroundColor: '#16a34a', borderRadius: 4, borderSkipped: false, stack: 'goles' },
-          { label: 'En contra', data: tramoEC, backgroundColor: '#dc2626', borderRadius: 4, borderSkipped: false, stack: 'goles' }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: {
-          legend: { display: true, labels: { color: tickColor, font: { size: 11 }, padding: 16 } },
-          tooltip: { mode: 'index' }
-        },
-        scales: {
-          x: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor } },
-          y: { stacked: true, beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, stepSize: 1 } }
-        }
-      }
-    });
+  function mkRank(id, entries) {
+    const el = document.getElementById(id);
+    if (!el || !entries.length) return;
+    const max = entries[0][1];
+    el.innerHTML = entries.map(([name, cnt], i) => `
+      <div class="rank-item">
+        <div class="rank-pos">${i+1}</div>
+        <div class="rank-bar-wrap">
+          <div class="rank-name">${esc(name)}</div>
+          <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(cnt/max*100).toFixed(1)}%"></div></div>
+        </div>
+        <div class="rank-val">${cnt} <span style="font-size:10px;color:var(--text-mut)">(${pct(cnt,total)}%)</span></div>
+      </div>`).join('');
   }
 
-  // Zona remate
-  const zrEntries = sortedCount(data, 'zonaRemate');
-  mkChart('chartZona', 'bar',
-    zrEntries.map(e=>e[0]),
-    [{ data: zrEntries.map(e=>e[1]),
-       backgroundColor: zrEntries.map((_,i) => RM_PALETTE[i % RM_PALETTE.length]),
-       borderRadius: 6, borderSkipped: false }],
-    { indexAxis: 'y' }
-  );
+  // Renderizar cada gráfico activo
+  for (const id of visibleIds) {
+    switch(id) {
 
-  // Tipo pase
-  const tpEntries = sortedCount(data, 'tipoPase');
-  mkChart('chartTipoPase', 'doughnut',
-    tpEntries.map(e=>e[0]),
-    [{ data: tpEntries.map(e=>e[1]),
-       backgroundColor: ['#2563eb','#16a34a','#ea580c','#9333ea'],
-       borderWidth: 2, borderColor: isDark ? '#1c1f26' : '#fff' }],
-    { legend: true, plugins: { tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${pct(ctx.parsed,total)}%)` }}}}
-  );
+      case 'chartTramo': {
+        const tramos = ['0-10','11-20','21-30','31-40','41-50','51-60','61-70','71-80','81-90'];
+        const ctx = document.getElementById('chartTramo')?.getContext('2d');
+        if (!ctx) break;
+        charts['chartTramo'] = new Chart(ctx, {
+          type: 'bar',
+          data: { labels: tramos, datasets: [
+            { label:'A favor', data: tramos.map(t => data.filter(g=>g.tramo===t && g.favor==='A favor').length),
+              backgroundColor:'#16a34a', borderRadius:4, borderSkipped:false, stack:'g' },
+            { label:'En contra', data: tramos.map(t => data.filter(g=>g.tramo===t && g.favor==='En contra').length),
+              backgroundColor:'#dc2626', borderRadius:4, borderSkipped:false, stack:'g' }
+          ]},
+          options: { responsive:true, maintainAspectRatio:true,
+            plugins: { legend: { display:true, labels:{ color:tickColor, font:{size:11}, padding:16, boxWidth:12 }},
+              tooltip: { mode:'index' }},
+            scales: {
+              x:{ stacked:true, grid:{color:gridColor}, ticks:{color:tickColor} },
+              y:{ stacked:true, beginAtZero:true, grid:{color:gridColor}, ticks:{color:tickColor, stepSize:1} }
+            }}
+        }); break;
+      }
 
-  // Zona de robo
-  const zonaRoboEntries = sortedCount(data, 'zonaRobo');
-  mkChart('chartZonaRobo', 'doughnut',
-    zonaRoboEntries.map(e=>e[0]),
-    [{ data: zonaRoboEntries.map(e=>e[1]),
-       backgroundColor: ['#2563eb','#3b82f6','#93c5fd','#bfdbfe'],
-       borderWidth: 2, borderColor: isDark ? '#1c1f26' : '#fff' }],
-    { legend: true, plugins: { tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${pct(ctx.parsed,total)}%)` }}}}
-  );
+      case 'chartLV': {
+        const localD = ['A favor','En contra'].map(f => data.filter(g=>g.lv==='Local'&&g.favor===f).length);
+        const visitD = ['A favor','En contra'].map(f => data.filter(g=>g.lv==='Visitante'&&g.favor===f).length);
+        mkChart('chartLV','bar',['Local','Visitante'],[
+          { label:'A favor', data:[localD[0],visitD[0]], backgroundColor:'#16a34a', borderRadius:6, borderSkipped:false },
+          { label:'En contra', data:[localD[1],visitD[1]], backgroundColor:'#dc2626', borderRadius:6, borderSkipped:false }
+        ], { legend:true, plugins:{ tooltip:{mode:'index'} }}); break;
+      }
 
-  // Local vs Visitante
-  const lvAF = ['A favor', 'En contra'];
-  const localData = lvAF.map(f => data.filter(g => g.lv === 'Local' && g.favor === f).length);
-  const visitanteData = lvAF.map(f => data.filter(g => g.lv === 'Visitante' && g.favor === f).length);
-  mkChart('chartLV', 'bar',
-    ['Local', 'Visitante'],
-    [
-      { label: 'A favor', data: [localData[0], visitanteData[0]], backgroundColor: '#16a34a', borderRadius: 6, borderSkipped: false },
-      { label: 'En contra', data: [localData[1], visitanteData[1]], backgroundColor: '#dc2626', borderRadius: 6, borderSkipped: false }
-    ],
-    { legend: true, plugins: { tooltip: { mode: 'index' }}}
-  );
+      case 'chartTipologia': {
+        const e = sortedCount(data,'tipologia');
+        mkChart('chartTipologia','doughnut', e.map(x=>x[0]),
+          [{ data:e.map(x=>x[1]), backgroundColor:RM_PALETTE, borderWidth:2, borderColor: isDark?'#1c1f26':'#fff' }],
+          { legend:true, plugins:{ tooltip:{ callbacks:{ label: c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,total)}%)`}}}}); break;
+      }
 
-  // Ranking Estilos
-  const estilosEntries = sortedCount(data, 'estilo', 10);
-  const maxEstilo = estilosEntries[0]?.[1] || 1;
-  document.getElementById('rankEstilos').innerHTML = estilosEntries.map(([name, cnt], i) => `
-    <div class="rank-item">
-      <div class="rank-pos">${i+1}</div>
-      <div class="rank-bar-wrap">
-        <div class="rank-name">${esc(name)}</div>
-        <div class="rank-bar-bg">
-          <div class="rank-bar-fill" style="width:${(cnt/maxEstilo*100).toFixed(1)}%"></div>
-        </div>
-      </div>
-      <div class="rank-val">${cnt}</div>
-    </div>
-  `).join('');
+      case 'chartSuperficie': {
+        const e = sortedCount(data,'superficie');
+        mkChart('chartSuperficie','bar', e.map(x=>x[0]),
+          [{ data:e.map(x=>x[1]), backgroundColor:e.map((_,i)=>RM_PALETTE[i%RM_PALETTE.length]), borderRadius:6, borderSkipped:false }]); break;
+      }
+
+      case 'chartZona': {
+        const e = sortedCount(data,'zonaRemate');
+        mkChart('chartZona','bar', e.map(x=>x[0]),
+          [{ data:e.map(x=>x[1]), backgroundColor:e.map((_,i)=>RM_PALETTE[i%RM_PALETTE.length]), borderRadius:6, borderSkipped:false }],
+          { indexAxis:'y' }); break;
+      }
+
+      case 'chartTipoPase': {
+        const e = sortedCount(data,'tipoPase');
+        mkChart('chartTipoPase','doughnut', e.map(x=>x[0]),
+          [{ data:e.map(x=>x[1]), backgroundColor:['#2563eb','#16a34a','#ea580c','#9333ea'], borderWidth:2, borderColor: isDark?'#1c1f26':'#fff' }],
+          { legend:true, plugins:{ tooltip:{ callbacks:{ label: c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,total)}%)`}}}}); break;
+      }
+
+      case 'chartZonaRobo': {
+        const e = sortedCount(data,'zonaRobo');
+        mkChart('chartZonaRobo','doughnut', e.map(x=>x[0]),
+          [{ data:e.map(x=>x[1]), backgroundColor:['#2563eb','#3b82f6','#93c5fd','#bfdbfe'], borderWidth:2, borderColor: isDark?'#1c1f26':'#fff' }],
+          { legend:true, plugins:{ tooltip:{ callbacks:{ label: c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,total)}%)`}}}}); break;
+      }
+
+      case 'chartEstilo':
+        mkRank('chartEstilo', sortedCount(data,'estilo',12)); break;
+
+      case 'chartGoleador':
+        mkRank('chartGoleador', sortedCount(data,'goleador',10)); break;
+
+      case 'chartRival':
+        mkRank('chartRival', sortedCount(data,'rival',10)); break;
+
+      case 'chartPosicRobo': {
+        const e = sortedCount(data,'posicRobo');
+        mkChart('chartPosicRobo','doughnut', e.map(x=>x[0]),
+          [{ data:e.map(x=>x[1]), backgroundColor:['#2563eb','#ea580c'], borderWidth:2, borderColor: isDark?'#1c1f26':'#fff' }],
+          { legend:true, plugins:{ tooltip:{ callbacks:{ label: c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,total)}%)`}}}}); break;
+      }
+
+      case 'chartPrimerPase': {
+        const e = sortedCount(data,'primerPase');
+        mkChart('chartPrimerPase','bar', e.map(x=>x[0]),
+          [{ data:e.map(x=>x[1]), backgroundColor:e.map((_,i)=>RM_PALETTE[i%RM_PALETTE.length]), borderRadius:6, borderSkipped:false }]); break;
+      }
+
+      case 'chartContactos': {
+        const order = ['1','2','3','4','5','6','7','8','9','10','10+'];
+        const cMap = count(data,'nContactos');
+        mkChart('chartContactos','bar', order,
+          [{ data:order.map(k=>cMap[k]||0), backgroundColor:RM_PALETTE, borderRadius:6, borderSkipped:false }]); break;
+      }
+
+      case 'chartDifMarcador': {
+        const range = ['-5','-4','-3','-2','-1','0','1','2','3','4','5','6','7','8','9','10'];
+        const dMap = count(data, g => String(g.dif ?? ''));
+        const dMapFixed = {};
+        data.forEach(g => { const k = String(g.dif ?? 0); dMapFixed[k] = (dMapFixed[k]||0)+1; });
+        mkChart('chartDifMarcador','bar', range,
+          [{ data:range.map(k=>dMapFixed[k]||0), backgroundColor:range.map(k=>Number(k)>=0?'#2563eb':'#dc2626'), borderRadius:5, borderSkipped:false }]); break;
+      }
+
+      case 'chartZonaRoboXTip': {
+        const tipologias = [...new Set(data.map(g=>g.tipologia).filter(Boolean))];
+        const zonas = ['Z1','Z2','Z3','Z4'];
+        const colors = ['#2563eb','#16a34a','#ea580c','#9333ea'];
+        const ctx = document.getElementById('chartZonaRoboXTip')?.getContext('2d');
+        if (!ctx) break;
+        charts['chartZonaRoboXTip'] = new Chart(ctx, {
+          type:'bar',
+          data: { labels: tipologias, datasets: zonas.map((z,i)=>({
+            label:z, data: tipologias.map(t => data.filter(g=>g.tipologia===t&&g.zonaRobo===z).length),
+            backgroundColor:colors[i], borderRadius:4, borderSkipped:false, stack:'z'
+          }))},
+          options: { responsive:true, maintainAspectRatio:true,
+            plugins:{ legend:{display:true, labels:{color:tickColor, font:{size:11}, padding:12, boxWidth:12}}, tooltip:{mode:'index'}},
+            scales:{
+              x:{stacked:true, grid:{color:gridColor}, ticks:{color:tickColor}},
+              y:{stacked:true, beginAtZero:true, grid:{color:gridColor}, ticks:{color:tickColor, stepSize:1}}
+            }}
+        }); break;
+      }
+    }
+  }
 }
 
 function pct(n, total) {

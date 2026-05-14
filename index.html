@@ -1327,6 +1327,7 @@ function showMod(name, btn) {
   if (name === 'informes') renderDashboard();
   if (name === 'bbdd') renderTabla();
   if (name === 'comparativas') renderComp();
+  if (name === 'foto') loadApiKey();
 }
 
 function toggleDark() {
@@ -2214,12 +2215,7 @@ function loadApiKey() {
   }
 }
 
-// Llamar loadApiKey al abrir el panel foto
-const _origShowMod = showMod;
-function showMod(name, btn) {
-  _origShowMod(name, btn);
-  if (name === 'foto') loadApiKey();
-}
+// loadApiKey se llama desde el propio panel foto al montarse
 
 function handlePhotoInput(event) {
   const file = event.target.files[0];

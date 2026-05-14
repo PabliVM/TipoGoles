@@ -293,49 +293,100 @@ tr:hover .btn-del{opacity:1}
    PDF / PRINT STYLES
    ===================================================== */
 @media print {
-  @page { size: A4 portrait; margin: 12mm 14mm; }
+  @page { size: A4 portrait; margin: 10mm 12mm; }
 
-  /* Ocultar UI chrome */
+  /* --- Ocultar UI chrome --- */
   .header, .nav-teams, .nav-modules, .app-footer,
   .dash-topbar, .dash-filter-panel, .editor-overlay,
   .editor-sidebar, .toast, .btn-del,
   #btnToggleFilters, #btnResetFilters, #btnEditorOpen,
   #btnExportPDF, #btnCompExportPDF { display: none !important; }
 
-  body { background: #fff !important; color: #000 !important; font-size: 11px; padding-bottom: 0; }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 10.5px;
+    padding-bottom: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 
   .panel { display: none !important; }
   .panel.active { display: block !important; }
 
-  /* PDF header */
+  /* --- PDF header --- */
   .pdf-header { display: flex !important; }
 
-  /* KPIs */
-  .kpi-grid { grid-template-columns: repeat(5,1fr) !important; gap: 6px !important; margin-bottom: 10px !important; }
-  .kpi-card { border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; }
-  .kpi-value { font-size: 20px !important; }
+  /* --- KPIs: siempre 5 columnas en A4 --- */
+  .kpi-grid {
+    display: grid !important;
+    grid-template-columns: repeat(5,1fr) !important;
+    gap: 5px !important;
+    margin-bottom: 8px !important;
+  }
+  .kpi-card { border: 1px solid #ddd !important; border-radius: 5px !important; padding: 6px 8px !important; page-break-inside: avoid; break-inside: avoid; }
+  .kpi-value { font-size: 18px !important; }
+  .kpi-label { font-size: 9px !important; }
+  .kpi-sub { font-size: 9px !important; }
 
-  /* Charts grid — 2 col portrait */
-  .charts-dynamic { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
-  .chart-card { border: 1px solid #ddd !important; border-radius: 6px !important; break-inside: avoid; }
+  /* --- Grid de gráficos: 2 columnas --- */
+  .charts-dynamic {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 7px !important;
+  }
+  .chart-card {
+    border: 1px solid #ddd !important;
+    border-radius: 5px !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    overflow: visible !important;
+  }
   .chart-card.full-width { grid-column: 1 / -1 !important; }
-  .chart-body canvas { max-height: 160px !important; }
-  .chart-body.tall canvas { max-height: 200px !important; }
-  .chart-head { padding: 6px 10px !important; }
-  .chart-title { font-size: 10px !important; }
+  .chart-head { padding: 5px 9px !important; border-bottom: 1px solid #eee !important; }
+  .chart-title { font-size: 9.5px !important; font-weight: 700; }
+  .chart-body { padding: 8px 10px !important; overflow: visible !important; }
 
-  /* Comparativas */
-  .comp-charts-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
-  .comp-chart-wrap { break-inside: avoid; }
-  .comp-chart-body canvas { max-height: 150px !important; }
+  /* Canvas: Chart.js los re-renderiza con dimensiones exactas antes de imprimir.
+     NO poner max-height aquí — el tamaño viene controlado desde JS (prepareChartsForPrint). */
+  .chart-body canvas {
+    display: block !important;
+    max-width: 100% !important;
+  }
 
-  /* Rank lists */
-  .rank-bar-fill { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  /* --- Rank lists --- */
+  .rank-list { gap: 3px !important; }
+  .rank-item { gap: 6px !important; }
+  .rank-name { font-size: 10px !important; }
+  .rank-val { font-size: 10px !important; }
+  .rank-bar-bg { height: 4px !important; }
+  .rank-bar-fill {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 
-  /* Tables */
+  /* --- Comparativas --- */
+  .comp-charts-grid { grid-template-columns: 1fr 1fr !important; gap: 7px !important; }
+  .comp-chart-wrap { page-break-inside: avoid; break-inside: avoid; border: 1px solid #ddd !important; border-radius: 5px !important; }
+  .comp-chart-body { padding: 8px 10px !important; }
+  .comp-table { font-size: 9px !important; }
+  .comp-table th, .comp-table td { padding: 4px 6px !important; }
+
+  /* --- Rank lists en print: altura fija para que no se corten --- */
+  .chart-body .rank-list,
+  .chart-body.tall .rank-list {
+    max-height: 185px !important;
+    overflow: hidden !important;
+  }
+  .chart-body .rank-item { margin-bottom: 1px !important; }
+
+  /* --- Doughnut/polar: contener dentro del card --- */
+  .chart-body { overflow: hidden !important; }
+
+  /* --- Tabla BBDD --- */
   .table-wrap { max-height: none !important; overflow: visible !important; }
-  .data-table { font-size: 9px !important; }
-  .data-table th, .data-table td { padding: 4px 6px !important; }
+  .data-table { font-size: 8.5px !important; }
+  .data-table th, .data-table td { padding: 3px 5px !important; }
 }
 
 /* PDF header — only visible when printing */
@@ -414,7 +465,7 @@ tr:hover .btn-del{opacity:1}
         <div class="info-chip"><div class="val" id="infoFile">—</div><div class="lbl">Archivo</div></div>
       </div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="loadSeedData()">⚽ Cargar 50 goles reales (Castilla 25/26)</button>
+        <button class="btn btn-primary" onclick="loadSeedData()">⚽ Cargar 50 goles reales (Castilla 2025/2026)</button>
         <button class="btn btn-secondary" onclick="exportCSV()">⬇️ Exportar CSV</button>
       </div>
       <div style="margin-top:14px;padding:10px 12px;background:var(--surface-alt);border-radius:var(--r);border:1px solid var(--border-light)">
@@ -904,7 +955,7 @@ const TEAM_FULL = {
   AA:'Alevín A',AB:'Alevín B',AC:'Alevín C',
   BA:'Benjamín A',BB:'Benjamín B',PA:'Prebenjamín A',PB:'Prebenjamín B',DB:'Debutantes'
 };
-const DEFAULT_SEASONS = ['23/24','24/25','25/26'];
+const DEFAULT_SEASONS = ['2025/2026'];
 
 const CHART_CATALOG = [
   {id:'chartTramo',      title:'Goles por tramo de minuto', icon:'⏱️', bloque:'Generales',        full:true,  visible:true,  chartType:'bar'},
@@ -946,10 +997,10 @@ const RM_PALETTE = ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#1d4ed8','#1e40af',
 /* =====================================================
    ESTADO GLOBAL
    ===================================================== */
-let db = {};            // { 'CAS_25/26': [...goles] }
-let seasons = [];       // ['23/24','24/25','25/26']
+let db = {};            // { 'CAS_2025/2026': [...goles] }
+let seasons = [];       // ['2025/2026']
 let activeTeam = 'CAS';
-let activeSeason = '25/26';
+let activeSeason = '2025/2026';
 let sortField = null, sortDir = 1;
 let layoutState = CHART_CATALOG.map(c => ({id:c.id, visible:c.visible, chartType:c.chartType}));
 let editorState = [];
@@ -1016,6 +1067,22 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('dark');
     document.getElementById('darkBtn').innerHTML = '☀';
   }
+
+  // Restaurar gráficos tras imprimir: Chart.js re-adapta al layout de pantalla
+  window.addEventListener('afterprint', () => {
+    // Eliminar dimensiones forzadas de todos los canvas
+    document.querySelectorAll('.chart-body canvas, .comp-chart-body canvas').forEach(c => {
+      c.style.width  = '';
+      c.style.height = '';
+    });
+    // Re-renderizar en modo pantalla
+    for (const chart of Object.values(charts)) {
+      try { chart.options.animation = false; chart.resize(); chart.update('none'); } catch(e) {}
+    }
+    for (const chart of Object.values(compCharts)) {
+      try { chart.options.animation = false; chart.resize(); chart.update('none'); } catch(e) {}
+    }
+  });
 });
 
 /* =====================================================
@@ -1846,26 +1913,80 @@ function renderComp() {
 /* =====================================================
    PDF EXPORT
    ===================================================== */
+/* =====================================================
+   PDF — Re-renderiza gráficos con dimensiones exactas para A4
+   A4 portrait área útil ~170mm ancho = ~642px a 96dpi
+   Col simple: 310px ancho. Col doble (full): 634px ancho.
+   Alturas: normal 160px, tall (full-width) 200px.
+   ===================================================== */
+
+// Dimensiones objetivo para print (px a 96dpi dentro de A4)
+const PRINT_W_HALF = 300;   // media columna
+const PRINT_W_FULL = 614;   // columna completa
+const PRINT_H_NORM = 155;   // altura normal
+const PRINT_H_TALL = 195;   // altura full-width
+
 function exportPDF() {
-  // Update PDF header before print
-  const teamsLabel=[activeTeam,...extraTeams].join(', ');
-  document.getElementById('pdfTitle').textContent=`Tipología de Goles — ${TEAM_FULL[activeTeam]||activeTeam}`;
-  document.getElementById('pdfSub').textContent=`Temporada ${activeSeason} · ${new Date().toLocaleDateString('es-ES')}`;
-  window.print();
+  document.getElementById('pdfTitle').textContent = `Tipología de Goles — ${TEAM_FULL[activeTeam]||activeTeam}`;
+  document.getElementById('pdfSub').textContent = `Temporada ${activeSeason} · ${new Date().toLocaleDateString('es-ES')}`;
+  document.getElementById('pdfMeta').innerHTML = `Fecha: ${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
+  prepareChartsForPrint(charts, layoutState).then(() => {
+    window.print();
+  });
 }
 
 function exportCompPDF() {
-  const tA=document.getElementById('compTeamA')?.value;
-  const tB=document.getElementById('compTeamB')?.value;
-  const sA=document.getElementById('compSeasonA')?.value;
-  const sB=document.getElementById('compSeasonB')?.value;
-  document.getElementById('pdfTitleComp').textContent=`Comparativa ${TEAM_FULL[tA]||tA} vs ${TEAM_FULL[tB]||tB}`;
-  document.getElementById('pdfSubComp').textContent=`${sA} vs ${sB} · ${new Date().toLocaleDateString('es-ES')}`;
-  window.print();
+  const tA = document.getElementById('compTeamA')?.value;
+  const tB = document.getElementById('compTeamB')?.value;
+  const sA = document.getElementById('compSeasonA')?.value;
+  const sB = document.getElementById('compSeasonB')?.value;
+  document.getElementById('pdfTitleComp').textContent = `Comparativa ${TEAM_FULL[tA]||tA} vs ${TEAM_FULL[tB]||tB}`;
+  document.getElementById('pdfSubComp').textContent = `${sA} vs ${sB} · ${new Date().toLocaleDateString('es-ES')}`;
+  prepareChartsForPrint(compCharts, null).then(() => {
+    window.print();
+  });
+}
+
+/**
+ * Para cada canvas activo:
+ *  1. Redimensiona el canvas al tamaño exacto de impresión
+ *  2. Fuerza Chart.js a re-renderizar con esas dimensiones
+ *  3. Espera un frame para que el render complete
+ * Después de window.print() el navegador restaura el layout normal.
+ */
+async function prepareChartsForPrint(chartMap, layout) {
+  // Determinar si cada chart es full-width
+  const fullSet = new Set(CHART_CATALOG.filter(c => c.full).map(c => c.id));
+
+  for (const [id, chart] of Object.entries(chartMap)) {
+    const canvas = chart.canvas;
+    if (!canvas) continue;
+
+    const isFull = fullSet.has(id) ||
+                   canvas.closest('.chart-card.full-width') !== null ||
+                   canvas.closest('.comp-chart-wrap') !== null;
+
+    const targetW = isFull ? PRINT_W_FULL : PRINT_W_HALF;
+    const targetH = isFull ? PRINT_H_TALL : PRINT_H_NORM;
+
+    // Fijar dimensiones físicas del canvas
+    canvas.style.width  = targetW + 'px';
+    canvas.style.height = targetH + 'px';
+    canvas.width  = targetW;
+    canvas.height = targetH;
+
+    // Actualizar opciones del chart para el nuevo tamaño
+    chart.options.animation = false;
+    chart.resize(targetW, targetH);
+    chart.update('none'); // sin animación
+  }
+
+  // Esperar 2 frames para que el render complete antes de imprimir
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 }
 
 /* =====================================================
-   SEED DATA — Castilla 25/26
+   SEED DATA — Castilla 2025/2026
    ===================================================== */
 const SEED_DATA=[
   {competicion:"Amistoso",favor:"A favor",jornada:"J16",rival:"Racing Ferrol",nivel:"Nivel 3",lv:"Local",dif:0,goleador:"Diego Aguado",minuto:49,tramo:"41-50",tipologia:"Juego posicional",estilo:"Saque de banda y centro",zonaRobo:"Z3",posicRobo:"Carril central",primerPase:"Hacia adelante",nPases:"4",tiempoTransicion:16,tipoPase:"Aereo",superficie:"Cabeza",nContactos:"8",zonaRemate:"2º palo (espalda 2º central)"},
@@ -1922,18 +2043,18 @@ const SEED_DATA=[
 
 function loadSeedData() {
   const data = SEED_DATA.map(g=>({...g,_id:Date.now()+Math.random()}));
-  setGoles('CAS','25/26',data);
-  activeTeam='CAS'; activeSeason='25/26';
+  setGoles('CAS','2025/2026',data);
+  activeTeam='CAS'; activeSeason='2025/2026';
   document.querySelectorAll('.team-tab').forEach(t=>t.classList.remove('active'));
   document.querySelector('.team-tab')?.classList.add('active');
-  document.getElementById('seasonSelect').value='25/26';
+  document.getElementById('seasonSelect').value='2025/2026';
   updateBadge(); renderTabla();
-  showImportStatus('ok',`✅ 50 goles cargados — CAS · 25/26`);
+  showImportStatus('ok',`✅ 50 goles cargados — CAS · 2025/2026`);
   document.getElementById('importInfo').style.display='grid';
   document.getElementById('infoReg').textContent=50;
   document.getElementById('infoCols').textContent=21;
   document.getElementById('infoFile').textContent='Seed data';
-  showToast('⚽ 50 goles cargados en CAS 25/26');
+  showToast('⚽ 50 goles cargados en CAS 2025/2026');
 }
 
 /* =====================================================

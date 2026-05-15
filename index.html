@@ -84,12 +84,49 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 
-/* NAV EQUIPOS */
-.nav-teams{background:var(--rm-dark);display:flex;gap:0;overflow-x:auto;scrollbar-width:none;padding:0 6px}
-.nav-teams::-webkit-scrollbar{display:none}
-.team-tab{padding:7px 12px;font-size:11.5px;font-weight:700;color:rgba(255,255,255,.6);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--tr),border-color var(--tr);letter-spacing:.2px}
-.team-tab:hover{color:rgba(255,255,255,.9)}
-.team-tab.active{color:#fff;border-bottom-color:#fff}
+/* BOTONES SUPERIORES POR EQUIPO */
+.team-bar{
+  background:var(--surface);
+  padding:10px 24px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  overflow-x:auto;
+  scrollbar-width:none;
+  position:sticky;
+  top:52px;
+  z-index:99;
+  border-bottom:1px solid var(--border);
+}
+
+.team-bar::-webkit-scrollbar{
+  height:0;
+}
+
+.team-btn{
+  padding:5px 14px;
+  font-size:11px;
+  font-weight:600;
+  font-family:var(--font);
+  border:1.5px solid var(--border);
+  border-radius:20px;
+  background:var(--surface);
+  color:var(--text-sec);
+  cursor:pointer;
+  white-space:nowrap;
+  transition:all var(--tr);
+}
+
+.team-btn:hover{
+  border-color:var(--rm);
+  color:var(--rm);
+}
+
+.team-btn.active{
+  background:var(--rm);
+  color:#fff;
+  border-color:var(--rm);
+}
 
 /* NAV MÓDULOS */
 .nav-modules{background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:0;overflow-x:auto;scrollbar-width:none}
@@ -491,8 +528,8 @@ tr:hover .btn-del{opacity:1}
 </header>
 
 
-<!-- NAV EQUIPOS -->
-<nav class="nav-teams" id="navTeams"></nav>
+<!-- BOTONES SUPERIORES POR EQUIPO -->
+<nav class="team-bar" id="navTeams"></nav>
 
 <!-- NAV MÓDULOS -->
 <nav class="nav-modules" id="navModules">
@@ -1388,15 +1425,26 @@ function onSeasonChange() {
 
 function buildTeamNav() {
   const nav = document.getElementById('navTeams');
-  nav.innerHTML = TEAMS.map(t =>
-    `<button class="team-tab ${t===activeTeam?'active':''}" onclick="switchTeam('${t}',this)">${t}</button>`
-  ).join('');
+
+  nav.innerHTML = TEAMS.map(t => `
+    <button 
+      class="team-btn ${t === activeTeam ? 'active' : ''}" 
+      onclick="switchTeam('${t}', this)"
+      title="${TEAM_FULL[t] || t}"
+    >
+      ${t}
+    </button>
+  `).join('');
 }
+
 
 function switchTeam(team, btn) {
   activeTeam = team;
-  document.querySelectorAll('.team-tab').forEach(t => t.classList.remove('active'));
+
+  document.querySelectorAll('.team-btn').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
+
+
   buildMultiTeamChecks();
   updateBadge();
   renderTabla();
@@ -1560,7 +1608,7 @@ function processCSV(file) {
   readerUtf.onload = function(e) {
     const text = e.target.result;
     // Detectar corrupción: si hay caracteres de reemplazo U+FFFD, usar Latin-1
-    if (text.includes('�')) {
+    if (text.includes(' ')) {
       readCSVLatin1(file);
     } else {
       parseCSVText(text, file.name);
@@ -1613,7 +1661,7 @@ const COL_MAP = {
   goleador:    ['Goleador','GOLEADOR'],
   minuto:      ['Minuto','MINUTO'],
   tramo:       ['Tramo minuto','TRAMO MINUTO','Tramo Minuto'],
-  tipologia:   ['Tipología','Tipologia','TIPOLOGÍA','TIPOLOGIA','tipolog�a'],
+  tipologia:   ['Tipología','Tipologia','TIPOLOGÍA','TIPOLOGIA','tipolog a'],
   estilo:      ['Estilo','ESTILO'],
   zonaRobo:    ['Zona de Robo','ZONA DE ROBO','Zona de robo','zona de robo'],
   posicRobo:   ['Posicionamiento del robo','POSICIONAMIENTO DEL ROBO','Posicionamiento del Robo'],
@@ -2337,8 +2385,12 @@ function loadSeedData() {
   const data = SEED_DATA.map(g=>({...g,_id:Date.now()+Math.random()}));
   setGoles('CAS','2025/2026',data);
   activeTeam='CAS'; activeSeason='2025/2026';
-  document.querySelectorAll('.team-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelector('.team-tab')?.classList.add('active');
+
+
+  document.querySelectorAll('.team-btn').forEach(t=>t.classList.remove('active'));
+  document.querySelector('.team-btn')?.classList.add('active');
+
+
   document.getElementById('seasonSelect').value='2025/2026';
   updateBadge(); renderTabla();
   showImportStatus('ok',`✅ 50 goles cargados — CAS · 2025/2026`);

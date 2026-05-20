@@ -85,11 +85,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 
 
 /* NAV EQUIPOS */
-.nav-teams{background:var(--rm-dark);display:flex;gap:0;overflow-x:auto;scrollbar-width:none;padding:0 6px}
-.nav-teams::-webkit-scrollbar{display:none}
-.team-tab{padding:7px 12px;font-size:11.5px;font-weight:700;color:rgba(255,255,255,.6);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--tr),border-color var(--tr);letter-spacing:.2px}
-.team-tab:hover{color:rgba(255,255,255,.9)}
-.team-tab.active{color:#fff;border-bottom-color:#fff}
+.nav-teams{background:var(--surface);padding:8px 18px;display:flex;align-items:center;gap:5px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);position:sticky;top:57px;z-index:150}
+.nav-teams::-webkit-scrollbar{height:0}
+.team-tab{padding:5px 14px;font-size:11px;font-weight:600;font-family:var(--font);border:1.5px solid var(--border);border-radius:20px;background:var(--surface);color:var(--text-sec);cursor:pointer;white-space:nowrap;transition:all var(--tr);line-height:1}
+.team-tab:hover{border-color:var(--rm);color:var(--rm)}
+.team-tab.active{background:var(--rm);color:#fff;border-color:var(--rm)}
 
 /* NAV MÓDULOS */
 .nav-modules{background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:0;overflow-x:auto;scrollbar-width:none}
@@ -1566,7 +1566,7 @@ function onSeasonChange() {
 function buildTeamNav() {
   const nav = document.getElementById('navTeams');
   nav.innerHTML = TEAMS.map(t =>
-    `<button class="team-tab ${t===activeTeam?'active':''}" onclick="switchTeam('${t}',this)">${t}</button>`
+    `<button class="team-tab ${t===activeTeam?'active':''}" data-team="${t}" title="${TEAM_FULL[t]||t}" onclick="switchTeam('${t}',this)">${t}</button>`
   ).join('');
 }
 

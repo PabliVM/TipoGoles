@@ -314,6 +314,7 @@ tr:hover .btn-edit{opacity:1}
 
 /* FOOTER */
 .app-footer{background:var(--rm);color:rgba(255,255,255,.5);font-size:10px;text-align:center;padding:9px;position:fixed;left:0;right:0;bottom:0;z-index:100}
+.welcome-footer{background:var(--rm);color:rgba(255,255,255,.5);font-size:10px;text-align:center;padding:9px;flex-shrink:0;margin-top:auto}
 
 /* EMPTY */
 .empty-state{text-align:center;padding:44px 20px;color:var(--text-mut)}
@@ -653,6 +654,10 @@ tr:hover .btn-edit{opacity:1}
     </div>
   </div>
 
+  <div class="welcome-footer">
+    Real Madrid Cantera CF · Tipología de Goles
+  </div>
+
 </div>
 
 <!-- HEADER -->
@@ -671,13 +676,12 @@ tr:hover .btn-edit{opacity:1}
       <select class="season-select" id="seasonSelect" onchange="onSeasonChange()"></select>
     </div>
     <button class="btn-add-season" onclick="openAddSeason()" title="Nueva temporada">＋</button>
+    <button class="btn-icon" onclick="toggleDark()" id="darkBtn" title="Modo oscuro">☾</button>
     <!-- Sync indicator -->
     <div title="Estado sincronización" style="display:flex;align-items:center;gap:4px">
       <div class="sync-dot off" id="syncDot"></div>
       <span id="syncLabel" style="font-size:10px;color:rgba(255,255,255,.5);display:none"></span>
     </div>
-
-    <button class="btn-icon" onclick="toggleDark()" id="darkBtn" title="Modo oscuro">☾</button>
   </div>
 </header>
 
@@ -1385,7 +1389,7 @@ tr:hover .btn-edit{opacity:1}
    ===================================================== */
 const TEAMS = ['CAS','RMC','JA','JB','JC','CA','CB','IA','IB','AA','AB','AC','BA','BB','PA','PB','DB'];
 const TEAM_FULL = {
-  CAS:'Castilla',RMC:'RM Castilla B',JA:'Juvenil A',JB:'Juvenil B',JC:'Juvenil C',
+  CAS:'Castilla',RMC:'Real Madrid C',JA:'Juvenil A',JB:'Juvenil B',JC:'Juvenil C',
   CA:'Cadete A',CB:'Cadete B',IA:'Infantil A',IB:'Infantil B',
   AA:'Alevín A',AB:'Alevín B',AC:'Alevín C',
   BA:'Benjamín A',BB:'Benjamín B',PA:'Prebenjamín A',PB:'Prebenjamín B',DB:'Debutantes'
@@ -1579,12 +1583,38 @@ function saveLocal() {
   } catch(e) {}
 }
 
+// Convierte formato corto "25/26" → "2025/2026"
+function migrateSeason(s) {
+  if (/^\d{2}\/\d{2}$/.test(s)) {
+    const [a, b] = s.split('/');
+    return `20${a}/20${b}`;
+  }
+  return s;
+}
+
 function loadLocal() {
   try {
     const d = localStorage.getItem('tg-db-v2');
-    if (d) db = JSON.parse(d);
+    if (d) {
+      const rawDb = JSON.parse(d);
+      // Migrar claves antiguas de formato corto
+      db = {};
+      for (const [k, v] of Object.entries(rawDb)) {
+        // k puede ser "CAS_25_26" → migrar a "CAS_2025_2026"
+        const newKey = k.replace(/^([A-Z]+)_(\d{2})_(\d{2})$/, (_, t, a, b) => `${t}_20${a}_20${b}`);
+        db[newKey] = v;
+      }
+    }
     const s = localStorage.getItem('tg-seasons-v2');
-    seasons = s ? JSON.parse(s) : [...DEFAULT_SEASONS];
+    if (s) {
+      const raw = JSON.parse(s);
+      // Migrar temporadas de formato corto
+      seasons = raw.map(migrateSeason);
+      // Eliminar duplicados tras migración
+      seasons = [...new Set(seasons)].sort();
+    } else {
+      seasons = [...DEFAULT_SEASONS];
+    }
     const l = localStorage.getItem('tg-layout-v2');
     if (l) {
       const parsed = JSON.parse(l);
@@ -1593,6 +1623,13 @@ function loadLocal() {
         return p ? {id:c.id, visible:p.visible, chartType:p.chartType||c.chartType}
                  : {id:c.id, visible:c.visible, chartType:c.chartType};
       });
+    }
+    // Migrar activeSeason también
+    if (activeSeason && /^\d{2}\/\d{2}$/.test(activeSeason)) {
+      activeSeason = migrateSeason(activeSeason);
+    }
+    if (!seasons.includes(activeSeason) && seasons.length) {
+      activeSeason = seasons[seasons.length - 1];
     }
   } catch(e) {}
 }
@@ -1746,8 +1783,13 @@ document.addEventListener('DOMContentLoaded', async () => {
    SEASON & TEAM NAV
    ===================================================== */
 function buildSeasonSelect() {
+  const opts = seasons.map(s => `<option value="${s}" ${s===activeSeason?'selected':''}>${s}</option>`).join('');
+  // Header principal
   const sel = document.getElementById('seasonSelect');
-  sel.innerHTML = seasons.map(s => `<option value="${s}" ${s===activeSeason?'selected':''}>${s}</option>`).join('');
+  if (sel) sel.innerHTML = opts;
+  // Header welcome
+  const wSel = document.getElementById('welcomeSeasonSelect');
+  if (wSel) wSel.innerHTML = opts;
 }
 
 function onSeasonChange() {

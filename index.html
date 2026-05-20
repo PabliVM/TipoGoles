@@ -1757,18 +1757,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
   dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); const f=e.dataTransfer.files[0]; if(f) processFile(f); });
 
-  // Dark mode
-  // Dark mode: leer desde Firebase
-  if (fbAvailable()) {
-    try {
-      const { db, doc, getDoc } = window._fb;
-      const snap = await getDoc(doc(db, 'meta', 'darkMode'));
-      if (snap.exists() && snap.data().on) {
-        document.body.classList.add('dark');
-        document.getElementById('darkBtn').innerHTML = '☀';
-      }
-    } catch(e) {}
-  }
+  // Dark mode se carga en el listener firebase-ready (abajo)
 
   // Restaurar gráficos tras imprimir
   window.addEventListener('afterprint', () => {
@@ -1801,14 +1790,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.appendChild(numDiv);
   });
 
-  // Sincronizar con Firebase cuando el SDK esté listo (sin auth)
-  function initFirebase() { syncFromFirebase(); }
+  // Firebase SDK es módulo ES — siempre llega después del DOMContentLoaded.
+  // Usamos el evento 'firebase-ready' que dispara el módulo cuando termina.
+  window.addEventListener('firebase-ready', async () => {
+    // 1. Iniciar listeners globales (seasons, layout)
+    listenSeasons();
+    listenLayout();
 
-  if (window._fbReady) {
-    initFirebase();
-  } else {
-    window.addEventListener('firebase-ready', initFirebase, { once: true });
-  }
+    // 2. Dark mode desde Firebase
+    try {
+      const { db, doc, getDoc } = window._fb;
+      const snap = await getDoc(doc(db, 'meta', 'darkMode'));
+      if (snap.exists() && snap.data().on) {
+        document.body.classList.add('dark');
+        document.getElementById('darkBtn').innerHTML = '☀';
+      }
+    } catch(e) {}
+
+    // 3. Si ya hay un equipo activo (welcome ya pasado), iniciar listener de goles
+    if (activeTeam) {
+      listenGoles(activeTeam, activeSeason);
+    }
+
+    setSyncState('syncing');
+  });
 });
 
 /* =====================================================
@@ -1830,7 +1835,7 @@ function onSeasonChange() {
   buildMultiTeamChecks();
   updateBadge();
   renderTabla();
-  switchGolListener(activeTeam, activeSeason);
+  if (fbAvailable()) listenGoles(activeTeam, activeSeason);
 }
 
 function buildTeamNav() {

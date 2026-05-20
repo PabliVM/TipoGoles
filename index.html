@@ -2682,43 +2682,93 @@ function renderDashboard() {
   function getShowLabels(id)  { return _dashCtx.stateMap[id]?.showLabels || false; }
 
   function mkC(id, type, labels, datasets, opts={}) {
-    const isH      = type==='bar_h';
-    const isGroup  = type==='bar_group';
-    const realType = (isH||isGroup) ? 'bar' : type;
-    const ctx      = document.getElementById(id)?.getContext('2d'); if(!ctx) return;
+    const isH        = type==='bar_h';
+    const isGroup    = type==='bar_group';
+    const realType   = (isH||isGroup) ? 'bar' : type;
+    const ctx        = document.getElementById(id)?.getContext('2d'); if(!ctx) return;
     const isCircular = realType==='doughnut'||realType==='pie'||realType==='polarArea';
-    const showLbl  = getShowLabels(id);
-    const _total   = _dashCtx.total;
-    const _dark    = _dashCtx.isDark;
-    const _gc      = _dashCtx.gridColor;
-    const _tc      = _dashCtx.tickColor;
-    const _sc      = _dashCtx.surfColor;
+    const showLbl    = getShowLabels(id);
+    const _total     = _dashCtx.total;
+    const _dark      = _dashCtx.isDark;
+    const _gc        = _dashCtx.gridColor;
+    const _tc        = _dashCtx.tickColor;
+    const _sc        = _dashCtx.surfColor;
 
+    // Plugin de etiquetas: estrategia diferente según tipo de gráfico
     const labelPlugin = {
       id: 'lbl_'+id,
       afterDatasetsDraw(chart) {
         if (!getShowLabels(id)) return;
         const c2 = chart.ctx;
+        const chartArea = chart.chartArea;
+
         chart.data.datasets.forEach((ds, di) => {
           const meta = chart.getDatasetMeta(di);
           if (meta.hidden) return;
+
           meta.data.forEach((el, i) => {
-            const val = ds.data[i]; if(!val||val<=0) return;
+            const val = ds.data[i];
+            if (!val || val <= 0) return;
+
+            const pctTxt = pct(val, _total) + '%';
             c2.save();
-            c2.textAlign='center'; c2.textBaseline='bottom';
-            c2.shadowColor='rgba(0,0,0,.35)'; c2.shadowBlur=2;
-            c2.fillStyle=_dark?'#e4e6ea':'#1a1d23';
-            c2.font=`700 9px 'Segoe UI',sans-serif`;
-            c2.fillText(String(val), el.x, isCircular?el.y+4:el.y-2);
-            c2.fillStyle=_dark?'rgba(255,255,255,.5)':'rgba(0,0,0,.4)';
-            c2.font=`600 8px 'Segoe UI',sans-serif`;
-            c2.shadowBlur=0;
-            c2.fillText(pct(val,_total)+'%', el.x, isCircular?el.y+14:el.y-12);
+            c2.textAlign = 'center';
+            c2.shadowBlur = 0;
+
+            if (isCircular) {
+              // Doughnut/Polar: etiqueta centrada en el arco si hay espacio
+              // Solo mostrar si el arco tiene suficiente ángulo (> 15°)
+              const angle = el.endAngle - el.startAngle;
+              if (angle < 0.26) { c2.restore(); return; } // < ~15°, demasiado pequeño
+
+              const midAngle = (el.startAngle + el.endAngle) / 2;
+              const r = (el.outerRadius + el.innerRadius) / 2;
+              const x = el.x + Math.cos(midAngle) * r;
+              const y = el.y + Math.sin(midAngle) * r;
+
+              // Número
+              c2.fillStyle = '#fff';
+              c2.font = `800 11px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'bottom';
+              c2.fillText(String(val), x, y + 1);
+              // Porcentaje
+              c2.font = `600 9px 'Segoe UI',sans-serif`;
+              c2.fillStyle = 'rgba(255,255,255,.85)';
+              c2.textBaseline = 'top';
+              c2.fillText(pctTxt, x, y + 2);
+
+            } else {
+              // Barras: número DENTRO de la barra (blanco), % ENCIMA (color ticks)
+              // Posición Y del tope de la barra
+              const barTop = el.y;
+              const barBottom = isH ? el.x : (chartArea?.bottom || el.base);
+              const barHeight = Math.abs((isH ? el.x - el.base : el.base - el.y));
+
+              if (barHeight > 22) {
+                // Número dentro de la barra (centrado verticalmente)
+                const midY = barTop + barHeight / 2;
+                c2.fillStyle = '#fff';
+                c2.font = `800 10px 'Segoe UI',sans-serif`;
+                c2.textBaseline = 'middle';
+                c2.fillText(String(val), el.x, isH ? el.y : midY);
+              }
+
+              // % encima de la barra (con suficiente separación)
+              c2.fillStyle = _dark ? '#9095a0' : '#5a6170';
+              c2.font = `600 9px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'bottom';
+              const topY = isH ? el.y : barTop - 3;
+              c2.fillText(pctTxt, el.x, topY);
+            }
+
             c2.restore();
           });
         });
       }
     };
+
+    // Añadir padding top para que el % encima de las barras no se corte
+    const layoutPadding = (!isCircular && showLbl) ? { top: 20 } : {};
 
     charts[id] = new Chart(ctx, {
       type: realType,
@@ -2726,13 +2776,14 @@ function renderDashboard() {
       plugins: showLbl ? [labelPlugin] : [],
       options: {
         responsive:true, maintainAspectRatio:true, indexAxis: isH?'y':'x',
+        layout: { padding: layoutPadding },
         plugins:{
           legend:{display:opts.legend??false, labels:{color:_tc,font:{size:10},padding:10,boxWidth:10}},
           tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed?.r??c.parsed} (${pct(c.parsed?.y??c.parsed?.r??c.parsed,_total)}%)`}}
         },
         scales: isCircular ? {} : {
           x:{grid:{color:_gc},ticks:{color:_tc,font:{size:10}}},
-          y:{beginAtZero:true,grid:{color:_gc},ticks:{color:_tc,font:{size:10},stepSize:1}}
+          y:{beginAtZero:true, grid:{color:_gc}, ticks:{color:_tc,font:{size:10},stepSize:1}}
         },
         ...opts
       }

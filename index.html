@@ -340,6 +340,148 @@ tr:hover .btn-edit{opacity:1}
 /* SPINNER */
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+/* =====================================================
+   PANTALLA DE INICIO — SELECTOR DE EQUIPO
+   ===================================================== */
+.welcome-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.welcome-screen.hidden { display: none; }
+
+.welcome-header {
+  background: var(--rm);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(37,99,235,.3);
+}
+.welcome-header-logo {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.2);
+  flex-shrink: 0;
+}
+.welcome-header-logo img { width: 100%; height: 100%; object-fit: contain; }
+.welcome-header-text { flex: 1; }
+.welcome-header-title { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
+.welcome-header-sub { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 1px; }
+
+.welcome-body {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 20px 40px;
+}
+
+.welcome-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--sh-lg);
+  width: 100%;
+  max-width: 600px;
+  overflow: hidden;
+}
+
+.welcome-card-head {
+  padding: 16px 22px 12px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.welcome-card-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-mut);
+  text-transform: uppercase;
+  letter-spacing: .7px;
+}
+.welcome-season-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.welcome-season-label {
+  font-size: 11px;
+  color: var(--text-mut);
+  font-weight: 600;
+}
+
+.welcome-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 18px 20px 22px;
+}
+
+.welcome-team-btn {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 12px 12px;
+  cursor: pointer;
+  transition: all .18s ease;
+  text-align: left;
+  font-family: var(--font);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: relative;
+  overflow: hidden;
+}
+.welcome-team-btn:hover {
+  border-color: var(--rm);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+  transform: translateY(-1px);
+}
+.welcome-team-btn:active { transform: translateY(0); }
+.welcome-team-btn.has-data::after {
+  content: '';
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.welcome-team-key {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+.welcome-team-name {
+  font-size: 11px;
+  color: var(--text-mut);
+  font-weight: 500;
+  line-height: 1.2;
+}
+.welcome-team-count {
+  font-size: 10px;
+  color: var(--rm);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+@media (max-width: 480px) {
+  .welcome-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 14px 18px; }
+  .welcome-body { padding: 16px 12px 32px; }
+  .welcome-team-btn { padding: 10px 8px 8px; }
+  .welcome-team-key { font-size: 14px; }
+}
+
 /* SVG CHARTS */
 .svg-chart-wrap { width:100%; overflow:visible; }
 .svg-chart-wrap svg { width:100%; height:auto; display:block; }
@@ -480,6 +622,39 @@ tr:hover .btn-edit{opacity:1}
 </head>
 <body>
 
+<!-- PANTALLA DE INICIO -->
+<div class="welcome-screen" id="welcomeScreen">
+
+  <div class="welcome-header">
+    <div class="welcome-header-logo">
+      <img src="https://raw.githubusercontent.com/PabliVM/Promociones/main/rm__.png"
+           crossorigin="anonymous" alt="RM" onerror="this.parentNode.innerHTML='⚽'">
+    </div>
+    <div class="welcome-header-text">
+      <div class="welcome-header-title">Tipología de Goles</div>
+      <div class="welcome-header-sub">Real Madrid Cantera CF</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;color:rgba(255,255,255,.6);font-weight:600">Temporada</span>
+      <div class="season-wrap">
+        <select class="season-select" id="welcomeSeasonSelect" onchange="onWelcomeSeasonChange()" style="font-size:12px;font-weight:700"></select>
+      </div>
+      <button class="btn-add-season" onclick="openAddSeason()" title="Nueva temporada" style="flex-shrink:0">＋</button>
+    </div>
+  </div>
+
+  <div class="welcome-body">
+    <div class="welcome-card">
+      <div class="welcome-card-head">
+        <div class="welcome-card-title">Equipos</div>
+        <span style="font-size:11px;color:var(--text-mut)" id="welcomeDataHint"></span>
+      </div>
+      <div class="welcome-grid" id="welcomeGrid"></div>
+    </div>
+  </div>
+
+</div>
+
 <!-- HEADER -->
 <header class="header">
   <div class="header-logo">
@@ -488,6 +663,10 @@ tr:hover .btn-edit{opacity:1}
   </div>
   <span class="header-title">Tipología de Goles</span>
   <div class="header-right">
+    <button class="btn-icon" onclick="goToWelcome()" title="Volver a equipos"
+            style="font-size:11px;width:auto;padding:0 8px;border-radius:14px;gap:4px;white-space:nowrap">
+      ← Equipos
+    </button>
     <div class="season-wrap">
       <select class="season-select" id="seasonSelect" onchange="onSeasonChange()"></select>
     </div>
@@ -1451,6 +1630,8 @@ async function onUserAuthenticated(user) {
     // Cargar goles del equipo/temporada activo
     await syncCurrentTeam();
     setSyncState('ok');
+    // Refrescar grid de bienvenida con datos de Firebase
+    renderWelcomeGrid();
   } catch(e) {
     console.error('onUserAuthenticated error:', e);
     setSyncState('err');
@@ -1496,6 +1677,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   buildMultiTeamChecks();
   updateBadge();
   renderTabla();
+
+  // Mostrar pantalla de inicio
+  renderWelcomeGrid();
 
   // Drag & drop
   const dz = document.getElementById('dropZone');
@@ -2540,6 +2724,7 @@ function loadSeedData() {
   document.getElementById('infoCols').textContent=21;
   document.getElementById('infoFile').textContent='Seed data';
   showToast('⚽ 50 goles cargados en CAS 2025/2026');
+  renderWelcomeGrid();
 }
 
 
@@ -2883,6 +3068,81 @@ function eliminarGolEdit() {
   renderTabla();
   showToast('🗑️ Gol eliminado');
   _editingId = null;
+}
+
+/* =====================================================
+   PANTALLA DE INICIO — SELECTOR DE EQUIPO
+   ===================================================== */
+function renderWelcomeGrid() {
+  const grid = document.getElementById('welcomeGrid');
+  if (!grid) return;
+
+  // Sincronizar selector de temporada del welcome
+  const wSel = document.getElementById('welcomeSeasonSelect');
+  if (wSel) {
+    wSel.innerHTML = seasons.map(s =>
+      `<option value="${s}" ${s === activeSeason ? 'selected' : ''}>${s}</option>`
+    ).join('');
+  }
+
+  // Contar goles por equipo en la temporada activa
+  const counts = {};
+  TEAMS.forEach(t => { counts[t] = getGoles(t, activeSeason).length; });
+  const totalGoles = Object.values(counts).reduce((a,b) => a+b, 0);
+
+  const hint = document.getElementById('welcomeDataHint');
+  if (hint) hint.textContent = totalGoles > 0
+    ? `${totalGoles} goles registrados`
+    : 'Sin datos aún · selecciona un equipo para empezar';
+
+  grid.innerHTML = TEAMS.map(t => {
+    const cnt = counts[t];
+    const hasData = cnt > 0;
+    return `
+      <button class="welcome-team-btn ${hasData ? 'has-data' : ''}"
+              onclick="enterTeam('${t}')"
+              title="${TEAM_FULL[t] || t}">
+        <span class="welcome-team-key">${t}</span>
+        <span class="welcome-team-name">${TEAM_FULL[t] || t}</span>
+        ${hasData ? `<span class="welcome-team-count">⚽ ${cnt} goles</span>` : ''}
+      </button>`;
+  }).join('');
+}
+
+function enterTeam(team) {
+  activeTeam = team;
+
+  // Ocultar welcome, mostrar app
+  document.getElementById('welcomeScreen').classList.add('hidden');
+
+  // Actualizar tab activo en nav-teams
+  buildTeamNav();
+  buildMultiTeamChecks();
+  updateBadge();
+  renderTabla();
+
+  // Sincronizar desde Firebase si hay conexión
+  if (fbAvailable()) syncCurrentTeam();
+
+  // Ir a panel importar por defecto
+  const firstTab = document.querySelector('.mod-tab');
+  if (firstTab) showMod('importar', firstTab);
+}
+
+function onWelcomeSeasonChange() {
+  const sel = document.getElementById('welcomeSeasonSelect');
+  if (sel) {
+    activeSeason = sel.value;
+    // Sincronizar también el select del header
+    const mainSel = document.getElementById('seasonSelect');
+    if (mainSel) mainSel.value = activeSeason;
+  }
+  renderWelcomeGrid();
+}
+
+function goToWelcome() {
+  document.getElementById('welcomeScreen').classList.remove('hidden');
+  renderWelcomeGrid();
 }
 
 /* =====================================================

@@ -514,12 +514,33 @@ tr:hover .btn-edit{opacity:1}
 .boot-pct-label { font-family:'Segoe UI',sans-serif; font-weight:800; text-anchor:middle; }
 
 @media print {
-  @page { size: A4 portrait; margin: 10mm 12mm; }
+  /* @page con counter para numeración N/Total */
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 14mm 12mm; /* margen inferior extra para footer */
+    counter-increment: page;
+
+    /* Footer con número de página en cada hoja */
+    @bottom-center {
+      content: counter(page) " / " counter(pages);
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 9px;
+      color: #8b919e;
+    }
+
+    /* Fecha en esquina inferior derecha */
+    @bottom-right {
+      content: attr(data-date);
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 9px;
+      color: #8b919e;
+    }
+  }
 
   /* --- Ocultar UI chrome --- */
   .header, .nav-teams, .nav-modules, .app-footer,
   .dash-topbar, .dash-filter-panel, .editor-overlay,
-  .editor-sidebar, .toast, .btn-del,
+  .editor-sidebar, .toast, .btn-del, .btn-edit,
   #btnToggleFilters, #btnResetFilters, #btnEditorOpen,
   #btnExportPDF, #btnCompExportPDF { display: none !important; }
 
@@ -535,8 +556,40 @@ tr:hover .btn-edit{opacity:1}
   .panel { display: none !important; }
   .panel.active { display: block !important; }
 
-  /* --- PDF header --- */
-  .pdf-header { display: flex !important; }
+  /* Header PDF fijo — se repite en TODAS las páginas en Chrome/Edge/Safari */
+  .pdf-header {
+    display: flex !important;
+    position: fixed !important;
+    top: 0; left: 0; right: 0;
+    background: #fff !important;
+    z-index: 9999;
+    padding: 8px 14px 8px !important;
+    border-bottom: 2px solid #2563eb !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Compensar el espacio del header fijo */
+  .panel.active {
+    padding-top: 68px !important;
+  }
+
+  /* Numeración de páginas — footer fijo */
+  .pdf-footer-print {
+    display: block !important;
+    position: fixed !important;
+    bottom: 0; left: 0; right: 0;
+    background: #fff !important;
+    border-top: 1px solid #e5e7eb;
+    padding: 3px 14px;
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9px;
+    color: #8b919e;
+    font-family: 'Segoe UI', sans-serif;
+    -webkit-print-color-adjust: exact;
+  }
 
   /* --- KPIs: siempre 5 columnas en A4 --- */
   .kpi-grid {
@@ -566,14 +619,8 @@ tr:hover .btn-edit{opacity:1}
   .chart-card.full-width { grid-column: 1 / -1 !important; }
   .chart-head { padding: 5px 9px !important; border-bottom: 1px solid #eee !important; }
   .chart-title { font-size: 9.5px !important; font-weight: 700; }
-  .chart-body { padding: 8px 10px !important; overflow: visible !important; }
-
-  /* Canvas: Chart.js los re-renderiza con dimensiones exactas antes de imprimir.
-     NO poner max-height aquí — el tamaño viene controlado desde JS (prepareChartsForPrint). */
-  .chart-body canvas {
-    display: block !important;
-    max-width: 100% !important;
-  }
+  .chart-body { padding: 8px 10px !important; overflow: hidden !important; }
+  .chart-body canvas { display: block !important; max-width: 100% !important; }
 
   /* --- Rank lists --- */
   .rank-list { gap: 3px !important; }
@@ -581,10 +628,9 @@ tr:hover .btn-edit{opacity:1}
   .rank-name { font-size: 10px !important; }
   .rank-val { font-size: 10px !important; }
   .rank-bar-bg { height: 4px !important; }
-  .rank-bar-fill {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
+  .rank-bar-fill { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .chart-body .rank-list, .chart-body.tall .rank-list { max-height: 185px !important; overflow: hidden !important; }
+  .chart-body .rank-item { margin-bottom: 1px !important; }
 
   /* --- Comparativas --- */
   .comp-charts-grid { grid-template-columns: 1fr 1fr !important; gap: 7px !important; }
@@ -593,21 +639,21 @@ tr:hover .btn-edit{opacity:1}
   .comp-table { font-size: 9px !important; }
   .comp-table th, .comp-table td { padding: 4px 6px !important; }
 
-  /* --- Rank lists en print: altura fija para que no se corten --- */
-  .chart-body .rank-list,
-  .chart-body.tall .rank-list {
-    max-height: 185px !important;
-    overflow: hidden !important;
-  }
-  .chart-body .rank-item { margin-bottom: 1px !important; }
-
-  /* --- Doughnut/polar: contener dentro del card --- */
-  .chart-body { overflow: hidden !important; }
-
   /* --- Tabla BBDD --- */
   .table-wrap { max-height: none !important; overflow: visible !important; }
   .data-table { font-size: 8.5px !important; }
   .data-table th, .data-table td { padding: 3px 5px !important; }
+
+  /* --- Numeración de páginas (footer print nativo) --- */
+  .print-page-num {
+    display: block !important;
+    position: fixed;
+    bottom: 4mm; left: 0; right: 0;
+    text-align: center;
+    font-size: 9px;
+    color: #8b919e;
+    font-family: 'Segoe UI', sans-serif;
+  }
 }
 
 /* PDF header — only visible when printing */
@@ -1108,6 +1154,12 @@ tr:hover .btn-edit{opacity:1}
 
   <div class="kpi-grid" id="kpiGrid"></div>
   <div class="charts-dynamic" id="chartsDynamic"></div>
+
+  <!-- Footer de paginación — solo visible al imprimir -->
+  <div class="pdf-footer-print" id="pdfFooterInformes" style="display:none">
+    <span>Real Madrid Cantera CF · Tipología de Goles</span>
+    <span id="pdfPageNumInformes"></span>
+  </div>
 </div>
 
 <!-- ===================================================
@@ -1178,6 +1230,12 @@ tr:hover .btn-edit{opacity:1}
 
   <div class="comp-charts-grid" id="compChartsGrid"></div>
   <div id="compTableWrap" style="margin-top:12px"></div>
+
+  <!-- Footer de paginación — solo visible al imprimir -->
+  <div class="pdf-footer-print" id="pdfFooterComp" style="display:none">
+    <span>Real Madrid Cantera CF · Comparativas</span>
+    <span id="pdfPageNumComp"></span>
+  </div>
 </div>
 
 <!-- ===================================================
@@ -1793,6 +1851,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     for (const chart of Object.values(compCharts)) {
       try { chart.options.animation = false; chart.resize(); chart.update('none'); } catch(e) {}
     }
+    // Limpiar numeración tras imprimir
+    document.querySelectorAll('.print-page-num').forEach(el => el.remove());
+  });
+
+  // Inyectar numeración antes de imprimir (CSS @page counter no soportado en Chrome)
+  window.addEventListener('beforeprint', () => {
+    // Eliminar anteriores
+    document.querySelectorAll('.print-page-num').forEach(el => el.remove());
+    // Chrome no soporta counter(pages) en @page, así que
+    // añadimos un div fixed con el número de página en JS.
+    // No podemos saber el total de páginas antes de imprimir,
+    // pero sí podemos estimar: cada 2 gráficos ≈ 1 página.
+    // La solución más fiable: mostrar solo el número de página actual.
+    const numDiv = document.createElement('div');
+    numDiv.className = 'print-page-num';
+    numDiv.id = 'printPageNum';
+    numDiv.style.cssText = 'position:fixed;bottom:4mm;left:0;right:0;text-align:center;font-size:9px;color:#8b919e;font-family:"Segoe UI",sans-serif;z-index:99999;display:none';
+    document.body.appendChild(numDiv);
   });
 
   // Inicializar Firebase Auth cuando el SDK esté listo
@@ -2559,7 +2635,7 @@ function renderDashboard() {
   const teamsLabel = [activeTeam,...extraTeams].join(', ');
   document.getElementById('pdfTitle').textContent = `Tipología de Goles — ${teamsLabel}`;
   document.getElementById('pdfSub').textContent = `Temporada ${activeSeason}`;
-  document.getElementById('pdfMeta').innerHTML = `Fecha: ${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
+  document.getElementById('pdfMeta').innerHTML = `${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
 
   if(!data.length){
     document.getElementById('kpiGrid').innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">📊</div><p>Sin datos. Carga goles primero.</p></div>';
@@ -2923,8 +2999,8 @@ const PRINT_H_TALL = 195;   // altura full-width
 
 function exportPDF() {
   document.getElementById('pdfTitle').textContent = `Tipología de Goles — ${TEAM_FULL[activeTeam]||activeTeam}`;
-  document.getElementById('pdfSub').textContent = `Temporada ${activeSeason} · ${new Date().toLocaleDateString('es-ES')}`;
-  document.getElementById('pdfMeta').innerHTML = `Fecha: ${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
+  document.getElementById('pdfSub').textContent = `Temporada ${activeSeason}`;
+  document.getElementById('pdfMeta').innerHTML = `${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
   prepareChartsForPrint(charts, layoutState).then(() => {
     window.print();
   });
@@ -2936,9 +3012,22 @@ function exportCompPDF() {
   const sA = document.getElementById('compSeasonA')?.value;
   const sB = document.getElementById('compSeasonB')?.value;
   document.getElementById('pdfTitleComp').textContent = `Comparativa ${TEAM_FULL[tA]||tA} vs ${TEAM_FULL[tB]||tB}`;
-  document.getElementById('pdfSubComp').textContent = `${sA} vs ${sB} · ${new Date().toLocaleDateString('es-ES')}`;
+  document.getElementById('pdfSubComp').textContent = `${sA} vs ${sB}`;
+  document.getElementById('pdfMetaComp').innerHTML = `${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
+
+  const PAGE_H = 882;
+  const compPanel = document.getElementById('panel-comparativas');
+  const contentH = compPanel ? compPanel.scrollHeight : PAGE_H;
+  const totalPages = Math.max(1, Math.ceil((contentH - 68) / PAGE_H));
+
+  const footerEl = document.getElementById('pdfFooterComp');
+  const pageNumEl = document.getElementById('pdfPageNumComp');
+  if (footerEl) footerEl.style.display = '';
+  if (pageNumEl) pageNumEl.textContent = `1 / ${totalPages}`;
+
   prepareChartsForPrint(compCharts, null).then(() => {
     window.print();
+    if (footerEl) footerEl.style.display = 'none';
   });
 }
 

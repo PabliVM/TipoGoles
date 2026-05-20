@@ -273,6 +273,17 @@ tr:hover .btn-edit{opacity:1}
 .chart-item-sub{font-size:10px;color:var(--text-mut)}
 /* Chart type selector in editor */
 .chart-type-sel{height:22px;padding:0 5px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface-alt);color:var(--text-sec);font-size:10.5px;font-family:var(--font);outline:none;cursor:pointer}
+/* Editor paleta y labels */
+.chart-item-extras{display:flex;flex-direction:column;gap:4px;margin-top:5px}
+.palette-row{display:flex;gap:3px;align-items:center}
+.palette-dot{width:14px;height:14px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
+.palette-dot.sel{border-color:var(--text);transform:scale(1.2)}
+.palette-dot:hover{transform:scale(1.15)}
+.labels-toggle{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-mut);cursor:pointer;user-select:none}
+.labels-toggle-btn{width:24px;height:13px;border-radius:7px;border:none;position:relative;cursor:pointer;transition:background .15s;flex-shrink:0}
+.labels-toggle-btn::after{content:'';position:absolute;left:2px;top:1.5px;width:10px;height:10px;border-radius:50%;background:#fff;transition:left .15s}
+.labels-toggle-btn.on{background:var(--rm)}.labels-toggle-btn.on::after{left:12px}
+.labels-toggle-btn.off{background:var(--border)}
 .chart-item-order{display:flex;flex-direction:column;gap:2px}
 .btn-order{width:18px;height:15px;border:1px solid var(--border);border-radius:3px;background:var(--surface-alt);color:var(--text-mut);font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--tr)}
 .btn-order:hover:not(:disabled){background:var(--rm-bg);color:var(--rm);border-color:var(--rm)}
@@ -1396,23 +1407,48 @@ const TEAM_FULL = {
 };
 const DEFAULT_SEASONS = ['2025/2026'];
 
+// dataType define qué tipos de gráfico son compatibles:
+//   single → una dimensión (categorías simples)
+//   dual   → dos series (A favor/En contra, Local/Visitante)
+//   cross  → cruzado (dos dimensiones)
+//   rank   → solo ranking
+//   svg    → visualización SVG propia
 const CHART_CATALOG = [
-  {id:'chartTramo',      title:'Goles por tramo de minuto', icon:'⏱️', bloque:'Generales',        full:true,  visible:true,  chartType:'bar'},
-  {id:'chartLV',         title:'Local vs Visitante',        icon:'🏠', bloque:'Generales',        full:false, visible:true,  chartType:'bar'},
-  {id:'chartGoleador',   title:'Ranking goleadores',        icon:'👤', bloque:'Generales',        full:false, visible:true,  chartType:'rank'},
-  {id:'chartRival',      title:'Goles por rival',           icon:'🆚', bloque:'Generales',        full:false, visible:false, chartType:'rank'},
-  {id:'chartTipologia',  title:'Goles por tipología',       icon:'⚽', bloque:'Tácticos',         full:false, visible:true,  chartType:'doughnut'},
-  {id:'chartEstilo',     title:'Ranking de estilos',        icon:'🎯', bloque:'Tácticos',         full:true,  visible:true,  chartType:'rank'},
-  {id:'chartZonaRobo',   title:'Zonas de robo',             icon:'🗺️', bloque:'Tácticos',         full:false, visible:true,  chartType:'svg'},
-  {id:'chartPosicRobo',  title:'Carriles de robo',          icon:'📌', bloque:'Tácticos',         full:false, visible:true,  chartType:'bar'},
-  {id:'chartPrimerPase', title:'Primer pase',               icon:'➡️', bloque:'Tácticos',         full:false, visible:false, chartType:'bar'},
-  {id:'chartZonaRoboXTip',title:'Zona robo × Tipología',   icon:'📊', bloque:'Tácticos',         full:true,  visible:false, chartType:'bar'},
-  {id:'chartSuperficie', title:'Superficie de remate',      icon:'🦶', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar'},
-  {id:'chartZona',       title:'Zona de remate',            icon:'📍', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar'},
-  {id:'chartTipoPase',   title:'Tipo de pase',              icon:'🧭', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'doughnut'},
-  {id:'chartContactos',  title:'Nº de contactos',           icon:'🔢', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar'},
-  {id:'chartDifMarcador',title:'Diferencia en marcador',    icon:'📈', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar'},
+  {id:'chartTramo',       title:'Goles por tramo de minuto', icon:'⏱️', bloque:'Generales',        full:true,  visible:true,  chartType:'bar',      dataType:'dual'},
+  {id:'chartLV',          title:'Local vs Visitante',        icon:'🏠', bloque:'Generales',        full:false, visible:true,  chartType:'bar',      dataType:'dual'},
+  {id:'chartGoleador',    title:'Ranking goleadores',        icon:'👤', bloque:'Generales',        full:false, visible:true,  chartType:'rank',     dataType:'rank'},
+  {id:'chartRival',       title:'Goles por rival',           icon:'🆚', bloque:'Generales',        full:false, visible:false, chartType:'rank',     dataType:'rank'},
+  {id:'chartTipologia',   title:'Goles por tipología',       icon:'⚽', bloque:'Tácticos',         full:false, visible:true,  chartType:'doughnut', dataType:'single'},
+  {id:'chartEstilo',      title:'Ranking de estilos',        icon:'🎯', bloque:'Tácticos',         full:true,  visible:true,  chartType:'rank',     dataType:'rank'},
+  {id:'chartZonaRobo',    title:'Zonas de robo',             icon:'🗺️', bloque:'Tácticos',         full:false, visible:true,  chartType:'svg',      dataType:'svg'},
+  {id:'chartPosicRobo',   title:'Carriles de robo',          icon:'📌', bloque:'Tácticos',         full:false, visible:true,  chartType:'bar',      dataType:'single'},
+  {id:'chartPrimerPase',  title:'Primer pase',               icon:'➡️', bloque:'Tácticos',         full:false, visible:false, chartType:'bar',      dataType:'single'},
+  {id:'chartZonaRoboXTip',title:'Zona robo × Tipología',    icon:'📊', bloque:'Tácticos',         full:true,  visible:false, chartType:'bar',      dataType:'cross'},
+  {id:'chartSuperficie',  title:'Superficie de remate',      icon:'🦶', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar',      dataType:'single'},
+  {id:'chartZona',        title:'Zona de remate',            icon:'📍', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar',      dataType:'single'},
+  {id:'chartTipoPase',    title:'Tipo de pase',              icon:'🧭', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'doughnut', dataType:'single'},
+  {id:'chartContactos',   title:'Nº de contactos',           icon:'🔢', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar',      dataType:'single'},
+  {id:'chartDifMarcador', title:'Diferencia en marcador',    icon:'📈', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar',      dataType:'single'},
 ];
+
+// Tipos de gráfico disponibles por dataType
+const TYPES_BY_DATATYPE = {
+  single: [{v:'bar',l:'Barras'},{v:'bar_h',l:'Barras H.'},{v:'doughnut',l:'Doughnut'},{v:'polarArea',l:'Polar'}],
+  dual:   [{v:'bar',l:'Barras apiladas'},{v:'bar_group',l:'Barras agrupadas'}],
+  cross:  [{v:'bar',l:'Barras apiladas'},{v:'bar_group',l:'Barras agrupadas'}],
+  rank:   [{v:'rank',l:'Ranking'}],
+  svg:    [{v:'svg',l:'Mapa de campo'}],
+};
+
+// Paletas de color disponibles
+const PALETTES = {
+  rm:    {name:'RM Azul',   colors:['#2563eb','#3b82f6','#60a5fa','#93c5fd','#1d4ed8','#1e40af']},
+  green: {name:'Verde',     colors:['#16a34a','#22c55e','#4ade80','#86efac','#15803d','#166534']},
+  red:   {name:'Rojo',      colors:['#dc2626','#ef4444','#f87171','#fca5a5','#b91c1c','#991b1b']},
+  multi: {name:'Multicolor',colors:['#2563eb','#16a34a','#dc2626','#ea580c','#7c3aed','#0891b2','#ca8a04','#db2777']},
+  mono:  {name:'Gris',      colors:['#374151','#4b5563','#6b7280','#9ca3af','#d1d5db','#1f2937']},
+  warm:  {name:'Cálido',    colors:['#ea580c','#f97316','#fb923c','#fdba74','#c2410c','#92400e']},
+};
 
 const DASH_FILTER_MAP = {
   'df-comp':      {field:'competicion', bloque:'generales'},
@@ -1441,7 +1477,7 @@ let seasons = [];       // ['2025/2026']
 let activeTeam = 'CAS';
 let activeSeason = '2025/2026';
 let sortField = null, sortDir = 1;
-let layoutState = CHART_CATALOG.map(c => ({id:c.id, visible:c.visible, chartType:c.chartType}));
+let layoutState = CHART_CATALOG.map(c => ({id:c.id, visible:c.visible, chartType:c.chartType, palette:'rm', showLabels:false}));
 let editorState = [];
 let extraTeams = [];    // equipos adicionales en informe
 const charts = {};
@@ -1620,8 +1656,10 @@ function loadLocal() {
       const parsed = JSON.parse(l);
       layoutState = CHART_CATALOG.map(c => {
         const p = parsed.find(x => x.id === c.id);
-        return p ? {id:c.id, visible:p.visible, chartType:p.chartType||c.chartType}
-                 : {id:c.id, visible:c.visible, chartType:c.chartType};
+        return p
+          ? {id:c.id, visible:p.visible, chartType:p.chartType||c.chartType,
+             palette:p.palette||'rm', showLabels:p.showLabels||false}
+          : {id:c.id, visible:c.visible, chartType:c.chartType, palette:'rm', showLabels:false};
       });
     }
     // Migrar activeSeason también
@@ -1671,8 +1709,10 @@ async function onUserAuthenticated(user) {
     if (fbLayout && Array.isArray(fbLayout)) {
       layoutState = CHART_CATALOG.map(c => {
         const p = fbLayout.find(x => x.id === c.id);
-        return p ? {id:c.id, visible:p.visible, chartType:p.chartType||c.chartType}
-                 : {id:c.id, visible:c.visible, chartType:c.chartType};
+        return p
+          ? {id:c.id, visible:p.visible, chartType:p.chartType||c.chartType,
+             palette:p.palette||'rm', showLabels:p.showLabels||false}
+          : {id:c.id, visible:c.visible, chartType:c.chartType, palette:'rm', showLabels:false};
       });
       saveLocal();
     }
@@ -2391,7 +2431,7 @@ function toggleBlock(id) { document.getElementById(id).classList.toggle('expande
    EDITOR DE LAYOUT
    ===================================================== */
 function openEditor() {
-  editorState=layoutState.map(s=>({...s}));
+  editorState=layoutState.map(s=>({...s, palette:s.palette||'rm', showLabels:s.showLabels||false}));
   renderEditorList();
   document.getElementById('editorOverlay').classList.add('open');
   document.getElementById('editorSidebar').classList.add('open');
@@ -2402,21 +2442,57 @@ function closeEditor() {
 }
 
 function renderEditorList() {
-  const body=document.getElementById('editorBody');
-  const bloques=[...new Set(CHART_CATALOG.map(c=>c.bloque))];
-  const CHART_TYPES=[{v:'doughnut',l:'Doughnut'},{v:'bar',l:'Barras'},{v:'bar_h',l:'Barras H.'},{v:'polarArea',l:'Polar'},{v:'rank',l:'Ranking'}];
-  let html='';
-  for(const bloque of bloques){
-    html+=`<div class="editor-section-title">${bloque}</div>`;
-    const items=editorState.map((s,i)=>({...s,i,cat:CHART_CATALOG.find(c=>c.id===s.id)})).filter(s=>s.cat?.bloque===bloque);
-    for(let i=0;i<items.length;i++){
-      const {id,visible,i:gi,cat}=items[i];
-      const typeSel=CHART_TYPES.map(t=>`<option value="${t.v}" ${(editorState[gi].chartType===t.v)?'selected':''}>${t.l}</option>`).join('');
-      html+=`<div class="chart-item ${visible?'active':''}" id="ei-${id}">
+  const body = document.getElementById('editorBody');
+  const bloques = [...new Set(CHART_CATALOG.map(c => c.bloque))];
+  let html = '';
+
+  for (const bloque of bloques) {
+    html += `<div class="editor-section-title">${bloque}</div>`;
+    const items = editorState
+      .map((s, i) => ({...s, i, cat: CHART_CATALOG.find(c => c.id === s.id)}))
+      .filter(s => s.cat?.bloque === bloque);
+
+    for (let i = 0; i < items.length; i++) {
+      const {id, visible, i: gi, cat} = items[i];
+      const state = editorState[gi];
+      const dataType = cat?.dataType || 'single';
+
+      // Solo mostrar tipos compatibles con dataType
+      const compatTypes = TYPES_BY_DATATYPE[dataType] || TYPES_BY_DATATYPE.single;
+      // Si el tipo actual no es compatible, no mostrar selector de tipo
+      const isTypeFixed = dataType === 'rank' || dataType === 'svg';
+
+      const typeSel = isTypeFixed
+        ? `<span style="font-size:10px;color:var(--text-mut)">${compatTypes[0]?.l || ''}</span>`
+        : `<select class="chart-type-sel" onchange="setChartType('${id}',this.value)">
+            ${compatTypes.map(t => `<option value="${t.v}" ${state.chartType===t.v?'selected':''}>${t.l}</option>`).join('')}
+           </select>`;
+
+      // Paleta de colores (solo para charts no-rank y no-svg)
+      const showPalette = dataType !== 'rank' && dataType !== 'svg';
+      const paletteHtml = showPalette ? `
+        <div class="palette-row">
+          ${Object.entries(PALETTES).map(([k,p]) => `
+            <div class="palette-dot ${state.palette===k?'sel':''}"
+                 style="background:${p.colors[0]}"
+                 title="${p.name}"
+                 onclick="setPalette('${id}','${k}')"></div>`).join('')}
+        </div>` : '';
+
+      // Toggle labels (solo charts con canvas, no rank ni svg)
+      const showLabels = dataType !== 'rank' && dataType !== 'svg';
+      const labelsHtml = showLabels ? `
+        <div class="labels-toggle" onclick="toggleLabels('${id}')">
+          <button class="labels-toggle-btn ${state.showLabels?'on':'off'}"></button>
+          <span>${state.showLabels ? 'Etiquetas visibles' : 'Solo en hover'}</span>
+        </div>` : '';
+
+      html += `<div class="chart-item ${visible?'active':''}" id="ei-${id}">
         <button class="chart-item-toggle" onclick="toggleChartVisible('${id}')"></button>
-        <div class="chart-item-info">
+        <div class="chart-item-info" style="flex:1;min-width:0">
           <div class="chart-item-name">${cat?.icon||''} ${cat?.title||id}</div>
-          <select class="chart-type-sel" onchange="setChartType('${id}',this.value)">${typeSel}</select>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:3px">${typeSel}</div>
+          <div class="chart-item-extras">${paletteHtml}${labelsHtml}</div>
         </div>
         <div class="chart-item-order">
           <button class="btn-order" onclick="moveChart('${id}',-1)" ${i===0?'disabled':''}>▲</button>
@@ -2425,11 +2501,29 @@ function renderEditorList() {
       </div>`;
     }
   }
-  body.innerHTML=html;
+  body.innerHTML = html;
 }
 
-function toggleChartVisible(id){const s=editorState.find(e=>e.id===id);if(s)s.visible=!s.visible;renderEditorList();}
-function setChartType(id,type){const s=editorState.find(e=>e.id===id);if(s)s.chartType=type;}
+function toggleChartVisible(id) {
+  const s = editorState.find(e => e.id===id);
+  if (s) s.visible = !s.visible;
+  renderEditorList();
+}
+function setChartType(id, type) {
+  const s = editorState.find(e => e.id===id);
+  if (s) s.chartType = type;
+  renderEditorList();
+}
+function setPalette(id, palette) {
+  const s = editorState.find(e => e.id===id);
+  if (s) s.palette = palette;
+  renderEditorList();
+}
+function toggleLabels(id) {
+  const s = editorState.find(e => e.id===id);
+  if (s) s.showLabels = !s.showLabels;
+  renderEditorList();
+}
 
 function moveChart(id,dir){
   const cat=CHART_CATALOG.find(c=>c.id===id);
@@ -2444,7 +2538,7 @@ function moveChart(id,dir){
 }
 
 function applyLayout(){layoutState=editorState.map(s=>({...s}));saveAll();if(fbAvailable())fbSaveMeta('layout',layoutState);closeEditor();renderDashboard();showToast('📊 Informe actualizado');}
-function resetLayout(){editorState=CHART_CATALOG.map(c=>({id:c.id,visible:c.visible,chartType:c.chartType}));renderEditorList();}
+function resetLayout(){editorState=CHART_CATALOG.map(c=>({id:c.id,visible:c.visible,chartType:c.chartType,palette:'rm',showLabels:false}));renderEditorList();}
 
 /* =====================================================
    DASHBOARD — RENDER
@@ -2490,64 +2584,161 @@ function renderDashboard() {
   Object.keys(charts).forEach(id=>{try{charts[id].destroy();}catch(e){}delete charts[id];});
 
   // Construir HTML
-  const visibleIds=layoutState.filter(s=>s.visible).map(s=>s.id);
-  const typeMap=Object.fromEntries(layoutState.map(s=>[s.id,s.chartType]));
-  let html='';
+  const visibleIds = layoutState.filter(s=>s.visible).map(s=>s.id);
+  const stateMap   = Object.fromEntries(layoutState.map(s=>[s.id, s]));
+  const typeMap    = Object.fromEntries(layoutState.map(s=>[s.id, s.chartType]));
+
+  let html = '';
   for(const id of visibleIds){
-    const cat=CHART_CATALOG.find(c=>c.id===id); if(!cat) continue;
-    const isSVG = cat.chartType==='svg';
-    const isRank=['rank'].includes(typeMap[id])||['chartEstilo','chartGoleador','chartRival'].includes(id)&&typeMap[id]==='rank';
-    const fullCls=cat.full?'full-width':'';
-    const tallCls=cat.full?'tall':'';
+    const cat = CHART_CATALOG.find(c=>c.id===id); if(!cat) continue;
+    const st  = stateMap[id];
+    const isSVG  = st.chartType==='svg';
+    const isRank = st.chartType==='rank';
+    const fullCls = cat.full ? 'full-width' : '';
+    const tallCls = cat.full ? 'tall' : '';
     let inner;
-    if(isSVG) inner=`<div class="svg-chart-wrap" id="${id}"></div>`;
-    else if(isRank) inner=`<div class="rank-list" id="${id}"></div>`;
-    else inner=`<canvas id="${id}"></canvas>`;
-    html+=`<div class="chart-card ${fullCls}"><div class="chart-head"><span class="chart-title">${cat.icon} ${cat.title}</span></div><div class="chart-body ${tallCls}">${inner}</div></div>`;
+    if(isSVG)      inner = `<div class="svg-chart-wrap" id="${id}"></div>`;
+    else if(isRank) inner = `<div class="rank-list" id="${id}"></div>`;
+    else            inner = `<canvas id="${id}"></canvas>`;
+    // Dot de paleta en el header del chart
+    const palDot = (!isSVG && !isRank) ? `<span style="width:8px;height:8px;border-radius:50%;background:${(PALETTES[st.palette||'rm']?.colors[0])||'#2563eb'};display:inline-block;margin-left:6px"></span>` : '';
+    html += `<div class="chart-card ${fullCls}">
+      <div class="chart-head">
+        <span class="chart-title">${cat.icon} ${cat.title}${palDot}</span>
+      </div>
+      <div class="chart-body ${tallCls}">${inner}</div>
+    </div>`;
   }
-  document.getElementById('chartsDynamic').innerHTML=html;
+  document.getElementById('chartsDynamic').innerHTML = html;
 
-  // Helper mkChart
-  function mkC(id,type,labels,datasets,opts={}){
-    const isH=type==='bar_h'; const realType=isH?'bar':type;
-    const ctx=document.getElementById(id)?.getContext('2d'); if(!ctx) return;
-    charts[id]=new Chart(ctx,{type:realType,data:{labels,datasets},options:{
-      responsive:true,maintainAspectRatio:true,indexAxis:isH?'y':'x',
-      plugins:{
-        legend:{display:opts.legend??false,labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},
-        tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed?.r??c.parsed} (${pct(c.parsed?.y??c.parsed?.r??c.parsed,total)}%)`}}
+  // ── Helpers de renderizado ────────────────────────────────────────────────
+
+  // Obtener colores de la paleta configurada para un chart
+  function getPalette(id) {
+    const pal = stateMap[id]?.palette || 'rm';
+    return PALETTES[pal]?.colors || RM_PALETTE;
+  }
+
+  // ¿Mostrar etiquetas siempre?
+  function getShowLabels(id) {
+    return stateMap[id]?.showLabels || false;
+  }
+
+  // Plugin inline para etiquetas siempre visibles en barras/doughnut
+  function labelsPlugin(id, total) {
+    if (!getShowLabels(id)) return {};
+    return {
+      datalabels: {
+        display: true,
+        color: '#fff',
+        font: { size: 9, weight: '700' },
+        formatter: (val) => val > 0 ? `${val}
+${pct(val,total)}%` : '',
+        anchor: 'center', align: 'center',
+        textShadowBlur: 4, textShadowColor: 'rgba(0,0,0,.4)',
+      }
+    };
+  }
+
+  function mkC(id, type, labels, datasets, opts={}) {
+    const isH = type==='bar_h' || type==='bar_group_h';
+    const isGroup = type==='bar_group';
+    const realType = (isH || isGroup) ? 'bar' : type;
+    const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) return;
+    const showLbl = getShowLabels(id);
+    const isCircular = realType==='doughnut'||realType==='pie'||realType==='polarArea';
+
+    // Construir plugin de datalabels si está activado
+    const datalabelsCfg = showLbl ? {
+      display: true,
+      color: isCircular ? '#fff' : (isDark ? '#e4e6ea' : '#1a1d23'),
+      font: {size: 9, weight: '700', family: "'Segoe UI',sans-serif"},
+      formatter: (val, ctx2) => {
+        const v = isCircular ? val : (ctx2.parsed?.y ?? val);
+        return v > 0 ? `${v} (${pct(v,total)}%)` : '';
       },
-      scales:(realType==='doughnut'||realType==='pie'||realType==='polarArea')?{}:{
-        x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}},
-        y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,font:{size:10},stepSize:1}}
-      },...opts
-    }});
+      anchor: isCircular ? 'center' : 'end',
+      align:  isCircular ? 'center' : 'top',
+      clamp: true, clip: false,
+      padding: 2,
+    } : {display: false};
+
+    charts[id] = new Chart(ctx, {
+      type: realType,
+      data: {labels, datasets},
+      plugins: showLbl ? [{
+        id: 'customLabels',
+        afterDatasetsDraw(chart) {
+          if (!getShowLabels(id)) return;
+          const {ctx: c, data: d} = chart;
+          d.datasets.forEach((ds, di) => {
+            const meta = chart.getDatasetMeta(di);
+            meta.data.forEach((el, i) => {
+              const val = ds.data[i];
+              if (!val) return;
+              const {x, y} = el.tooltipPosition ? el.tooltipPosition() : {x:el.x, y:el.y};
+              c.save();
+              c.fillStyle = '#fff';
+              c.font = `700 9px 'Segoe UI',sans-serif`;
+              c.textAlign = 'center';
+              c.textBaseline = 'middle';
+              c.shadowColor = 'rgba(0,0,0,.5)';
+              c.shadowBlur = 3;
+              c.fillText(`${val}`, x, isCircular ? y : y - 8);
+              c.fillStyle = isDark ? 'rgba(255,255,255,.65)' : 'rgba(0,0,0,.55)';
+              c.font = `600 8px 'Segoe UI',sans-serif`;
+              c.shadowBlur = 0;
+              if (!isCircular) c.fillText(`${pct(val,total)}%`, x, y - 17);
+              c.restore();
+            });
+          });
+        }
+      }] : [],
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        indexAxis: isH ? 'y' : 'x',
+        plugins: {
+          legend: {display: opts.legend ?? false, labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},
+          tooltip: {callbacks:{label:c=>` ${c.parsed?.y??c.parsed?.r??c.parsed} (${pct(c.parsed?.y??c.parsed?.r??c.parsed,total)}%)`}}
+        },
+        scales: isCircular ? {} : {
+          x: {grid:{color:gridColor}, ticks:{color:tickColor,font:{size:10}}},
+          y: {beginAtZero:true, grid:{color:gridColor}, ticks:{color:tickColor,font:{size:10},stepSize:1}}
+        },
+        ...opts
+      }
+    });
   }
 
-  function mkRank(id,entries){
-    const el=document.getElementById(id); if(!el||!entries.length) return;
-    const max=entries[0][1];
-    el.innerHTML=entries.map(([name,cnt],i)=>`<div class="rank-item">
-      <div class="rank-pos">${i+1}</div>
+  function mkRank(id, entries) {
+    const el = document.getElementById(id); if(!el||!entries.length) return;
+    const max = entries[0][1];
+    const pal = getPalette(id);
+    el.innerHTML = entries.map(([name,cnt],i) => `<div class="rank-item">
+      <div class="rank-pos" style="background:${pal[0]}22;color:${pal[0]}">${i+1}</div>
       <div class="rank-bar-wrap">
         <div class="rank-name">${esc(name)}</div>
-        <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(cnt/max*100).toFixed(1)}%"></div></div>
+        <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(cnt/max*100).toFixed(1)}%;background:${pal[i%pal.length]}"></div></div>
       </div>
       <div class="rank-val">${cnt} <span style="font-size:9.5px;color:var(--text-mut)">(${pct(cnt,total)}%)</span></div>
     </div>`).join('');
   }
 
-  function renderChart(id,field,fullLabel){
-    const type=typeMap[id]||'bar';
-    if(type==='rank'){ mkRank(id,sortedCount(data,field,12)); return; }
-    const e=sortedCount(data,field);
-    const isDonut=type==='doughnut'||type==='polarArea';
-    mkC(id,type,e.map(x=>x[0]),[{
-      data:e.map(x=>x[1]),
-      backgroundColor:isDonut?RM_PALETTE:e.map((_,i)=>RM_PALETTE[i%RM_PALETTE.length]),
-      borderWidth:isDonut?2:0,borderColor:isDonut?surfColor:undefined,
-      borderRadius:(!isDonut&&type!=='polarArea')?5:0,borderSkipped:false
-    }],isDonut?{legend:true,plugins:{tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,total)}%)`}}}}:{});
+  function renderChart(id, field) {
+    const type = typeMap[id] || 'bar';
+    if(type==='rank') { mkRank(id, sortedCount(data,field,12)); return; }
+    const pal = getPalette(id);
+    const e = sortedCount(data, field);
+    const isDonut = type==='doughnut'||type==='polarArea';
+    const isBarH  = type==='bar_h';
+    mkC(id, type, e.map(x=>x[0]), [{
+      data: e.map(x=>x[1]),
+      backgroundColor: isDonut ? pal : e.map((_,i)=>pal[i%pal.length]),
+      borderWidth: isDonut ? 2 : 0,
+      borderColor: isDonut ? surfColor : undefined,
+      borderRadius: (!isDonut&&type!=='polarArea') ? 5 : 0,
+      borderSkipped: false
+    }], isDonut ? {legend:true, plugins:{tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,total)}%)`}}}} : {});
   }
 
   for(const id of visibleIds){
@@ -2555,13 +2746,17 @@ function renderDashboard() {
     switch(id){
       case 'chartTramo':{
         const tramos=['0-10','11-20','21-30','31-40','41-50','51-60','61-70','71-80','81-90'];
+        const tramoType = typeMap['chartTramo'] || 'bar';
+        const isGroup = tramoType === 'bar_group';
         const ctx=document.getElementById('chartTramo')?.getContext('2d'); if(!ctx) break;
+        const afData  = tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='A favor').length);
+        const ecData  = tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='En contra').length);
         charts['chartTramo']=new Chart(ctx,{type:'bar',data:{labels:tramos,datasets:[
-          {label:'A favor',data:tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='A favor').length),backgroundColor:'#16a34a',borderRadius:4,borderSkipped:false,stack:'g'},
-          {label:'En contra',data:tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='En contra').length),backgroundColor:'#dc2626',borderRadius:4,borderSkipped:false,stack:'g'}
+          {label:'A favor',   data:afData, backgroundColor:'#16a34a',borderRadius:4,borderSkipped:false, stack:isGroup?'af':'g'},
+          {label:'En contra', data:ecData, backgroundColor:'#dc2626',borderRadius:4,borderSkipped:false, stack:isGroup?'ec':'g'}
         ]},options:{responsive:true,maintainAspectRatio:true,
           plugins:{legend:{display:true,labels:{color:tickColor,font:{size:10},padding:12,boxWidth:10}},tooltip:{mode:'index'}},
-          scales:{x:{stacked:true,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:true,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
+          scales:{x:{stacked:!isGroup,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:!isGroup,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
         }}); break; }
       case 'chartLV':{
         const lD=['A favor','En contra'].map(f=>data.filter(g=>g.lv==='Local'&&g.favor===f).length);
@@ -2581,13 +2776,17 @@ function renderDashboard() {
       case 'chartZonaRoboXTip':{
         const tips=[...new Set(data.map(g=>g.tipologia).filter(Boolean))];
         const zonas=['Z1','Z2','Z3','Z4'];
+        const crossPal = getPalette(id);
+        const crossType = typeMap[id] || 'bar';
+        const crossGroup = crossType === 'bar_group';
         const ctx=document.getElementById(id)?.getContext('2d'); if(!ctx) break;
         charts[id]=new Chart(ctx,{type:'bar',data:{labels:tips,datasets:zonas.map((z,i)=>({
           label:z,data:tips.map(t=>data.filter(g=>g.tipologia===t&&g.zonaRobo===z).length),
-          backgroundColor:RM_PALETTE[i],borderRadius:3,borderSkipped:false,stack:'z'
+          backgroundColor:crossPal[i%crossPal.length],borderRadius:3,borderSkipped:false,
+          stack:crossGroup?z:'z'
         }))},options:{responsive:true,maintainAspectRatio:true,
           plugins:{legend:{display:true,labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},tooltip:{mode:'index'}},
-          scales:{x:{stacked:true,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:true,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
+          scales:{x:{stacked:!crossGroup,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:!crossGroup,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
         }}); break; }
       case 'chartTipologia': renderChart(id,'tipologia'); break;
       case 'chartSuperficie': renderChart(id,'superficie'); break;

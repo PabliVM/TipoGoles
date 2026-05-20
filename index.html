@@ -514,27 +514,9 @@ tr:hover .btn-edit{opacity:1}
 .boot-pct-label { font-family:'Segoe UI',sans-serif; font-weight:800; text-anchor:middle; }
 
 @media print {
-  /* @page con counter para numeración N/Total */
   @page {
     size: A4 portrait;
-    margin: 10mm 12mm 14mm 12mm; /* margen inferior extra para footer */
-    counter-increment: page;
-
-    /* Footer con número de página en cada hoja */
-    @bottom-center {
-      content: counter(page) " / " counter(pages);
-      font-family: 'Segoe UI', sans-serif;
-      font-size: 9px;
-      color: #8b919e;
-    }
-
-    /* Fecha en esquina inferior derecha */
-    @bottom-right {
-      content: attr(data-date);
-      font-family: 'Segoe UI', sans-serif;
-      font-size: 9px;
-      color: #8b919e;
-    }
+    margin: 8mm 10mm 10mm 10mm;
   }
 
   /* --- Ocultar UI chrome --- */
@@ -547,113 +529,111 @@ tr:hover .btn-edit{opacity:1}
   body {
     background: #fff !important;
     color: #000 !important;
-    font-size: 10.5px;
-    padding-bottom: 0;
+    font-size: 10px;
+    padding: 0 !important;
+    margin: 0 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
   .panel { display: none !important; }
-  .panel.active { display: block !important; }
+  .panel.active { display: block !important; padding: 0 !important; }
 
-  /* Header PDF — en flujo normal, NO fixed (evita solapamiento con contenido) */
+  /* ── PDF Header: estático en flujo, se repite via JS en cada página ── */
   .pdf-header {
     display: flex !important;
     position: static !important;
     background: #2563eb !important;
-    border-radius: 6px !important;
-    padding: 10px 14px !important;
-    margin-bottom: 10px !important;
+    border-radius: 5px !important;
+    padding: 8px 12px !important;
+    margin-bottom: 8px !important;
     break-inside: avoid !important;
-    page-break-inside: avoid !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
-
-  /* Sin padding top extra — el header ya está en flujo */
-  .panel.active {
-    padding-top: 0 !important;
-  }
-
-  /* Separación KPIs del header */
-  .kpi-grid {
-    margin-top: 6px !important;
-  }
-
-  /* Footer de paginación — también en flujo, al final */
-  .pdf-footer-print {
+  /* Clones del header insertados por JS para páginas 2+ */
+  .pdf-header-clone {
     display: flex !important;
-    position: static !important;
-    margin-top: 12px !important;
-    border-top: 1px solid #e5e7eb !important;
-    padding: 4px 0 !important;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 9px;
-    color: #8b919e;
-    font-family: 'Segoe UI', sans-serif;
+    background: #2563eb !important;
+    border-radius: 5px !important;
+    padding: 8px 12px !important;
+    margin-bottom: 8px !important;
+    break-before: page !important;
+    page-break-before: always !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
-  /* --- KPIs: siempre 5 columnas en A4 --- */
+  /* ── KPIs ── */
   .kpi-grid {
     display: grid !important;
     grid-template-columns: repeat(5,1fr) !important;
-    gap: 5px !important;
-    margin-bottom: 8px !important;
+    gap: 4px !important;
+    margin-bottom: 6px !important;
   }
-  .kpi-card { border: 1px solid #ddd !important; border-radius: 5px !important; padding: 6px 8px !important; page-break-inside: avoid; break-inside: avoid; }
-  .kpi-value { font-size: 18px !important; }
-  .kpi-label { font-size: 9px !important; }
-  .kpi-sub { font-size: 9px !important; }
+  .kpi-card {
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+    padding: 5px 7px !important;
+    break-inside: avoid;
+  }
+  .kpi-value { font-size: 16px !important; }
+  .kpi-label { font-size: 8px !important; }
+  .kpi-sub   { font-size: 8px !important; }
 
-  /* --- Grid de gráficos: 2 columnas --- */
+  /* ── Gráficos: 1 columna en print para que sean grandes y legibles ── */
   .charts-dynamic {
     display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 7px !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
   }
   .chart-card {
     border: 1px solid #ddd !important;
     border-radius: 5px !important;
-    page-break-inside: avoid;
     break-inside: avoid;
+    page-break-inside: avoid;
     overflow: visible !important;
+    width: 100% !important;
   }
-  .chart-card.full-width { grid-column: 1 / -1 !important; }
-  .chart-head { padding: 5px 9px !important; border-bottom: 1px solid #eee !important; }
-  .chart-title { font-size: 9px !important; font-weight: 700; letter-spacing: .3px; }
-  .chart-body { padding: 8px 10px !important; overflow: hidden !important; }
-  .chart-body canvas { display: block !important; max-width: 100% !important; }
+  .chart-card.full-width { grid-column: 1 !important; }
+  .chart-head { padding: 5px 10px !important; border-bottom: 1px solid #eee !important; }
+  .chart-title { font-size: 9.5px !important; font-weight: 800 !important; letter-spacing: .4px; }
+  .chart-body { padding: 10px !important; overflow: visible !important; }
+  /* Canvas dimensionado por JS en prepareChartsForPrint */
+  .chart-body canvas { display: block !important; width: 100% !important; }
 
-  /* --- Rank lists --- */
-  .rank-list { gap: 3px !important; }
-  .rank-item { gap: 6px !important; }
+  /* ── Rank lists ── */
+  .rank-list { gap: 4px !important; }
+  .rank-item { gap: 8px !important; }
   .rank-name { font-size: 10px !important; }
-  .rank-val { font-size: 10px !important; }
-  .rank-bar-bg { height: 4px !important; }
+  .rank-val  { font-size: 10px !important; }
+  .rank-bar-bg { height: 5px !important; }
   .rank-bar-fill { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  .chart-body .rank-list, .chart-body.tall .rank-list { max-height: 185px !important; overflow: hidden !important; }
-  .chart-body .rank-item { margin-bottom: 1px !important; }
+  .chart-body .rank-list { max-height: none !important; overflow: visible !important; }
 
-  /* --- Comparativas --- */
-  .comp-charts-grid { grid-template-columns: 1fr 1fr !important; gap: 7px !important; }
-  .comp-chart-wrap { page-break-inside: avoid; break-inside: avoid; border: 1px solid #ddd !important; border-radius: 5px !important; }
-  .comp-chart-body { padding: 8px 10px !important; }
-  .comp-table { font-size: 9px !important; }
-  .comp-table th, .comp-table td { padding: 4px 6px !important; }
+  /* ── Comparativas ── */
+  .comp-charts-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .comp-chart-wrap { break-inside: avoid; border: 1px solid #ddd !important; border-radius: 5px !important; }
+  .comp-chart-body canvas { display: block !important; }
 
-  /* --- Tabla BBDD --- */
+  /* ── Tabla BBDD ── */
   .table-wrap { max-height: none !important; overflow: visible !important; }
-  .data-table { font-size: 8.5px !important; }
+  .data-table { font-size: 8px !important; }
   .data-table th, .data-table td { padding: 3px 5px !important; }
 
-  /* --- Numeración de páginas (footer print nativo) --- */
-  .print-page-num {
-    display: block !important;
-    position: fixed;
-    bottom: 4mm; left: 0; right: 0;
-    text-align: center;
-    font-size: 9px;
+  /* ── Footer paginación ── */
+  .pdf-footer-print {
+    display: flex !important;
+    position: static !important;
+    margin-top: 10px !important;
+    border-top: 1px solid #eee !important;
+    padding: 3px 0 !important;
+    justify-content: space-between;
+    font-size: 8.5px;
     color: #8b919e;
     font-family: 'Segoe UI', sans-serif;
   }
@@ -3035,10 +3015,11 @@ function renderComp() {
    ===================================================== */
 
 // Dimensiones objetivo para print (px a 96dpi dentro de A4)
-const PRINT_W_HALF = 300;   // media columna
-const PRINT_W_FULL = 614;   // columna completa
-const PRINT_H_NORM = 155;   // altura normal
-const PRINT_H_TALL = 195;   // altura full-width
+// Print: 1 columna completa — A4 útil ~176mm a 96dpi ≈ 664px
+const PRINT_W_HALF = 664;   // ahora 1 columna completa
+const PRINT_W_FULL = 664;   // igual
+const PRINT_H_NORM = 220;   // más alto para que se vea bien
+const PRINT_H_TALL = 260;   // gráficos full-width
 
 function exportPDF() {
   document.getElementById('pdfTitle').textContent = `Tipología de Goles — ${TEAM_FULL[activeTeam]||activeTeam}`;

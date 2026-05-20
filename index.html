@@ -10,7 +10,7 @@
 <!-- Firebase SDKs -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, writeBatch, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCNhXXGDxB3icjx-kbHtnqqL8Q40PyWIx4",
@@ -25,7 +25,7 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 // Exponer al scope global para el JS vanilla
-window._fb = { db, collection, doc, setDoc, getDoc, getDocs, deleteDoc, writeBatch };
+window._fb = { db, collection, doc, setDoc, getDoc, getDocs, deleteDoc, writeBatch, onSnapshot };
 window._fbReady = true;
 window.dispatchEvent(new Event('firebase-ready'));
 </script>
@@ -1531,7 +1531,7 @@ const charts = {};
 let _dashCtx = {}; // contexto compartido entre renderDashboard y sus helpers
 
 /* =====================================================
-   PERSISTENCIA — Firebase Firestore + localStorage cache
+   PERSISTENCIA — Firebase Firestore (tiempo real)
    Sin autenticación — reglas Firestore: allow read, write: if true
    Estructura Firestore:
      goles/{equipo}_{temporada}/registros/{_id}  → objeto gol
@@ -1539,248 +1539,196 @@ let _dashCtx = {}; // contexto compartido entre renderDashboard y sus helpers
      meta/layout                                 → { data: [...] }
    ===================================================== */
 
-// ── Helpers Firestore ────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function dbKey(team, season) { return team + '_' + season.replace(/\//g,'_'); }
-
 function fbAvailable() { return window._fbReady === true; }
 
-function setSyncState(state, label='') {
+function setSyncState(state) {
   const dot = document.getElementById('syncDot');
-  const lbl = document.getElementById('syncLabel');
-  if (!dot) return;
-  dot.className = 'sync-dot ' + state;
-  if (lbl) { lbl.textContent = label; lbl.style.display = label ? 'block' : 'none'; }
+  if (dot) dot.className = 'sync-dot ' + state;
 }
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// ── Listeners onSnapshot activos (tiempo real) ───────────────────────────────
+const _listeners = {}; // { key: unsubscribe }
 
-
-async function loginGoogle() {
-  // Login silencioso — se activa automáticamente via onAuthStateChanged
-  try {
-    const { auth, signInWithPopup, GoogleAuthProvider } = window._fb;
-    await signInWithPopup(auth, new GoogleAuthProvider());
-  } catch(e) { console.error('Login error:', e); }
+function stopListener(key) {
+  if (_listeners[key]) { _listeners[key](); delete _listeners[key]; }
 }
 
-
-
-// ── GUARDAR goles en Firestore (batch write) ─────────────────────────────────
-async function fbSaveGoles(team, season, arr) {
+// Escuchar goles en tiempo real para equipo+temporada
+function listenGoles(team, season) {
+  const key = 'goles_' + dbKey(team, season);
+  stopListener(key); // cancelar listener anterior si existe
   if (!fbAvailable()) return;
-  const { db, collection, doc, writeBatch } = window._fb;
-  setSyncState('syncing');
-  try {
-    const colRef = collection(db, 'goles', dbKey(team,season), 'registros');
-    // Borrar todos y reescribir en batch (máx 500 por batch)
-    const existing = await getDocs_safe(colRef);
-    const BATCH_SIZE = 400;
-    let batch = writeBatch(db);
-    let ops = 0;
-    // Borrar existentes
-    for (const d of existing) {
-      batch.delete(d.ref);
-      ops++;
-      if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(db); ops = 0; }
-    }
-    // Escribir nuevos
-    for (const g of arr) {
-      const ref = doc(colRef, String(g._id).replace('.','_'));
-      batch.set(ref, g);
-      ops++;
-      if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(db); ops = 0; }
-    }
-    if (ops > 0) await batch.commit();
-    setSyncState('ok');
-  } catch(e) {
-    console.error('fbSaveGoles error:', e);
-    setSyncState('err', 'Error sync');
-  }
+  const { db, collection, onSnapshot } = window._fb;
+  const colRef = collection(db, 'goles', dbKey(team, season), 'registros');
+  _listeners[key] = onSnapshot(colRef,
+    snap => {
+      db[dbKey(team, season)] = snap.docs.map(d => d.data());
+      setSyncState('ok');
+      updateBadge();
+      renderTabla();
+      renderWelcomeGrid();
+      if (document.getElementById('panel-informes')?.classList.contains('active')) renderDashboard();
+    },
+    err => { console.error('listenGoles error:', err); setSyncState('err'); }
+  );
 }
 
-async function getDocs_safe(colRef) {
-  try {
-    const { getDocs } = window._fb;
-    const snap = await getDocs(colRef);
-    return snap.docs;
-  } catch(e) { return []; }
+// Escuchar meta/seasons en tiempo real
+function listenSeasons() {
+  if (!fbAvailable()) return;
+  const { db, doc, onSnapshot } = window._fb;
+  stopListener('seasons');
+  _listeners['seasons'] = onSnapshot(doc(db, 'meta', 'seasons'),
+    snap => {
+      if (!snap.exists()) return;
+      try {
+        const fbSeasons = JSON.parse(snap.data().data);
+        if (Array.isArray(fbSeasons)) {
+          fbSeasons.forEach(s => { if (!seasons.includes(s)) seasons.push(s); });
+          seasons = [...new Set(seasons)].sort();
+          buildSeasonSelect();
+          buildCompSelects();
+          renderWelcomeGrid();
+        }
+      } catch(e) {}
+    },
+    err => console.error('listenSeasons error:', err)
+  );
 }
 
-// ── CARGAR goles desde Firestore ─────────────────────────────────────────────
-async function fbLoadGoles(team, season) {
-  if (!fbAvailable()) return null;
-  const { db, collection, getDocs } = window._fb;
-  try {
-    const colRef = collection(db, 'goles', dbKey(team,season), 'registros');
-    const snap = await getDocs(colRef);
-    return snap.docs.map(d => d.data());
-  } catch(e) {
-    console.error('fbLoadGoles error:', e);
-    return null;
-  }
+// Escuchar meta/layout en tiempo real
+function listenLayout() {
+  if (!fbAvailable()) return;
+  const { db, doc, onSnapshot } = window._fb;
+  stopListener('layout');
+  _listeners['layout'] = onSnapshot(doc(db, 'meta', 'layout'),
+    snap => {
+      if (!snap.exists()) return;
+      try {
+        const fbLayout = JSON.parse(snap.data().data);
+        if (Array.isArray(fbLayout)) {
+          layoutState = CHART_CATALOG.map(c => {
+            const p = fbLayout.find(x => x.id === c.id);
+            const forceType = c.dataType === 'svg' || c.dataType === 'rank';
+            const chartType = forceType ? c.chartType : (p?.chartType || c.chartType);
+            return p
+              ? { id:c.id, visible:p.visible, chartType, palette:p.palette||'rm', showLabels:p.showLabels||false }
+              : { id:c.id, visible:c.visible, chartType:c.chartType, palette:'rm', showLabels:false };
+          });
+          if (document.getElementById('panel-informes')?.classList.contains('active')) renderDashboard();
+        }
+      } catch(e) {}
+    },
+    err => console.error('listenLayout error:', err)
+  );
 }
 
-// ── GUARDAR meta (seasons, layout) ──────────────────────────────────────────
-async function fbSaveMeta(key, value) {
+// ── GUARDAR en Firestore ──────────────────────────────────────────────────────
+async function fbWriteGol(team, season, gol) {
+  if (!fbAvailable()) return;
+  const { db, doc, setDoc, collection } = window._fb;
+  try {
+    const id = String(gol._id).replace('.','_');
+    await setDoc(doc(db, 'goles', dbKey(team,season), 'registros', id), gol);
+  } catch(e) { console.error('fbWriteGol error:', e); setSyncState('err'); }
+}
+
+async function fbDeleteGol(team, season, golId) {
+  if (!fbAvailable()) return;
+  const { db, doc, deleteDoc, collection } = window._fb;
+  try {
+    const id = String(golId).replace('.','_');
+    await deleteDoc(doc(db, 'goles', dbKey(team,season), 'registros', id));
+  } catch(e) { console.error('fbDeleteGol error:', e); setSyncState('err'); }
+}
+
+async function fbWriteMeta(key, value) {
   if (!fbAvailable()) return;
   const { db, doc, setDoc } = window._fb;
   try {
     await setDoc(doc(db, 'meta', key), { data: JSON.stringify(value) });
-  } catch(e) { console.error('fbSaveMeta error:', e); }
+  } catch(e) { console.error('fbWriteMeta error:', e); }
 }
 
-async function fbLoadMeta(key) {
-  if (!fbAvailable()) return null;
-  const { db, doc, getDoc } = window._fb;
-  try {
-    const snap = await getDoc(doc(db, 'meta', key));
-    if (!snap.exists()) return null;
-    return JSON.parse(snap.data().data);
-  } catch(e) { return null; }
-}
-
-// ── API pública de persistencia (usada por el resto del código) ──────────────
-function saveLocal() {
-  try {
-    localStorage.setItem('tg-db-v2', JSON.stringify(db));
-    localStorage.setItem('tg-seasons-v2', JSON.stringify(seasons));
-    localStorage.setItem('tg-layout-v2', JSON.stringify(layoutState));
-  } catch(e) {}
-}
-
-// Convierte formato corto "25/26" → "2025/2026"
-function migrateSeason(s) {
-  if (/^\d{2}\/\d{2}$/.test(s)) {
-    const [a, b] = s.split('/');
-    return `20${a}/20${b}`;
-  }
-  return s;
-}
-
-function loadLocal() {
-  try {
-    const d = localStorage.getItem('tg-db-v2');
-    if (d) {
-      const rawDb = JSON.parse(d);
-      // Migrar claves antiguas de formato corto
-      db = {};
-      for (const [k, v] of Object.entries(rawDb)) {
-        // k puede ser "CAS_25_26" → migrar a "CAS_2025_2026"
-        const newKey = k.replace(/^([A-Z]+)_(\d{2})_(\d{2})$/, (_, t, a, b) => `${t}_20${a}_20${b}`);
-        db[newKey] = v;
-      }
-    }
-    const s = localStorage.getItem('tg-seasons-v2');
-    if (s) {
-      const raw = JSON.parse(s);
-      // Migrar temporadas de formato corto
-      seasons = raw.map(migrateSeason);
-      // Eliminar duplicados tras migración
-      seasons = [...new Set(seasons)].sort();
-    } else {
-      seasons = [...DEFAULT_SEASONS];
-    }
-    const l = localStorage.getItem('tg-layout-v2');
-    if (l) {
-      const parsed = JSON.parse(l);
-      layoutState = CHART_CATALOG.map(c => {
-        const p = parsed.find(x => x.id === c.id);
-        // Para tipos svg y rank, siempre usar chartType del catálogo (nunca del save)
-        const forceType = (c.dataType === 'svg' || c.dataType === 'rank');
-        const chartType = forceType ? c.chartType : (p?.chartType || c.chartType);
-        return p
-          ? {id:c.id, visible:p.visible, chartType,
-             palette:p.palette||'rm', showLabels:p.showLabels||false}
-          : {id:c.id, visible:c.visible, chartType:c.chartType, palette:'rm', showLabels:false};
-      });
-    }
-    // Migrar activeSeason también
-    if (activeSeason && /^\d{2}\/\d{2}$/.test(activeSeason)) {
-      activeSeason = migrateSeason(activeSeason);
-    }
-    if (!seasons.includes(activeSeason) && seasons.length) {
-      activeSeason = seasons[seasons.length - 1];
-    }
-  } catch(e) {}
-}
-
-// saveAll: localStorage + Firestore
-function saveAll() {
-  saveLocal();
-  // Firestore async (no bloquea UI)
-  if (fbAvailable()) {
-    fbSaveGoles(activeTeam, activeSeason, currentGoles());
-    fbSaveMeta('seasons', seasons);
-    fbSaveMeta('layout', layoutState);
-  }
-}
-
-// loadAll: localStorage primero (rápido), luego Firestore en paralelo
-async function loadAll() {
-  loadLocal();
-  if (!seasons.length) seasons = [...DEFAULT_SEASONS];
-}
-
-// Sincronización inicial con Firestore (sin auth)
-async function syncFromFirebase() {
-  if (!fbAvailable()) return;
-  setSyncState('syncing');
-  try {
-    // Cargar temporadas
-    const fbSeasons = await fbLoadMeta('seasons');
-    if (fbSeasons && Array.isArray(fbSeasons)) {
-      fbSeasons.forEach(s => { if (!seasons.includes(s)) seasons.push(s); });
-      seasons.sort();
-      saveLocal();
-      buildSeasonSelect();
-      buildCompSelects();
-    }
-    // Cargar layout
-    const fbLayout = await fbLoadMeta('layout');
-    if (fbLayout && Array.isArray(fbLayout)) {
-      layoutState = CHART_CATALOG.map(c => {
-        const p = fbLayout.find(x => x.id === c.id);
-        const forceType = (c.dataType === 'svg' || c.dataType === 'rank');
-        const chartType = forceType ? c.chartType : (p?.chartType || c.chartType);
-        return p
-          ? {id:c.id, visible:p.visible, chartType,
-             palette:p.palette||'rm', showLabels:p.showLabels||false}
-          : {id:c.id, visible:c.visible, chartType:c.chartType, palette:'rm', showLabels:false};
-      });
-      saveLocal();
-    }
-    // Cargar goles del equipo/temporada activo
-    await syncCurrentTeam();
-    setSyncState('ok');
-    renderWelcomeGrid();
-  } catch(e) {
-    console.error('syncFromFirebase error:', e);
-    setSyncState('err');
-  }
-}
-
-// Sincronizar equipo+temporada activo desde Firestore
-async function syncCurrentTeam() {
-  const fbGoles = await fbLoadGoles(activeTeam, activeSeason);
-  if (fbGoles !== null) {
-    // Firestore es fuente de verdad cuando hay conexión
-    db[dbKey(activeTeam, activeSeason)] = fbGoles;
-    saveLocal();
-    updateBadge();
-    renderTabla();
-    // Re-renderizar dashboard si está activo
-    if (document.getElementById('panel-informes')?.classList.contains('active')) {
-      renderDashboard();
-    }
-  }
-}
-
+// ── API pública ───────────────────────────────────────────────────────────────
 function getGoles(team, season) { return db[dbKey(team, season)] || []; }
 function currentGoles() { return getGoles(activeTeam, activeSeason); }
 
+// Añadir gol individual
+function addGol(team, season, gol) {
+  if (!db[dbKey(team,season)]) db[dbKey(team,season)] = [];
+  db[dbKey(team,season)].push(gol);
+  fbWriteGol(team, season, gol);
+  setSyncState('syncing');
+}
+
+// Guardar array completo (para importar CSV, editar, eliminar)
 function setGoles(team, season, arr) {
-  db[dbKey(team, season)] = arr;
-  saveAll();
+  db[dbKey(team,season)] = arr;
+  // Escribir en batch: borrar todos y reescribir
+  _fbBatchWriteGoles(team, season, arr);
+}
+
+async function _fbBatchWriteGoles(team, season, arr) {
+  if (!fbAvailable()) return;
+  setSyncState('syncing');
+  const { db: fdb, collection, doc, writeBatch, getDocs } = window._fb;
+  try {
+    const colRef = collection(fdb, 'goles', dbKey(team,season), 'registros');
+    // Leer documentos existentes para borrar
+    const snap = await getDocs(colRef);
+    const BATCH_SIZE = 400;
+    let batch = writeBatch(fdb);
+    let ops = 0;
+    for (const d of snap.docs) {
+      batch.delete(d.ref); ops++;
+      if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(fdb); ops = 0; }
+    }
+    for (const g of arr) {
+      const id = String(g._id).replace('.','_');
+      batch.set(doc(colRef, id), g); ops++;
+      if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(fdb); ops = 0; }
+    }
+    if (ops > 0) await batch.commit();
+    setSyncState('ok');
+  } catch(e) { console.error('_fbBatchWriteGoles error:', e); setSyncState('err'); }
+}
+
+function saveAll() {
+  if (fbAvailable()) {
+    _fbBatchWriteGoles(activeTeam, activeSeason, currentGoles());
+    fbWriteMeta('seasons', seasons);
+    fbWriteMeta('layout', layoutState);
+  }
+}
+
+async function loadAll() {
+  if (!seasons.length) seasons = [...DEFAULT_SEASONS];
+  if (!activeSeason) activeSeason = DEFAULT_SEASONS[DEFAULT_SEASONS.length - 1];
+}
+
+// Iniciar todos los listeners en tiempo real
+function startRealtimeListeners() {
+  listenSeasons();
+  listenLayout();
+  listenGoles(activeTeam, activeSeason);
+}
+
+// Cambiar contexto equipo+temporada: cambiar listener de goles
+function switchGolListener(team, season) {
+  listenGoles(team, season);
+}
+
+// Sincronización inicial (compatibilidad con código que la llama)
+async function syncFromFirebase() {
+  startRealtimeListeners();
+  setSyncState('syncing');
+}
+
+async function syncCurrentTeam() {
+  listenGoles(activeTeam, activeSeason);
 }
 
 /* =====================================================
@@ -1799,13 +1747,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateBadge();
   renderTabla();
 
-  // Restaurar último equipo si existe, si no mostrar pantalla de inicio
-  const lastTeam = localStorage.getItem('tg-last-team');
-  if (lastTeam && TEAMS.includes(lastTeam)) {
-    enterTeam(lastTeam);
-  } else {
-    renderWelcomeGrid();
-  }
+  // Mostrar welcome screen mientras Firebase carga
+  renderWelcomeGrid();
+  // Firebase llenará los datos via listeners
 
   // Drag & drop
   const dz = document.getElementById('dropZone');
@@ -1814,9 +1758,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); const f=e.dataTransfer.files[0]; if(f) processFile(f); });
 
   // Dark mode
-  if (localStorage.getItem('tg-dark') === '1') {
-    document.body.classList.add('dark');
-    document.getElementById('darkBtn').innerHTML = '☀';
+  // Dark mode: leer desde Firebase
+  if (fbAvailable()) {
+    try {
+      const { db, doc, getDoc } = window._fb;
+      const snap = await getDoc(doc(db, 'meta', 'darkMode'));
+      if (snap.exists() && snap.data().on) {
+        document.body.classList.add('dark');
+        document.getElementById('darkBtn').innerHTML = '☀';
+      }
+    } catch(e) {}
   }
 
   // Restaurar gráficos tras imprimir
@@ -1879,7 +1830,7 @@ function onSeasonChange() {
   buildMultiTeamChecks();
   updateBadge();
   renderTabla();
-  if (fbAvailable()) syncCurrentTeam();
+  switchGolListener(activeTeam, activeSeason);
 }
 
 function buildTeamNav() {
@@ -2008,8 +1959,7 @@ function addSeasonDirect(val) {
   seasons.push(val);
   seasons.sort();
   activeSeason = val;
-  saveAll();
-  if (fbAvailable()) fbSaveMeta('seasons', seasons);
+  fbWriteMeta('seasons', seasons);
   buildSeasonSelect();
   buildCompSelects();
   renderWelcomeGrid();
@@ -2062,14 +2012,14 @@ function showMod(name, btn) {
   if (name === 'informes') { loadDashFilters(); renderDashboard(); }
   if (name === 'bbdd') renderTabla();
   if (name === 'comparativas') renderComp();
-  localStorage.setItem('tg-last-panel', name);
+  fbWriteMeta('lastPanel', {panel: name});
 }
 
 function toggleDark() {
   document.body.classList.toggle('dark');
   const on = document.body.classList.contains('dark');
   document.getElementById('darkBtn').innerHTML = on ? '☀' : '☾';
-  localStorage.setItem('tg-dark', on ? '1' : '0');
+  fbWriteMeta('darkMode', { on });
 }
 
 /* =====================================================
@@ -2396,8 +2346,8 @@ function sortTabla(field) {
 }
 
 function eliminarGol(id) {
-  const arr = currentGoles().filter(g=>String(g._id)!==String(id));
-  setGoles(activeTeam,activeSeason,arr);
+  db[dbKey(activeTeam,activeSeason)] = currentGoles().filter(g=>String(g._id)!==String(id));
+  fbDeleteGol(activeTeam, activeSeason, id);
   updateBadge(); renderTabla();
   showToast('🗑️ Eliminado');
 }
@@ -2432,7 +2382,7 @@ function resetDashFilters() {
   for(const id of Object.keys(DASH_FILTER_MAP)){
     const el=document.getElementById(id); if(el){el.value='';el.classList.remove('active');}
   }
-  localStorage.removeItem('tg-dash-filters');
+  fbWriteMeta('dashFilters', {});
   updateBlockBadges(); updateActiveChips(); renderDashboard();
 }
 
@@ -2581,7 +2531,7 @@ function moveChart(id,dir){
   renderEditorList();
 }
 
-function applyLayout(){layoutState=editorState.map(s=>({...s}));saveAll();if(fbAvailable())fbSaveMeta('layout',layoutState);closeEditor();renderDashboard();showToast('📊 Informe actualizado');}
+function applyLayout(){layoutState=editorState.map(s=>({...s}));fbWriteMeta('layout',layoutState);closeEditor();renderDashboard();showToast('📊 Informe actualizado');}
 function resetLayout(){editorState=CHART_CATALOG.map(c=>({id:c.id,visible:c.visible,chartType:c.chartType,palette:'rm',showLabels:false}));renderEditorList();}
 
 /* =====================================================
@@ -3456,7 +3406,8 @@ function guardarEdicion() {
     zonaRemate:       get('eg-zonaRemate'),
   };
 
-  setGoles(activeTeam, activeSeason, arr);
+  db[dbKey(activeTeam,activeSeason)] = arr;
+  fbWriteGol(activeTeam, activeSeason, arr[idx]); // solo el gol editado
   closeModal('modalEditGol');
   renderTabla();
   showToast('✅ Gol actualizado');
@@ -3466,8 +3417,8 @@ function guardarEdicion() {
 function eliminarGolEdit() {
   if (!_editingId) return;
   if (!confirm('¿Eliminar este registro?')) return;
-  const arr = currentGoles().filter(g => String(g._id) !== _editingId);
-  setGoles(activeTeam, activeSeason, arr);
+  db[dbKey(activeTeam,activeSeason)] = currentGoles().filter(g => String(g._id) !== _editingId);
+  fbDeleteGol(activeTeam, activeSeason, _editingId);
   updateBadge();
   closeModal('modalEditGol');
   renderTabla();
@@ -3518,7 +3469,7 @@ function enterTeam(team) {
   activeTeam = team;
 
   // Guardar equipo activo para restaurar al recargar
-  localStorage.setItem('tg-last-team', team);
+  fbWriteMeta('lastTeam', {team});
 
   // Ocultar welcome, mostrar app
   document.getElementById('welcomeScreen').classList.add('hidden');
@@ -3532,13 +3483,9 @@ function enterTeam(team) {
   // Sincronizar desde Firebase si hay conexión
   if (fbAvailable()) syncCurrentTeam();
 
-  // Restaurar panel activo si existe, si no ir a importar
-  const lastPanel = localStorage.getItem('tg-last-panel') || 'importar';
-  const validPanels = ['importar','registro','bbdd','informes','comparativas'];
-  const panelName = validPanels.includes(lastPanel) ? lastPanel : 'importar';
-  const panelTab = document.querySelector(`.mod-tab[onclick*="${panelName}"]`);
-  if (panelTab) showMod(panelName, panelTab);
-  else { const firstTab = document.querySelector('.mod-tab'); if(firstTab) showMod('importar', firstTab); }
+  // Ir a importar por defecto
+  const firstTab = document.querySelector('.mod-tab');
+  if (firstTab) showMod('importar', firstTab);
 }
 
 function onWelcomeSeasonChange() {
@@ -3553,7 +3500,7 @@ function onWelcomeSeasonChange() {
 }
 
 function goToWelcome() {
-  localStorage.removeItem('tg-last-team');
+  fbWriteMeta('lastTeam', {});
   document.getElementById('welcomeScreen').classList.remove('hidden');
   renderWelcomeGrid();
 }
@@ -3561,20 +3508,23 @@ function goToWelcome() {
 /* =====================================================
    FILTROS DASHBOARD — persistencia
    ===================================================== */
-function saveDashFilters() {
+// Filtros dashboard: guardados en Firestore bajo meta/dashFilters
+async function saveDashFilters() {
   const state = {};
   for (const id of Object.keys(DASH_FILTER_MAP)) {
     const val = document.getElementById(id)?.value || '';
     if (val) state[id] = val;
   }
-  localStorage.setItem('tg-dash-filters', JSON.stringify(state));
+  await fbWriteMeta('dashFilters', state);
 }
 
-function loadDashFilters() {
+async function loadDashFilters() {
+  if (!fbAvailable()) return;
   try {
-    const saved = localStorage.getItem('tg-dash-filters');
-    if (!saved) return;
-    const state = JSON.parse(saved);
+    const { db, doc, getDoc } = window._fb;
+    const snap = await getDoc(doc(db, 'meta', 'dashFilters'));
+    if (!snap.exists()) return;
+    const state = JSON.parse(snap.data().data);
     for (const [id, val] of Object.entries(state)) {
       const el = document.getElementById(id);
       if (el) { el.value = val; el.classList.toggle('active', val !== ''); }

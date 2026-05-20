@@ -2717,69 +2717,69 @@ ${pct(val,total)}%` : '',
   }
 
   function mkC(id, type, labels, datasets, opts={}) {
-    const isH = type==='bar_h' || type==='bar_group_h';
-    const isGroup = type==='bar_group';
-    const realType = (isH || isGroup) ? 'bar' : type;
-    const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) return;
-    const showLbl = getShowLabels(id);
+    const isH        = type==='bar_h';
+    const isGroup    = type==='bar_group';
+    const realType   = (isH || isGroup) ? 'bar' : type;
+    const ctx        = document.getElementById(id)?.getContext('2d');
+    if (!ctx) return;
+    const showLbl    = getShowLabels(id);
     const isCircular = realType==='doughnut'||realType==='pie'||realType==='polarArea';
 
-    // Construir plugin de datalabels si está activado
-    const datalabelsCfg = showLbl ? {
-      display: true,
-      color: isCircular ? '#fff' : (isDark ? '#e4e6ea' : '#1a1d23'),
-      font: {size: 9, weight: '700', family: "'Segoe UI',sans-serif"},
-      formatter: (val, ctx2) => {
-        const v = isCircular ? val : (ctx2.parsed?.y ?? val);
-        return v > 0 ? `${v} (${pct(v,total)}%)` : '';
-      },
-      anchor: isCircular ? 'center' : 'end',
-      align:  isCircular ? 'center' : 'top',
-      clamp: true, clip: false,
-      padding: 2,
-    } : {display: false};
+    // Plugin inline de etiquetas (no requiere registro global)
+    const labelPlugin = {
+      id: 'inlineLabels_' + id,
+      afterDatasetsDraw(chart) {
+        if (!getShowLabels(id)) return;
+        const c2 = chart.ctx;
+        chart.data.datasets.forEach((ds, di) => {
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          meta.data.forEach((el, i) => {
+            const val = ds.data[i];
+            if (!val || val <= 0) return;
+            let px = el.x, py = el.y;
+            c2.save();
+            c2.textAlign = 'center';
+            c2.textBaseline = 'bottom';
+            c2.shadowColor = 'rgba(0,0,0,.4)';
+            c2.shadowBlur = 2;
+            // Valor
+            c2.fillStyle = isDark ? '#e4e6ea' : '#1a1d23';
+            c2.font = `700 9px 'Segoe UI',sans-serif`;
+            c2.fillText(String(val), px, isCircular ? py + 4 : py - 2);
+            // Porcentaje
+            c2.fillStyle = isDark ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.45)';
+            c2.font = `600 8px 'Segoe UI',sans-serif`;
+            c2.shadowBlur = 0;
+            c2.fillText(`${pct(val,total)}%`, px, isCircular ? py + 14 : py - 12);
+            c2.restore();
+          });
+        });
+      }
+    };
 
     charts[id] = new Chart(ctx, {
       type: realType,
       data: {labels, datasets},
-      plugins: showLbl ? [{
-        id: 'customLabels',
-        afterDatasetsDraw(chart) {
-          if (!getShowLabels(id)) return;
-          const {ctx: c, data: d} = chart;
-          d.datasets.forEach((ds, di) => {
-            const meta = chart.getDatasetMeta(di);
-            meta.data.forEach((el, i) => {
-              const val = ds.data[i];
-              if (!val) return;
-              const {x, y} = el.tooltipPosition ? el.tooltipPosition() : {x:el.x, y:el.y};
-              c.save();
-              c.fillStyle = '#fff';
-              c.font = `700 9px 'Segoe UI',sans-serif`;
-              c.textAlign = 'center';
-              c.textBaseline = 'middle';
-              c.shadowColor = 'rgba(0,0,0,.5)';
-              c.shadowBlur = 3;
-              c.fillText(`${val}`, x, isCircular ? y : y - 8);
-              c.fillStyle = isDark ? 'rgba(255,255,255,.65)' : 'rgba(0,0,0,.55)';
-              c.font = `600 8px 'Segoe UI',sans-serif`;
-              c.shadowBlur = 0;
-              if (!isCircular) c.fillText(`${pct(val,total)}%`, x, y - 17);
-              c.restore();
-            });
-          });
-        }
-      }] : [],
+      plugins: [labelPlugin],
       options: {
-        responsive: true, maintainAspectRatio: true,
+        responsive: true,
+        maintainAspectRatio: true,
         indexAxis: isH ? 'y' : 'x',
         plugins: {
-          legend: {display: opts.legend ?? false, labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},
-          tooltip: {callbacks:{label:c=>` ${c.parsed?.y??c.parsed?.r??c.parsed} (${pct(c.parsed?.y??c.parsed?.r??c.parsed,total)}%)`}}
+          legend: {
+            display: opts.legend ?? false,
+            labels: {color:tickColor, font:{size:10}, padding:10, boxWidth:10}
+          },
+          tooltip: {
+            callbacks: {
+              label: c => ` ${c.parsed?.y ?? c.parsed?.r ?? c.parsed} (${pct(c.parsed?.y ?? c.parsed?.r ?? c.parsed, total)}%)`
+            }
+          }
         },
         scales: isCircular ? {} : {
-          x: {grid:{color:gridColor}, ticks:{color:tickColor,font:{size:10}}},
-          y: {beginAtZero:true, grid:{color:gridColor}, ticks:{color:tickColor,font:{size:10},stepSize:1}}
+          x: {grid:{color:gridColor}, ticks:{color:tickColor, font:{size:10}}},
+          y: {beginAtZero:true, grid:{color:gridColor}, ticks:{color:tickColor, font:{size:10}, stepSize:1}}
         },
         ...opts
       }

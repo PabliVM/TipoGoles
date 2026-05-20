@@ -1185,13 +1185,25 @@ tr:hover .btn-edit{opacity:1}
 <div class="modal-overlay" id="modalSeason">
   <div class="modal">
     <div class="modal-title">➕ Nueva temporada</div>
+
+    <!-- Botones rápidos: anterior y siguiente a las existentes -->
+    <div style="margin-bottom:14px">
+      <div class="field-label" style="margin-bottom:8px">Añadir rápido</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="seasonQuickBtns"></div>
+    </div>
+
+    <div style="height:1px;background:var(--border-light);margin-bottom:14px"></div>
+
     <div class="field-group">
-      <label class="field-label">Temporada (ej: 26/27)</label>
-      <input class="field-input" type="text" id="newSeasonInput" placeholder="26/27" maxlength="8">
+      <label class="field-label">O escribe manualmente (ej: 2027/2028)</label>
+      <input class="field-input" type="text" id="newSeasonInput"
+             placeholder="2027/2028" maxlength="12"
+             oninput="validateSeasonInput(this)">
+      <span id="seasonInputError" style="font-size:11px;color:var(--red);margin-top:3px;display:none"></span>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modalSeason')">Cancelar</button>
-      <button class="btn btn-primary" onclick="addSeason()">Crear</button>
+      <button class="btn btn-primary" onclick="addSeasonManual()">Crear</button>
     </div>
   </div>
 </div>
@@ -1821,21 +1833,94 @@ function onExtraTeam(cb) {
 /* =====================================================
    TEMPORADAS
    ===================================================== */
-function openAddSeason() { openModal('modalSeason'); document.getElementById('newSeasonInput').value=''; }
+function openAddSeason() {
+  openModal('modalSeason');
+  document.getElementById('newSeasonInput').value = '';
+  document.getElementById('seasonInputError').style.display = 'none';
+  renderSeasonQuickBtns();
+}
 
-function addSeason() {
-  const val = document.getElementById('newSeasonInput').value.trim();
-  if (!val) return;
-  if (seasons.includes(val)) { showToast('⚠️ Esa temporada ya existe','orange'); return; }
+// Genera botones de año anterior y siguiente basados en las temporadas actuales
+function renderSeasonQuickBtns() {
+  const wrap = document.getElementById('seasonQuickBtns');
+  if (!wrap || !seasons.length) return;
+
+  const suggestions = [];
+
+  // Calcular el rango actual de años
+  const years = seasons.map(s => {
+    const m = s.match(/(\d{4})/);
+    return m ? parseInt(m[1]) : null;
+  }).filter(Boolean);
+
+  if (years.length) {
+    const minYear = Math.min(...years);
+    const maxYear = Math.max(...years);
+
+    // Temporada anterior (antes del mínimo)
+    const prevStart = minYear - 1;
+    const prevSeason = `${prevStart}/${prevStart + 1}`;
+    if (!seasons.includes(prevSeason)) suggestions.push({ label: `← ${prevSeason}`, val: prevSeason });
+
+    // Temporada siguiente (después del máximo)
+    const nextStart = maxYear;
+    const nextSeason = `${nextStart}/${nextStart + 1}`;
+    if (!seasons.includes(nextSeason)) suggestions.push({ label: `${nextSeason} →`, val: nextSeason });
+  }
+
+  if (!suggestions.length) {
+    wrap.innerHTML = '<span style="font-size:11px;color:var(--text-mut)">No hay sugerencias disponibles</span>';
+    return;
+  }
+
+  wrap.innerHTML = suggestions.map(s => `
+    <button class="btn btn-secondary btn-sm" onclick="addSeasonDirect('${s.val}')">
+      ${s.label}
+    </button>`).join('');
+}
+
+function addSeasonDirect(val) {
+  if (seasons.includes(val)) { showToast('⚠️ Esa temporada ya existe', 'orange'); return; }
+  // Insertar en orden cronológico
   seasons.push(val);
+  seasons.sort();
   activeSeason = val;
   saveAll();
   if (fbAvailable()) fbSaveMeta('seasons', seasons);
   buildSeasonSelect();
   buildCompSelects();
+  renderWelcomeGrid();
   closeModal('modalSeason');
-  showToast('✅ Temporada '+val+' creada');
+  showToast('✅ Temporada ' + val + ' creada');
 }
+
+function validateSeasonInput(input) {
+  const err = document.getElementById('seasonInputError');
+  const val = input.value.trim();
+  // Formato válido: YYYY/YYYY (ej: 2026/2027)
+  const ok = /^\d{4}\/\d{4}$/.test(val);
+  if (val && !ok) {
+    err.textContent = 'Formato: YYYY/YYYY (ej: 2026/2027)';
+    err.style.display = 'block';
+  } else {
+    err.style.display = 'none';
+  }
+}
+
+function addSeasonManual() {
+  const val = document.getElementById('newSeasonInput').value.trim();
+  if (!val) return;
+  if (!/^\d{4}\/\d{4}$/.test(val)) {
+    document.getElementById('seasonInputError').textContent = 'Formato: YYYY/YYYY (ej: 2026/2027)';
+    document.getElementById('seasonInputError').style.display = 'block';
+    return;
+  }
+  addSeasonDirect(val);
+  document.getElementById('newSeasonInput').value = '';
+}
+
+// Alias para compatibilidad
+function addSeason() { addSeasonManual(); }
 
 /* =====================================================
    MODALES

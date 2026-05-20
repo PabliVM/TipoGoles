@@ -556,44 +556,42 @@ tr:hover .btn-edit{opacity:1}
   .panel { display: none !important; }
   .panel.active { display: block !important; }
 
-  /* Header PDF fijo — se repite en TODAS las páginas en Chrome/Edge/Safari */
+  /* Header PDF — en flujo normal, NO fixed (evita solapamiento con contenido) */
   .pdf-header {
     display: flex !important;
-    position: fixed !important;
-    top: 0; left: 0; right: 0;
+    position: static !important;
     background: #2563eb !important;
-    z-index: 9999;
-    padding: 8px 14px !important;
-    border-radius: 0 !important;
+    border-radius: 6px !important;
+    padding: 10px 14px !important;
+    margin-bottom: 10px !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Compensar el espacio del header fijo (header ~60px + 20px de aire) */
+  /* Sin padding top extra — el header ya está en flujo */
   .panel.active {
-    padding-top: 80px !important;
+    padding-top: 0 !important;
   }
 
-  /* Primer bloque de contenido: KPIs — separación extra del header */
+  /* Separación KPIs del header */
   .kpi-grid {
-    margin-top: 8px !important;
+    margin-top: 6px !important;
   }
 
-  /* Numeración de páginas — footer fijo */
+  /* Footer de paginación — también en flujo, al final */
   .pdf-footer-print {
-    display: block !important;
-    position: fixed !important;
-    bottom: 0; left: 0; right: 0;
-    background: #fff !important;
-    border-top: 1px solid #e5e7eb;
-    padding: 3px 14px;
     display: flex !important;
+    position: static !important;
+    margin-top: 12px !important;
+    border-top: 1px solid #e5e7eb !important;
+    padding: 4px 0 !important;
     align-items: center;
     justify-content: space-between;
     font-size: 9px;
     color: #8b919e;
     font-family: 'Segoe UI', sans-serif;
-    -webkit-print-color-adjust: exact;
   }
 
   /* --- KPIs: siempre 5 columnas en A4 --- */
@@ -2738,27 +2736,29 @@ function renderDashboard() {
               c2.fillText(pctTxt, x, y + 2);
 
             } else {
-              // Barras: número DENTRO de la barra (blanco), % ENCIMA (color ticks)
-              // Posición Y del tope de la barra
+              // Barras: número DENTRO si hay espacio, % ENCIMA solo si la barra es alta
+              const barHeight = Math.abs(isH ? el.x - el.base : el.base - el.y);
               const barTop = el.y;
-              const barBottom = isH ? el.x : (chartArea?.bottom || el.base);
-              const barHeight = Math.abs((isH ? el.x - el.base : el.base - el.y));
 
-              if (barHeight > 22) {
-                // Número dentro de la barra (centrado verticalmente)
+              // Número dentro (solo si barra >= 18px)
+              if (barHeight >= 18) {
                 const midY = barTop + barHeight / 2;
                 c2.fillStyle = '#fff';
                 c2.font = `800 10px 'Segoe UI',sans-serif`;
                 c2.textBaseline = 'middle';
+                c2.shadowColor = 'rgba(0,0,0,.3)';
+                c2.shadowBlur = 2;
                 c2.fillText(String(val), el.x, isH ? el.y : midY);
+                c2.shadowBlur = 0;
               }
 
-              // % encima de la barra (con suficiente separación)
-              c2.fillStyle = _dark ? '#9095a0' : '#5a6170';
-              c2.font = `600 9px 'Segoe UI',sans-serif`;
-              c2.textBaseline = 'bottom';
-              const topY = isH ? el.y : barTop - 3;
-              c2.fillText(pctTxt, el.x, topY);
+              // % encima solo si barra >= 30px (suficiente espacio visual)
+              if (barHeight >= 30 || barHeight < 18) {
+                c2.fillStyle = _dark ? '#9095a0' : '#5a6170';
+                c2.font = `600 9px 'Segoe UI',sans-serif`;
+                c2.textBaseline = 'bottom';
+                c2.fillText(pctTxt, el.x, barTop - 3);
+              }
             }
 
             c2.restore();
@@ -2816,6 +2816,40 @@ function renderDashboard() {
     }],isDonut?{legend:true,plugins:{tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,_total)}%)`}}}}:{});
   }
 
+  // Helper: plugin de etiquetas para gráficos multi-dataset (Tramo, LV, Cross)
+  function makeMultiLabelPlugin(id) {
+    if (!getShowLabels(id)) return null;
+    return {
+      id: 'mlbl_'+id,
+      afterDatasetsDraw(chart) {
+        if (!getShowLabels(id)) return;
+        const c2 = chart.ctx;
+        const _tot = _dashCtx.total;
+        const _dark = _dashCtx.isDark;
+        chart.data.datasets.forEach((ds, di) => {
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          meta.data.forEach((el, i) => {
+            const val = ds.data[i];
+            if (!val || val <= 0) return;
+            const barH = Math.abs(el.base - el.y);
+            if (barH < 14) return; // barra demasiado pequeña
+            c2.save();
+            c2.textAlign = 'center';
+            c2.textBaseline = 'middle';
+            c2.fillStyle = '#fff';
+            c2.font = `700 9px 'Segoe UI',sans-serif`;
+            c2.shadowColor = 'rgba(0,0,0,.3)';
+            c2.shadowBlur = 2;
+            const midY = el.y + barH / 2;
+            c2.fillText(String(val), el.x, midY);
+            c2.restore();
+          });
+        });
+      }
+    };
+  }
+
   for(const id of visibleIds){
     const type=typeMap[id];
     switch(id){
@@ -2826,13 +2860,18 @@ function renderDashboard() {
         const ctx=document.getElementById('chartTramo')?.getContext('2d'); if(!ctx) break;
         const afData  = tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='A favor').length);
         const ecData  = tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='En contra').length);
-        charts['chartTramo']=new Chart(ctx,{type:'bar',data:{labels:tramos,datasets:[
-          {label:'A favor',   data:afData, backgroundColor:'#16a34a',borderRadius:4,borderSkipped:false, stack:isGroup?'af':'g'},
-          {label:'En contra', data:ecData, backgroundColor:'#dc2626',borderRadius:4,borderSkipped:false, stack:isGroup?'ec':'g'}
-        ]},options:{responsive:true,maintainAspectRatio:true,
-          plugins:{legend:{display:true,labels:{color:tickColor,font:{size:10},padding:12,boxWidth:10}},tooltip:{mode:'index'}},
-          scales:{x:{stacked:!isGroup,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:!isGroup,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
-        }}); break; }
+        const tramoPlugin = makeMultiLabelPlugin('chartTramo');
+        charts['chartTramo']=new Chart(ctx,{type:'bar',
+          data:{labels:tramos,datasets:[
+            {label:'A favor',   data:afData, backgroundColor:'#16a34a',borderRadius:4,borderSkipped:false, stack:isGroup?'af':'g'},
+            {label:'En contra', data:ecData, backgroundColor:'#dc2626',borderRadius:4,borderSkipped:false, stack:isGroup?'ec':'g'}
+          ]},
+          plugins: tramoPlugin ? [tramoPlugin] : [],
+          options:{responsive:true,maintainAspectRatio:true,
+            layout:{padding:{top: tramoPlugin?4:0}},
+            plugins:{legend:{display:true,labels:{color:tickColor,font:{size:10},padding:12,boxWidth:10}},tooltip:{mode:'index'}},
+            scales:{x:{stacked:!isGroup,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:!isGroup,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
+          }}); break; }
       case 'chartLV':{
         const lD=['A favor','En contra'].map(f=>data.filter(g=>g.lv==='Local'&&g.favor===f).length);
         const vD=['A favor','En contra'].map(f=>data.filter(g=>g.lv==='Visitante'&&g.favor===f).length);
@@ -2855,14 +2894,19 @@ function renderDashboard() {
         const crossType = typeMap[id] || 'bar';
         const crossGroup = crossType === 'bar_group';
         const ctx=document.getElementById(id)?.getContext('2d'); if(!ctx) break;
-        charts[id]=new Chart(ctx,{type:'bar',data:{labels:tips,datasets:zonas.map((z,i)=>({
-          label:z,data:tips.map(t=>data.filter(g=>g.tipologia===t&&g.zonaRobo===z).length),
-          backgroundColor:crossPal[i%crossPal.length],borderRadius:3,borderSkipped:false,
-          stack:crossGroup?z:'z'
-        }))},options:{responsive:true,maintainAspectRatio:true,
-          plugins:{legend:{display:true,labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},tooltip:{mode:'index'}},
-          scales:{x:{stacked:!crossGroup,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:!crossGroup,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
-        }}); break; }
+        const crossPlugin = makeMultiLabelPlugin(id);
+        charts[id]=new Chart(ctx,{type:'bar',
+          data:{labels:tips,datasets:zonas.map((z,i)=>({
+            label:z,data:tips.map(t=>data.filter(g=>g.tipologia===t&&g.zonaRobo===z).length),
+            backgroundColor:crossPal[i%crossPal.length],borderRadius:3,borderSkipped:false,
+            stack:crossGroup?z:'z'
+          }))},
+          plugins: crossPlugin ? [crossPlugin] : [],
+          options:{responsive:true,maintainAspectRatio:true,
+            layout:{padding:{top: crossPlugin?4:0}},
+            plugins:{legend:{display:true,labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},tooltip:{mode:'index'}},
+            scales:{x:{stacked:!crossGroup,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:!crossGroup,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
+          }}); break; }
       case 'chartTipologia': renderChart(id,'tipologia'); break;
       case 'chartSuperficie': renderSuperficieSVG(id, data); break;
       case 'chartZonaRobo':   renderZonaRoboSVG(id, data); break;

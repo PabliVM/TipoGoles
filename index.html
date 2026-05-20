@@ -1725,8 +1725,11 @@ function loadLocal() {
       const parsed = JSON.parse(l);
       layoutState = CHART_CATALOG.map(c => {
         const p = parsed.find(x => x.id === c.id);
+        // Para tipos svg y rank, siempre usar chartType del catálogo (nunca del save)
+        const forceType = (c.dataType === 'svg' || c.dataType === 'rank');
+        const chartType = forceType ? c.chartType : (p?.chartType || c.chartType);
         return p
-          ? {id:c.id, visible:p.visible, chartType:p.chartType||c.chartType,
+          ? {id:c.id, visible:p.visible, chartType,
              palette:p.palette||'rm', showLabels:p.showLabels||false}
           : {id:c.id, visible:c.visible, chartType:c.chartType, palette:'rm', showLabels:false};
       });
@@ -2113,6 +2116,7 @@ function showMod(name, btn) {
   if (name === 'informes') renderDashboard();
   if (name === 'bbdd') renderTabla();
   if (name === 'comparativas') renderComp();
+  localStorage.setItem('tg-last-panel', name);
 }
 
 function toggleDark() {
@@ -2684,15 +2688,15 @@ function renderDashboard() {
   for(const id of visibleIds){
     const cat = CHART_CATALOG.find(c=>c.id===id); if(!cat) continue;
     const st  = stateMap[id];
-    const isSVG  = st.chartType==='svg';
-    const isRank = st.chartType==='rank';
+    // Usar dataType del CATÁLOGO (fuente de verdad) para decidir el contenedor
+    const isSVG  = cat.dataType === 'svg';
+    const isRank = cat.dataType === 'rank' || st.chartType === 'rank';
     const fullCls = cat.full ? 'full-width' : '';
     const tallCls = cat.full ? 'tall' : '';
     let inner;
-    if(isSVG)      inner = `<div class="svg-chart-wrap" id="${id}"></div>`;
+    if(isSVG)       inner = `<div class="svg-chart-wrap" id="${id}"></div>`;
     else if(isRank) inner = `<div class="rank-list" id="${id}"></div>`;
     else            inner = `<canvas id="${id}"></canvas>`;
-    // Dot de paleta en el header del chart
     const palDot = (!isSVG && !isRank) ? `<span style="width:8px;height:8px;border-radius:50%;background:${(PALETTES[st.palette||'rm']?.colors[0])||'#2563eb'};display:inline-block;margin-left:6px"></span>` : '';
     html += `<div class="chart-card ${fullCls}">
       <div class="chart-head">
@@ -3454,9 +3458,13 @@ function enterTeam(team) {
   // Sincronizar desde Firebase si hay conexión
   if (fbAvailable()) syncCurrentTeam();
 
-  // Ir a panel importar por defecto
-  const firstTab = document.querySelector('.mod-tab');
-  if (firstTab) showMod('importar', firstTab);
+  // Restaurar panel activo si existe, si no ir a importar
+  const lastPanel = localStorage.getItem('tg-last-panel') || 'importar';
+  const validPanels = ['importar','registro','bbdd','informes','comparativas'];
+  const panelName = validPanels.includes(lastPanel) ? lastPanel : 'importar';
+  const panelTab = document.querySelector(`.mod-tab[onclick*="${panelName}"]`);
+  if (panelTab) showMod(panelName, panelTab);
+  else { const firstTab = document.querySelector('.mod-tab'); if(firstTab) showMod('importar', firstTab); }
 }
 
 function onWelcomeSeasonChange() {

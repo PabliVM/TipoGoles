@@ -1511,7 +1511,10 @@ const DASH_FILTER_MAP = {
   'df-estilo':    {field:'estilo',      bloque:'tecnico'},
 };
 
-const RM_PALETTE = ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#1d4ed8','#1e40af','#16a34a','#ea580c','#dc2626','#7c3aed'];
+// Paleta cualitativa: colores bien diferenciados para doughnuts/categorías
+const QUAL_PALETTE = ['#2563eb','#16a34a','#dc2626','#ea580c','#7c3aed','#0891b2','#ca8a04','#db2777','#059669','#9333ea'];
+// RM_PALETTE kept for backwards compat — ahora apunta a la cualitativa
+const RM_PALETTE = QUAL_PALETTE;
 
 /* =====================================================
    ESTADO GLOBAL
@@ -2758,7 +2761,11 @@ function renderDashboard() {
         responsive:true, maintainAspectRatio:true, indexAxis: isH?'y':'x',
         layout: { padding: layoutPadding },
         plugins:{
-          legend:{display:opts.legend??false, labels:{color:_tc,font:{size:10},padding:10,boxWidth:10}},
+          legend:{
+            display: opts.legend??false,
+            position: opts.legendPos || 'top',
+            labels:{color:_tc, font:{size:10}, padding:12, boxWidth:12, boxHeight:12}
+          },
           tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed?.r??c.parsed} (${pct(c.parsed?.y??c.parsed?.r??c.parsed,_total)}%)`}}
         },
         scales: isCircular ? {} : {
@@ -2788,12 +2795,29 @@ function renderDashboard() {
     if(type==='rank'){mkRank(id,sortedCount(data,field,12));return;}
     const pal=getPalette(id); const e=sortedCount(data,field);
     const isDonut=type==='doughnut'||type==='polarArea';
-    mkC(id,type,e.map(x=>x[0]),[{
-      data:e.map(x=>x[1]),
-      backgroundColor:isDonut?pal:e.map((_,i)=>pal[i%pal.length]),
-      borderWidth:isDonut?2:0, borderColor:isDonut?_sc:undefined,
-      borderRadius:(!isDonut&&type!=='polarArea')?5:0, borderSkipped:false
-    }],isDonut?{legend:true,plugins:{tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,_total)}%)`}}}}:{});
+    const isBar=!isDonut;
+
+    // Barras: color sólido único (primer color paleta). Doughnut: color por segmento.
+    const bgColor = isDonut
+      ? pal.slice(0, e.length)
+      : pal[0];
+
+    // Barras: filtrar valores 0 para no pintarlos
+    const filteredLabels = isBar ? e.filter(x=>x[1]>0).map(x=>x[0]) : e.map(x=>x[0]);
+    const filteredData   = isBar ? e.filter(x=>x[1]>0).map(x=>x[1]) : e.map(x=>x[1]);
+
+    mkC(id, type, isBar?filteredLabels:e.map(x=>x[0]), [{
+      data: isBar ? filteredData : e.map(x=>x[1]),
+      backgroundColor: bgColor,
+      borderWidth: isDonut?2:0,
+      borderColor: isDonut?_sc:undefined,
+      borderRadius: isBar?5:0,
+      borderSkipped: false
+    }], isDonut ? {
+      legend: true,
+      legendPos: 'right',
+      plugins:{tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,_total)}%)`}}}
+    } : {});
   }
 
   // Helper: plugin de etiquetas para gráficos multi-dataset (Tramo, LV, Cross)
@@ -2864,9 +2888,16 @@ function renderDashboard() {
         const cm=count(data,'nContactos');
         mkC('chartContactos',type,order,[{data:order.map(k=>cm[k]||0),backgroundColor:RM_PALETTE,borderRadius:5,borderSkipped:false}]); break; }
       case 'chartDifMarcador':{
-        const range=['-5','-4','-3','-2','-1','0','1','2','3','4','5','6','7','8','9','10'];
+        // Diferencia en marcador: siempre barras, nunca doughnut
         const dm={};data.forEach(g=>{const k=String(g.dif??0);dm[k]=(dm[k]||0)+1;});
-        mkC('chartDifMarcador',type,range,[{data:range.map(k=>dm[k]||0),backgroundColor:range.map(k=>Number(k)>=0?'#2563eb':'#dc2626'),borderRadius:5,borderSkipped:false}]); break; }
+        // Solo mostrar valores que existen (filtrar ceros)
+        const allRange=['-10','-9','-8','-7','-6','-5','-4','-3','-2','-1','0','1','2','3','4','5','6','7','8','9','10'];
+        const filtRange=allRange.filter(k=>dm[k]>0);
+        mkC('chartDifMarcador','bar',filtRange,[{
+          data:filtRange.map(k=>dm[k]||0),
+          backgroundColor:filtRange.map(k=>Number(k)<0?'#dc2626':'#2563eb'),
+          borderRadius:5,borderSkipped:false
+        }]); break; }
       case 'chartZonaRoboXTip':{
         const tips=[...new Set(data.map(g=>g.tipologia).filter(Boolean))];
         const zonas=['Z1','Z2','Z3','Z4'];
@@ -3318,14 +3349,14 @@ function renderSuperficieSVG(containerId, data) {
            onerror="this.style.opacity='.2'"
            alt="${cat.label}">
       <!-- Porcentaje grande -->
-      <div style="font-size:18px;font-weight:800;color:${cnt>0?cat.color:tc};
-                  font-family:'Segoe UI',sans-serif;line-height:1.1">${pctVal}%</div>
+      <div style="font-size:20px;font-weight:800;color:${cnt>0?cat.color:tc};
+                  font-family:'Segoe UI',sans-serif;line-height:1.1;text-align:center;width:100%">${pctVal}%</div>
       <!-- Nº registros -->
       <div style="font-size:11px;font-weight:600;color:${tc};
-                  font-family:'Segoe UI',sans-serif">${cnt} gol${cnt!==1?'es':''}</div>
+                  font-family:'Segoe UI',sans-serif;text-align:center;width:100%">${cnt} gol${cnt!==1?'es':''}</div>
       <!-- Etiqueta -->
       <div style="font-size:9px;font-weight:700;color:${tc};font-family:'Segoe UI',sans-serif;
-                  text-align:center;text-transform:uppercase;letter-spacing:.3px">${cat.label}</div>
+                  text-align:center;text-transform:uppercase;letter-spacing:.3px;width:100%;padding-bottom:6px">${cat.label}</div>
     </div>`;
 
     if (i < 3) {

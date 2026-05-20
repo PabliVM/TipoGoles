@@ -561,12 +561,12 @@ tr:hover .btn-edit{opacity:1}
     display: flex !important;
     position: fixed !important;
     top: 0; left: 0; right: 0;
-    background: #fff !important;
+    background: #2563eb !important;
     z-index: 9999;
-    padding: 8px 14px 8px !important;
-    border-bottom: 2px solid #2563eb !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    padding: 8px 14px !important;
+    border-radius: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   /* Compensar el espacio del header fijo */
@@ -661,21 +661,24 @@ tr:hover .btn-edit{opacity:1}
   display: none;
   align-items: center;
   gap: 14px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #2563eb;
+  padding: 10px 16px;
+  background: #2563eb;
+  border-radius: 6px;
   margin-bottom: 14px;
 }
 .pdf-header-logo {
-  width: 44px; height: 44px; border-radius: 50%;
-  background: #2563eb;
+  width: 42px; height: 42px; border-radius: 50%;
+  background: #fff;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.3);
 }
 .pdf-header-logo img { width: 100%; height: 100%; object-fit: contain; }
 .pdf-header-info { flex: 1; }
-.pdf-header-title { font-size: 16px; font-weight: 800; color: #1a1d23; }
-.pdf-header-sub { font-size: 11px; color: #5a6170; margin-top: 2px; }
-.pdf-header-meta { text-align: right; font-size: 10px; color: #8b919e; line-height: 1.6; }
+.pdf-header-title { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -.2px; }
+.pdf-header-sub { font-size: 11px; color: rgba(255,255,255,.75); margin-top: 2px; }
+.pdf-header-meta { text-align: right; font-size: 10px; color: rgba(255,255,255,.65); line-height: 1.7; }
 </style>
 </head>
 <body>

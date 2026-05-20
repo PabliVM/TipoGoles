@@ -2078,7 +2078,7 @@ function showMod(name, btn) {
   document.querySelectorAll('.mod-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   btn.classList.add('active');
-  if (name === 'informes') renderDashboard();
+  if (name === 'informes') { loadDashFilters(); renderDashboard(); }
   if (name === 'bbdd') renderTabla();
   if (name === 'comparativas') renderComp();
   localStorage.setItem('tg-last-panel', name);
@@ -2443,6 +2443,7 @@ function getDashData() {
 
 function onDashFilter(el) {
   el.classList.toggle('active', el.value!=='');
+  saveDashFilters();
   updateBlockBadges(); updateActiveChips(); renderDashboard();
 }
 
@@ -2450,6 +2451,7 @@ function resetDashFilters() {
   for(const id of Object.keys(DASH_FILTER_MAP)){
     const el=document.getElementById(id); if(el){el.value='';el.classList.remove('active');}
   }
+  localStorage.removeItem('tg-dash-filters');
   updateBlockBadges(); updateActiveChips(); renderDashboard();
 }
 
@@ -3447,6 +3449,32 @@ function goToWelcome() {
   localStorage.removeItem('tg-last-team');
   document.getElementById('welcomeScreen').classList.remove('hidden');
   renderWelcomeGrid();
+}
+
+/* =====================================================
+   FILTROS DASHBOARD — persistencia
+   ===================================================== */
+function saveDashFilters() {
+  const state = {};
+  for (const id of Object.keys(DASH_FILTER_MAP)) {
+    const val = document.getElementById(id)?.value || '';
+    if (val) state[id] = val;
+  }
+  localStorage.setItem('tg-dash-filters', JSON.stringify(state));
+}
+
+function loadDashFilters() {
+  try {
+    const saved = localStorage.getItem('tg-dash-filters');
+    if (!saved) return;
+    const state = JSON.parse(saved);
+    for (const [id, val] of Object.entries(state)) {
+      const el = document.getElementById(id);
+      if (el) { el.value = val; el.classList.toggle('active', val !== ''); }
+    }
+    updateBlockBadges();
+    updateActiveChips();
+  } catch(e) {}
 }
 
 /* =====================================================

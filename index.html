@@ -1829,8 +1829,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateBadge();
   renderTabla();
 
-  // Mostrar pantalla de inicio
-  renderWelcomeGrid();
+  // Restaurar último equipo si existe, si no mostrar pantalla de inicio
+  const lastTeam = localStorage.getItem('tg-last-team');
+  if (lastTeam && TEAMS.includes(lastTeam)) {
+    enterTeam(lastTeam);
+  } else {
+    renderWelcomeGrid();
+  }
 
   // Drag & drop
   const dz = document.getElementById('dropZone');
@@ -3492,6 +3497,9 @@ function renderWelcomeGrid() {
 function enterTeam(team) {
   activeTeam = team;
 
+  // Guardar equipo activo para restaurar al recargar
+  localStorage.setItem('tg-last-team', team);
+
   // Ocultar welcome, mostrar app
   document.getElementById('welcomeScreen').classList.add('hidden');
 
@@ -3521,6 +3529,7 @@ function onWelcomeSeasonChange() {
 }
 
 function goToWelcome() {
+  localStorage.removeItem('tg-last-team');
   document.getElementById('welcomeScreen').classList.remove('hidden');
   renderWelcomeGrid();
 }

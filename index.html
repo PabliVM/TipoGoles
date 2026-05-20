@@ -10,8 +10,7 @@
 <!-- Firebase SDKs -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCNhXXGDxB3icjx-kbHtnqqL8Q40PyWIx4",
@@ -22,12 +21,11 @@ const firebaseConfig = {
   appId: "1:1035671728322:web:353002cfdff6c3723dcb5b"
 };
 
-const app  = initializeApp(firebaseConfig);
-const db   = getFirestore(app);
-const auth = getAuth(app);
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
 
 // Exponer al scope global para el JS vanilla
-window._fb = { db, auth, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, writeBatch, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged };
+window._fb = { db, collection, doc, setDoc, getDoc, getDocs, deleteDoc, writeBatch };
 window._fbReady = true;
 window.dispatchEvent(new Event('firebase-ready'));
 </script>
@@ -789,7 +787,7 @@ tr:hover .btn-edit{opacity:1}
         <div class="info-chip"><div class="val" id="infoFile">—</div><div class="lbl">Archivo</div></div>
       </div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="loadSeedData()">⚽ Cargar 50 goles reales (Castilla 2025/2026)</button>
+
         <button class="btn btn-secondary" onclick="exportCSV()">⬇️ Exportar CSV</button>
       </div>
       <div style="margin-top:14px;padding:10px 12px;background:var(--surface-alt);border-radius:var(--r);border:1px solid var(--border-light)">
@@ -1553,19 +1551,17 @@ let _dashCtx = {}; // contexto compartido entre renderDashboard y sus helpers
 
 /* =====================================================
    PERSISTENCIA — Firebase Firestore + localStorage cache
+   Sin autenticación — reglas Firestore: allow read, write: if true
    Estructura Firestore:
      goles/{equipo}_{temporada}/registros/{_id}  → objeto gol
-     meta/seasons                                → { list: [...] }
-     meta/layout                                 → { state: [...] }
+     meta/seasons                                → { data: [...] }
+     meta/layout                                 → { data: [...] }
    ===================================================== */
-
-let fbUser = null;    // usuario autenticado actual
-let unsubListeners = {};  // listeners onSnapshot activos
 
 // ── Helpers Firestore ────────────────────────────────────────────────────────
 function dbKey(team, season) { return team + '_' + season.replace(/\//g,'_'); }
 
-function fbAvailable() { return window._fbReady && fbUser !== null; }
+function fbAvailable() { return window._fbReady === true; }
 
 function setSyncState(state, label='') {
   const dot = document.getElementById('syncDot');
@@ -1586,24 +1582,7 @@ async function loginGoogle() {
   } catch(e) { console.error('Login error:', e); }
 }
 
-async function logoutGoogle() {
-  try {
-    const { auth, signOut } = window._fb;
-    await signOut(auth);
-    fbUser = null;
-    updateAuthUI(null);
-    setSyncState('off');
-  } catch(e) { console.error('Logout error:', e); }
-}
 
-function updateAuthUI(user) {
-  // Botón de auth eliminado — solo actualizar sync dot
-  if (user) {
-    setSyncState('ok');
-  } else {
-    setSyncState('off');
-  }
-}
 
 // ── GUARDAR goles en Firestore (batch write) ─────────────────────────────────
 async function fbSaveGoles(team, season, arr) {
@@ -1761,28 +1740,29 @@ async function loadAll() {
   if (!seasons.length) seasons = [...DEFAULT_SEASONS];
 }
 
-// Cuando el usuario se autentica: cargar datos desde Firestore y mezclar con local
-async function onUserAuthenticated(user) {
-  fbUser = user;
-  updateAuthUI(user);
+// Sincronización inicial con Firestore (sin auth)
+async function syncFromFirebase() {
+  if (!fbAvailable()) return;
   setSyncState('syncing');
   try {
-    // Cargar temporadas desde Firestore
+    // Cargar temporadas
     const fbSeasons = await fbLoadMeta('seasons');
     if (fbSeasons && Array.isArray(fbSeasons)) {
-      // Fusionar: añadir las de Firestore que no estén en local
       fbSeasons.forEach(s => { if (!seasons.includes(s)) seasons.push(s); });
+      seasons.sort();
       saveLocal();
       buildSeasonSelect();
       buildCompSelects();
     }
-    // Cargar layout desde Firestore
+    // Cargar layout
     const fbLayout = await fbLoadMeta('layout');
     if (fbLayout && Array.isArray(fbLayout)) {
       layoutState = CHART_CATALOG.map(c => {
         const p = fbLayout.find(x => x.id === c.id);
+        const forceType = (c.dataType === 'svg' || c.dataType === 'rank');
+        const chartType = forceType ? c.chartType : (p?.chartType || c.chartType);
         return p
-          ? {id:c.id, visible:p.visible, chartType:p.chartType||c.chartType,
+          ? {id:c.id, visible:p.visible, chartType,
              palette:p.palette||'rm', showLabels:p.showLabels||false}
           : {id:c.id, visible:c.visible, chartType:c.chartType, palette:'rm', showLabels:false};
       });
@@ -1791,10 +1771,9 @@ async function onUserAuthenticated(user) {
     // Cargar goles del equipo/temporada activo
     await syncCurrentTeam();
     setSyncState('ok');
-    // Refrescar grid de bienvenida con datos de Firebase
     renderWelcomeGrid();
   } catch(e) {
-    console.error('onUserAuthenticated error:', e);
+    console.error('syncFromFirebase error:', e);
     setSyncState('err');
   }
 }
@@ -1890,27 +1869,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.appendChild(numDiv);
   });
 
-  // Inicializar Firebase Auth cuando el SDK esté listo
-  function initFirebaseAuth() {
-    if (!window._fb) return;
-    const { auth, onAuthStateChanged } = window._fb;
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        await onUserAuthenticated(user);
-      } else {
-        fbUser = null;
-        updateAuthUI(null);
-        setSyncState('off');
-        // Sin sesión: mostrar overlay de login automáticamente
-        // (comenta esta línea si prefieres que no sea obligatorio)
-        }
-    });
-  }
+  // Sincronizar con Firebase cuando el SDK esté listo (sin auth)
+  function initFirebase() { syncFromFirebase(); }
 
   if (window._fbReady) {
-    initFirebaseAuth();
+    initFirebase();
   } else {
-    window.addEventListener('firebase-ready', initFirebaseAuth, { once: true });
+    window.addEventListener('firebase-ready', initFirebase, { once: true });
   }
 });
 

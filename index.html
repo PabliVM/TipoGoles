@@ -236,7 +236,7 @@ tr:hover .btn-edit{opacity:1}
 .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
 .chart-card.full-width{grid-column:1/-1}
 .chart-head{padding:10px 14px 9px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between}
-.chart-title{font-size:12px;font-weight:700}
+.chart-title{font-size:10.5px;font-weight:800;letter-spacing:.3px;text-transform:none}
 .chart-body{padding:12px 14px;position:relative}
 .chart-body canvas{max-height:210px}
 .chart-body.tall canvas{max-height:260px}
@@ -625,7 +625,7 @@ tr:hover .btn-edit{opacity:1}
   }
   .chart-card.full-width { grid-column: 1 / -1 !important; }
   .chart-head { padding: 5px 9px !important; border-bottom: 1px solid #eee !important; }
-  .chart-title { font-size: 9.5px !important; font-weight: 700; }
+  .chart-title { font-size: 9px !important; font-weight: 700; letter-spacing: .3px; }
   .chart-body { padding: 8px 10px !important; overflow: hidden !important; }
   .chart-body canvas { display: block !important; max-width: 100% !important; }
 
@@ -1482,21 +1482,21 @@ const DEFAULT_SEASONS = ['2025/2026'];
 //   rank   → solo ranking
 //   svg    → visualización SVG propia
 const CHART_CATALOG = [
-  {id:'chartTramo',       title:'Goles por tramo de minuto', icon:'⏱️', bloque:'Generales',        full:true,  visible:true,  chartType:'bar',      dataType:'dual'},
-  {id:'chartLV',          title:'Local vs Visitante',        icon:'🏠', bloque:'Generales',        full:false, visible:true,  chartType:'bar',      dataType:'dual'},
-  {id:'chartGoleador',    title:'Ranking goleadores',        icon:'👤', bloque:'Generales',        full:false, visible:true,  chartType:'rank',     dataType:'rank'},
-  {id:'chartRival',       title:'Goles por rival',           icon:'🆚', bloque:'Generales',        full:false, visible:false, chartType:'rank',     dataType:'rank'},
-  {id:'chartTipologia',   title:'Goles por tipología',       icon:'⚽', bloque:'Tácticos',         full:false, visible:true,  chartType:'doughnut', dataType:'single'},
-  {id:'chartEstilo',      title:'Ranking de estilos',        icon:'🎯', bloque:'Tácticos',         full:true,  visible:true,  chartType:'rank',     dataType:'rank'},
-  {id:'chartZonaRobo',    title:'Zonas de robo',             icon:'🗺️', bloque:'Tácticos',         full:false, visible:true,  chartType:'svg',      dataType:'svg'},
-  {id:'chartPosicRobo',   title:'Carriles de robo',          icon:'📌', bloque:'Tácticos',         full:false, visible:true,  chartType:'bar',      dataType:'single'},
-  {id:'chartPrimerPase',  title:'Primer pase',               icon:'➡️', bloque:'Tácticos',         full:false, visible:false, chartType:'bar',      dataType:'single'},
-  {id:'chartZonaRoboXTip',title:'Zona robo × Tipología',    icon:'📊', bloque:'Tácticos',         full:true,  visible:false, chartType:'bar',      dataType:'cross'},
-  {id:'chartSuperficie',  title:'Superficie de remate',      icon:'🦶', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'svg',      dataType:'svg'},
-  {id:'chartZona',        title:'Zona de remate',            icon:'📍', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar',      dataType:'single'},
-  {id:'chartTipoPase',    title:'Tipo de pase',              icon:'🧭', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'doughnut', dataType:'single'},
-  {id:'chartContactos',   title:'Nº de contactos',           icon:'🔢', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar',      dataType:'single'},
-  {id:'chartDifMarcador', title:'Diferencia en marcador',    icon:'📈', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar',      dataType:'single'},
+  {id:'chartTramo',       title:'GOLES POR TRAMO DE MINUTO',  icon:'', bloque:'Generales',        full:true,  visible:true,  chartType:'bar',      dataType:'dual'},
+  {id:'chartLV',          title:'LOCAL VS VISITANTE',          icon:'', bloque:'Generales',        full:false, visible:true,  chartType:'bar',      dataType:'dual'},
+  {id:'chartGoleador',    title:'RANKING GOLEADORES',          icon:'', bloque:'Generales',        full:false, visible:true,  chartType:'rank',     dataType:'rank'},
+  {id:'chartRival',       title:'GOLES POR RIVAL',             icon:'', bloque:'Generales',        full:false, visible:false, chartType:'rank',     dataType:'rank'},
+  {id:'chartTipologia',   title:'GOLES POR TIPOLOGÍA',         icon:'', bloque:'Tácticos',         full:false, visible:true,  chartType:'doughnut', dataType:'single'},
+  {id:'chartEstilo',      title:'RANKING DE ESTILOS',          icon:'', bloque:'Tácticos',         full:true,  visible:true,  chartType:'rank',     dataType:'rank'},
+  {id:'chartZonaRobo',    title:'ZONAS DE ROBO',               icon:'', bloque:'Tácticos',         full:false, visible:true,  chartType:'svg',      dataType:'svg'},
+  {id:'chartPosicRobo',   title:'CARRILES DE ROBO',            icon:'', bloque:'Tácticos',         full:false, visible:true,  chartType:'bar',      dataType:'single'},
+  {id:'chartPrimerPase',  title:'PRIMER PASE',                 icon:'', bloque:'Tácticos',         full:false, visible:false, chartType:'bar',      dataType:'single'},
+  {id:'chartZonaRoboXTip',title:'ZONA ROBO × TIPOLOGÍA',       icon:'', bloque:'Tácticos',         full:true,  visible:false, chartType:'bar',      dataType:'cross'},
+  {id:'chartSuperficie',  title:'SUPERFICIE DE REMATE',        icon:'', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'svg',      dataType:'svg'},
+  {id:'chartZona',        title:'ZONA DE REMATE',              icon:'', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar',      dataType:'single'},
+  {id:'chartTipoPase',    title:'TIPO DE PASE',                icon:'', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'doughnut', dataType:'single'},
+  {id:'chartContactos',   title:'Nº DE CONTACTOS',             icon:'', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar',      dataType:'single'},
+  {id:'chartDifMarcador', title:'DIFERENCIA EN MARCADOR',      icon:'', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar',      dataType:'single'},
 ];
 
 // Tipos de gráfico disponibles por dataType
@@ -2700,7 +2700,7 @@ function renderDashboard() {
     const palDot = (!isSVG && !isRank) ? `<span style="width:8px;height:8px;border-radius:50%;background:${(PALETTES[st.palette||'rm']?.colors[0])||'#2563eb'};display:inline-block;margin-left:6px"></span>` : '';
     html += `<div class="chart-card ${fullCls}">
       <div class="chart-head">
-        <span class="chart-title">${cat.icon} ${cat.title}${palDot}</span>
+        <span class="chart-title">${cat.title}${palDot}</span>
       </div>
       <div class="chart-body ${tallCls}">${inner}</div>
     </div>`;
@@ -3244,8 +3244,8 @@ function renderSuperficieSVG(containerId, data) {
   };
 
   const cats = [
-    { key:'Pie derecho',   label:'Pie Derecho',  color:'#2563eb' },
     { key:'Pie Izquierdo', label:'Pie Izquierdo', color:'#dc2626' },
+    { key:'Pie derecho',   label:'Pie Derecho',  color:'#2563eb' },
     { key:'Cabeza',        label:'Cabeza',        color:'#16a34a' },
     { key:'Otros',         label:'Otros',         color:'#ea580c' },
   ];

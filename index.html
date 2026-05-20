@@ -182,6 +182,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .badge-orange{background:var(--orange-bg);color:var(--orange)}
 .btn-del{width:20px;height:20px;border-radius:4px;border:none;background:var(--red-bg);color:var(--red);cursor:pointer;font-size:10px;display:inline-flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--tr)}
 tr:hover .btn-del{opacity:1}
+.btn-edit{width:20px;height:20px;border-radius:4px;border:none;background:var(--rm-bg);color:var(--rm);cursor:pointer;font-size:10px;display:inline-flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--tr);margin-right:3px}
+tr:hover .btn-edit{opacity:1}
+.data-table tr{cursor:pointer}
+/* Modal edición */
+.edit-modal{background:var(--surface);border-radius:var(--rl);box-shadow:var(--sh-lg);width:760px;max-width:95vw;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column}
+.edit-modal::-webkit-scrollbar{width:4px}
+.edit-modal::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.edit-modal-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:10}
+.edit-modal-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.edit-modal-body{padding:16px 18px;flex:1}
+.edit-modal-foot{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--surface)}
+.edit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:10px}
 
 /* DASHBOARD */
 .dash-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
@@ -1005,6 +1017,163 @@ tr:hover .btn-del{opacity:1}
   </div>
 </div>
 
+<!-- MODAL EDICIÓN GOL -->
+<div class="modal-overlay" id="modalEditGol">
+  <div class="edit-modal">
+    <div class="edit-modal-head">
+      <div class="edit-modal-title">✏️ Editar gol <span id="editGolId" style="font-size:11px;color:var(--text-mut);font-weight:400"></span></div>
+      <button class="editor-close" onclick="closeModal('modalEditGol')">✕</button>
+    </div>
+    <div class="edit-modal-body">
+
+      <div class="sec-label" style="margin-bottom:8px">General</div>
+      <div class="edit-grid" style="margin-bottom:14px">
+        <div class="field-group">
+          <label class="field-label">Competición</label>
+          <div class="select-wrap"><select class="field-select" id="eg-comp">
+            <option value="">—</option><option>Liga</option><option>Torneo</option><option>Amistoso</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">A favor / En contra</label>
+          <div class="select-wrap"><select class="field-select" id="eg-favor">
+            <option value="">—</option><option value="A favor">A favor</option><option value="En contra">En contra</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Jornada</label>
+          <div class="select-wrap"><select class="field-select" id="eg-jornada">
+            <option value="">—</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Rival</label>
+          <input class="field-input" type="text" id="eg-rival">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Nivel rival</label>
+          <div class="select-wrap"><select class="field-select" id="eg-nivel">
+            <option value="">—</option><option>Nivel 1</option><option>Nivel 2</option><option>Nivel 3</option><option>Nivel 4</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Local / Visitante</label>
+          <div class="select-wrap"><select class="field-select" id="eg-lv">
+            <option value="">—</option><option>Local</option><option>Visitante</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Dif. marcador</label>
+          <input class="field-input" type="number" id="eg-dif" min="-10" max="10">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Goleador</label>
+          <input class="field-input" type="text" id="eg-goleador">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Minuto</label>
+          <input class="field-input" type="number" id="eg-minuto" min="1" max="120">
+        </div>
+      </div>
+
+      <div class="sec-label green" style="margin-bottom:8px">Tácticos</div>
+      <div class="edit-grid" style="margin-bottom:14px">
+        <div class="field-group">
+          <label class="field-label">Tipología</label>
+          <div class="select-wrap"><select class="field-select" id="eg-tipologia">
+            <option value="">—</option>
+            <option>Balón parado</option><option>Transiciones</option>
+            <option>Juego directo</option><option>Juego posicional</option><option>Otros</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Estilo</label>
+          <div class="select-wrap"><select class="field-select" id="eg-estilo">
+            <option value="">—</option>
+            <option>Centro retrasado</option><option>Centro profundidad</option>
+            <option>Juego combinativo (paredes)</option><option>Juego combinativo (último pase)</option>
+            <option>Acción individual</option><option>Falta directa</option><option>Falta indirecta</option>
+            <option>Córner directo</option><option>Córner no directo</option>
+            <option>Saque de banda y centro</option><option>Saque de banda y combinativo</option>
+            <option>Penalti</option><option>Transicion</option><option>Juego directo</option>
+            <option>Saque de banda + tiro</option><option>Propia puerta</option>
+            <option>Equilibrio</option><option>Otros</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Zona de robo</label>
+          <div class="select-wrap"><select class="field-select" id="eg-zonaRobo">
+            <option value="">—</option><option>Z1</option><option>Z2</option><option>Z3</option><option>Z4</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Posic. del robo</label>
+          <div class="select-wrap"><select class="field-select" id="eg-posicRobo">
+            <option value="">—</option><option>Carril central</option><option>Banda</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Primer pase</label>
+          <div class="select-wrap"><select class="field-select" id="eg-primerPase">
+            <option value="">—</option><option>Horizontal</option><option>Hacia detrás</option><option>Hacia adelante</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Nº Pases</label>
+          <div class="select-wrap"><select class="field-select" id="eg-nPases">
+            <option value="">—</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+            <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>10+</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Tiempo transición (s)</label>
+          <input class="field-input" type="number" id="eg-tiempo" min="0">
+        </div>
+      </div>
+
+      <div class="sec-label orange" style="margin-bottom:8px">Técnico-tácticos</div>
+      <div class="edit-grid">
+        <div class="field-group">
+          <label class="field-label">Tipo de pase</label>
+          <div class="select-wrap"><select class="field-select" id="eg-tipoPase">
+            <option value="">—</option><option>Aereo</option><option>Raso</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Superficie remate</label>
+          <div class="select-wrap"><select class="field-select" id="eg-superficie">
+            <option value="">—</option>
+            <option>Cabeza</option><option>Pie Izquierdo</option><option>Pie derecho</option><option>Otros</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Nº Contactos</label>
+          <div class="select-wrap"><select class="field-select" id="eg-nContactos">
+            <option value="">—</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+            <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>10+</option>
+          </select></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Zona remate</label>
+          <div class="select-wrap"><select class="field-select" id="eg-zonaRemate">
+            <option value="">—</option>
+            <option>1er palo</option><option>2º palo</option><option>2º palo (espalda 2º central)</option>
+            <option>Penalti</option><option>Vértice</option><option>Fuera del área</option><option>Área pequeña</option>
+          </select></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="edit-modal-foot">
+      <button class="btn btn-danger btn-sm" onclick="eliminarGolEdit()">🗑️ Eliminar</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('modalEditGol')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEdicion()">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDITOR SIDEBAR -->
 <div class="editor-overlay" id="editorOverlay" onclick="closeEditor()"></div>
 <div class="editor-sidebar" id="editorSidebar">
@@ -1797,7 +1966,7 @@ function renderTabla() {
   document.getElementById('tableCount').textContent=data.length+' registros';
   if(!data.length){tbody.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
-  tbody.innerHTML=data.map(g=>`<tr>
+  tbody.innerHTML=data.map(g=>`<tr onclick="abrirEdicion('${g._id}')" title="Clic para editar">
     <td><span class="badge badge-blue">${esc(g.competicion)}</span></td>
     <td><span class="badge ${g.favor==='A favor'?'badge-green':'badge-red'}">${esc(g.favor)}</span></td>
     <td>${esc(g.jornada)}</td>
@@ -1819,7 +1988,10 @@ function renderTabla() {
     <td>${esc(g.superficie)}</td>
     <td style="text-align:center">${esc(g.nContactos)}</td>
     <td>${esc(g.zonaRemate)}</td>
-    <td><button class="btn-del" onclick="eliminarGol('${g._id}')">✕</button></td>
+    <td onclick="event.stopPropagation()" style="white-space:nowrap">
+      <button class="btn-edit" onclick="abrirEdicion('${g._id}')" title="Editar">✏️</button>
+      <button class="btn-del" onclick="eliminarGol('${g._id}')" title="Eliminar">✕</button>
+    </td>
   </tr>`).join('');
 }
 
@@ -2604,6 +2776,113 @@ function renderSuperficieSVG(containerId, data) {
   svg += `
 </svg>`;
   el.innerHTML = svg;
+}
+
+/* =====================================================
+   EDICIÓN DE GOLES
+   ===================================================== */
+let _editingId = null;
+
+function abrirEdicion(id) {
+  const goles = currentGoles();
+  const g = goles.find(x => String(x._id) === String(id));
+  if (!g) return;
+  _editingId = String(id);
+
+  // Rellenar jornadas si no están
+  const selJ = document.getElementById('eg-jornada');
+  if (selJ && selJ.options.length < 2) {
+    for (let i=1; i<=38; i++) {
+      const o = document.createElement('option');
+      o.value = 'J'+i; o.textContent = 'J'+i;
+      selJ.appendChild(o);
+    }
+  }
+
+  // Rellenar todos los campos
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val ?? '';
+  };
+  set('eg-comp',        g.competicion);
+  set('eg-favor',       g.favor);
+  set('eg-jornada',     g.jornada);
+  set('eg-rival',       g.rival);
+  set('eg-nivel',       g.nivel);
+  set('eg-lv',          g.lv);
+  set('eg-dif',         g.dif);
+  set('eg-goleador',    g.goleador);
+  set('eg-minuto',      g.minuto);
+  set('eg-tipologia',   g.tipologia);
+  set('eg-estilo',      g.estilo);
+  set('eg-zonaRobo',    g.zonaRobo);
+  set('eg-posicRobo',   g.posicRobo);
+  set('eg-primerPase',  g.primerPase);
+  set('eg-nPases',      g.nPases);
+  set('eg-tiempo',      g.tiempoTransicion);
+  set('eg-tipoPase',    g.tipoPase);
+  set('eg-superficie',  g.superficie);
+  set('eg-nContactos',  g.nContactos);
+  set('eg-zonaRemate',  g.zonaRemate);
+
+  // Etiqueta identificadora
+  const lbl = document.getElementById('editGolId');
+  if (lbl) lbl.textContent = `${g.rival||'Sin rival'} · Min. ${g.minuto||'—'}`;
+
+  openModal('modalEditGol');
+}
+
+function guardarEdicion() {
+  if (!_editingId) return;
+  const arr = currentGoles();
+  const idx = arr.findIndex(x => String(x._id) === _editingId);
+  if (idx === -1) return;
+
+  const get = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
+
+  const minuto = parseInt(get('eg-minuto')) || 0;
+  arr[idx] = {
+    ...arr[idx],  // mantener _id y campos no editables
+    competicion:      get('eg-comp'),
+    favor:            get('eg-favor'),
+    jornada:          get('eg-jornada'),
+    rival:            get('eg-rival'),
+    nivel:            get('eg-nivel'),
+    lv:               get('eg-lv'),
+    dif:              get('eg-dif'),
+    goleador:         get('eg-goleador'),
+    minuto:           minuto,
+    tramo:            calcTramo(minuto),
+    tipologia:        get('eg-tipologia'),
+    estilo:           get('eg-estilo'),
+    zonaRobo:         get('eg-zonaRobo'),
+    posicRobo:        get('eg-posicRobo'),
+    primerPase:       get('eg-primerPase'),
+    nPases:           get('eg-nPases'),
+    tiempoTransicion: parseInt(get('eg-tiempo')) || 0,
+    tipoPase:         get('eg-tipoPase'),
+    superficie:       get('eg-superficie'),
+    nContactos:       get('eg-nContactos'),
+    zonaRemate:       get('eg-zonaRemate'),
+  };
+
+  setGoles(activeTeam, activeSeason, arr);
+  closeModal('modalEditGol');
+  renderTabla();
+  showToast('✅ Gol actualizado');
+  _editingId = null;
+}
+
+function eliminarGolEdit() {
+  if (!_editingId) return;
+  if (!confirm('¿Eliminar este registro?')) return;
+  const arr = currentGoles().filter(g => String(g._id) !== _editingId);
+  setGoles(activeTeam, activeSeason, arr);
+  updateBadge();
+  closeModal('modalEditGol');
+  renderTabla();
+  showToast('🗑️ Gol eliminado');
+  _editingId = null;
 }
 
 /* =====================================================

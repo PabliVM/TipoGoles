@@ -1656,44 +1656,59 @@ async function fbWriteMeta(key, value) {
 function getGoles(team, season) { return db[dbKey(team, season)] || []; }
 function currentGoles() { return getGoles(activeTeam, activeSeason); }
 
-// Añadir gol individual
+// Añadir gol individual (escritura directa, el listener lo confirmará)
 function addGol(team, season, gol) {
   if (!db[dbKey(team,season)]) db[dbKey(team,season)] = [];
   db[dbKey(team,season)].push(gol);
-  fbWriteGol(team, season, gol);
+  updateBadge();
+  renderTabla();
+  fbWriteGol(team, season, gol); // async — el onSnapshot lo confirmará
   setSyncState('syncing');
 }
 
 // Guardar array completo (para importar CSV, editar, eliminar)
-function setGoles(team, season, arr) {
-  db[dbKey(team,season)] = arr;
-  // Escribir en batch: borrar todos y reescribir
-  _fbBatchWriteGoles(team, season, arr);
-}
+async function setGoles(team, season, arr) {
+  // 1. Pausar listener para evitar que onSnapshot machaque los datos mientras escribimos
+  const key = 'goles_' + dbKey(team, season);
+  stopListener(key);
 
-async function _fbBatchWriteGoles(team, season, arr) {
-  if (!fbAvailable()) return;
-  setSyncState('syncing');
-  const { db: fdb, collection, doc, writeBatch, getDocs } = window._fb;
-  try {
-    const colRef = collection(fdb, 'goles', dbKey(team,season), 'registros');
-    // Leer documentos existentes para borrar
-    const snap = await getDocs(colRef);
-    const BATCH_SIZE = 400;
-    let batch = writeBatch(fdb);
-    let ops = 0;
-    for (const d of snap.docs) {
-      batch.delete(d.ref); ops++;
-      if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(fdb); ops = 0; }
+  // 2. Actualizar memoria local
+  db[dbKey(team,season)] = arr;
+
+  // 3. Escribir en Firestore
+  if (fbAvailable()) {
+    setSyncState('syncing');
+    const { db: fdb, collection, doc, writeBatch, getDocs } = window._fb;
+    try {
+      const colRef = collection(fdb, 'goles', dbKey(team,season), 'registros');
+      const snap = await getDocs(colRef);
+      const BATCH_SIZE = 400;
+      let batch = writeBatch(fdb);
+      let ops = 0;
+      for (const d of snap.docs) {
+        batch.delete(d.ref); ops++;
+        if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(fdb); ops = 0; }
+      }
+      for (const g of arr) {
+        const id = String(g._id).replace('.','_');
+        batch.set(doc(colRef, id), g); ops++;
+        if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(fdb); ops = 0; }
+      }
+      if (ops > 0) await batch.commit();
+      setSyncState('ok');
+    } catch(e) {
+      console.error('setGoles error:', e);
+      setSyncState('err');
     }
-    for (const g of arr) {
-      const id = String(g._id).replace('.','_');
-      batch.set(doc(colRef, id), g); ops++;
-      if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(fdb); ops = 0; }
-    }
-    if (ops > 0) await batch.commit();
-    setSyncState('ok');
-  } catch(e) { console.error('_fbBatchWriteGoles error:', e); setSyncState('err'); }
+  }
+
+  // 4. Reactivar listener — ahora recibirá los datos que acabamos de escribir
+  listenGoles(team, season);
+
+  // 5. Actualizar UI inmediatamente (no esperar al listener)
+  updateBadge();
+  renderTabla();
+  renderWelcomeGrid();
 }
 
 function saveAll() {

@@ -1691,61 +1691,53 @@ async function fbWriteMeta(key, value) {
 function getGoles(team, season) { return db[dbKey(team, season)] || []; }
 function currentGoles() { return getGoles(activeTeam, activeSeason); }
 
-// Añadir gol individual (escritura directa, el listener lo confirmará)
-function addGol(team, season, gol) {
-  if (!db[dbKey(team,season)]) db[dbKey(team,season)] = [];
-  db[dbKey(team,season)].push(gol);
-  updateBadge();
-  renderTabla();
-  fbWriteGol(team, season, gol); // async — el onSnapshot lo confirmará
-  setSyncState('syncing');
+// Añadir gol individual
+async function addGol(team, season, gol) {
+  if (!fbAvailable()) { showToast('❌ Firebase no conectado', 'red'); return; }
+  dbg(`addGol: ${team}/${season} min:${gol.minuto}`, 'info');
+  await fbWriteGol(team, season, gol);
+  // onSnapshot actualizará db[] y la UI automáticamente
 }
 
 // Guardar array completo (para importar CSV, editar, eliminar)
 async function setGoles(team, season, arr) {
-  dbg(`setGoles: ${team} ${season} → ${arr.length} goles. FB disponible: ${fbAvailable()}`, 'info');
-  // 1. Pausar listener para evitar que onSnapshot machaque los datos mientras escribimos
-  const key = 'goles_' + dbKey(team, season);
-  stopListener(key);
-
-  // 2. Actualizar memoria local
-  db[dbKey(team,season)] = arr;
-
-  // 3. Escribir en Firestore
-  if (fbAvailable()) {
-    setSyncState('syncing');
-    const { db: fdb, collection, doc, writeBatch, getDocs } = window._fb;
-    try {
-      const colRef = collection(fdb, 'goles', dbKey(team,season), 'registros');
-      const snap = await getDocs(colRef);
-      const BATCH_SIZE = 400;
-      let batch = writeBatch(fdb);
-      let ops = 0;
-      for (const d of snap.docs) {
-        batch.delete(d.ref); ops++;
-        if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(fdb); ops = 0; }
-      }
-      for (const g of arr) {
-        const id = String(g._id).replace('.','_');
-        batch.set(doc(colRef, id), g); ops++;
-        if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(fdb); ops = 0; }
-      }
-      if (ops > 0) await batch.commit();
-      setSyncState('ok'); dbg(`Batch OK: ${arr.length} goles escritos`, 'ok');
-    } catch(e) {
-      dbg(`Batch ERROR: ${e.message}`, 'err');
-      console.error('setGoles error:', e);
-      setSyncState('err');
-    }
+  dbg(`setGoles: ${team}/${season} → ${arr.length} goles. FB:${fbAvailable()}`, 'info');
+  if (!fbAvailable()) {
+    dbg('setGoles: Firebase no disponible — abortando', 'err');
+    showToast('❌ Firebase no conectado. Espera y reintenta.', 'red');
+    return;
   }
 
-  // 4. Reactivar listener — ahora recibirá los datos que acabamos de escribir
-  listenGoles(team, season);
+  setSyncState('syncing');
+  const { db: fdb, collection, doc, setDoc, deleteDoc, getDocs } = window._fb;
 
-  // 5. Actualizar UI inmediatamente (no esperar al listener)
-  updateBadge();
-  renderTabla();
-  renderWelcomeGrid();
+  try {
+    const colRef = collection(fdb, 'goles', dbKey(team,season), 'registros');
+
+    // Paso 1: borrar documentos existentes uno a uno
+    const existingSnap = await getDocs(colRef);
+    dbg(`Borrando ${existingSnap.docs.length} goles existentes...`, 'info');
+    const deletePromises = existingSnap.docs.map(d => deleteDoc(d.ref));
+    await Promise.all(deletePromises);
+
+    // Paso 2: escribir nuevos uno a uno
+    dbg(`Escribiendo ${arr.length} goles nuevos...`, 'info');
+    const writePromises = arr.map(g => {
+      const id = String(g._id).replace(/\./g, '_');
+      return setDoc(doc(colRef, id), g);
+    });
+    await Promise.all(writePromises);
+
+    dbg(`✅ ${arr.length} goles guardados en Firebase`, 'ok');
+    setSyncState('ok');
+    showToast(`✅ ${arr.length} goles guardados`);
+
+  } catch(e) {
+    dbg(`ERROR en setGoles: ${e.message}`, 'err');
+    console.error('setGoles error:', e);
+    setSyncState('err');
+    showToast('❌ Error guardando: ' + e.message, 'red');
+  }
 }
 
 // saveAll — solo escribe en Firebase, sin local
@@ -2293,22 +2285,27 @@ function mapRow(row) {
   };
 }
 
-function finishImport(mapped, fileName, sheetInfo) {
+async function finishImport(mapped, fileName, sheetInfo) {
   if (!mapped.length) {
     showImportStatus('err', '❌ No se mapeó ninguna fila. Verifica que las cabeceras coincidan con lo esperado.');
     return;
   }
+  dbg(`finishImport: ${mapped.length} goles de ${fileName}`, 'info');
+  showImportStatus('ok', `⏳ Guardando ${mapped.length} goles en Firebase...`);
+
   const existing = currentGoles();
-  setGoles(activeTeam, activeSeason, [...existing, ...mapped]);
+  const allGoles = [...existing, ...mapped];
+
+  // Esperar a que Firebase confirme la escritura
+  await setGoles(activeTeam, activeSeason, allGoles);
+
   updateBadge(); renderTabla();
   const shortName = fileName.length > 16 ? fileName.slice(0,16)+'…' : fileName;
-  dbg(`finishImport: ${mapped.length} goles → setGoles llamado`, 'info');
   showImportStatus('ok', `✅ ${mapped.length} goles importados a ${activeTeam} · ${activeSeason} (${sheetInfo})`);
   document.getElementById('importInfo').style.display = 'grid';
   document.getElementById('infoReg').textContent = mapped.length;
   document.getElementById('infoCols').textContent = Object.keys(COL_MAP).length;
   document.getElementById('infoFile').textContent = shortName;
-  showToast(`✅ ${mapped.length} goles importados`);
 }
 
 function showImportStatus(type, msg) {
@@ -2337,7 +2334,7 @@ function selectChip(el, groupId, hiddenId) {
   document.getElementById(hiddenId).value = el.dataset.val;
 }
 
-function guardarGol(continuar) {
+async function guardarGol(continuar) {
   const g = {
     _id:Date.now()+Math.random(),
     competicion:v('f-comp'), favor:v('f-favor'), jornada:v('f-jornada'),
@@ -2439,10 +2436,9 @@ function sortTabla(field) {
   renderTabla();
 }
 
-function eliminarGol(id) {
-  db[dbKey(activeTeam,activeSeason)] = currentGoles().filter(g=>String(g._id)!==String(id));
-  fbDeleteGol(activeTeam, activeSeason, id);
-  updateBadge(); renderTabla();
+async function eliminarGol(id) {
+  await fbDeleteGol(activeTeam, activeSeason, id);
+  // onSnapshot actualizará db[] y la UI
   showToast('🗑️ Eliminado');
 }
 
@@ -3466,7 +3462,7 @@ function abrirEdicion(id) {
   openModal('modalEditGol');
 }
 
-function guardarEdicion() {
+async function guardarEdicion() {
   if (!_editingId) return;
   const arr = currentGoles();
   const idx = arr.findIndex(x => String(x._id) === _editingId);
@@ -3500,20 +3496,17 @@ function guardarEdicion() {
     zonaRemate:       get('eg-zonaRemate'),
   };
 
-  db[dbKey(activeTeam,activeSeason)] = arr;
-  fbWriteGol(activeTeam, activeSeason, arr[idx]); // solo el gol editado
+  await fbWriteGol(activeTeam, activeSeason, arr[idx]);
+  // onSnapshot actualizará db[] y la UI
   closeModal('modalEditGol');
-  renderTabla();
   showToast('✅ Gol actualizado');
   _editingId = null;
 }
 
-function eliminarGolEdit() {
+async function eliminarGolEdit() {
   if (!_editingId) return;
   if (!confirm('¿Eliminar este registro?')) return;
-  db[dbKey(activeTeam,activeSeason)] = currentGoles().filter(g => String(g._id) !== _editingId);
-  fbDeleteGol(activeTeam, activeSeason, _editingId);
-  updateBadge();
+  await fbDeleteGol(activeTeam, activeSeason, _editingId);
   closeModal('modalEditGol');
   renderTabla();
   showToast('🗑️ Gol eliminado');

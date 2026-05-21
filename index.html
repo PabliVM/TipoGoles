@@ -1848,16 +1848,59 @@ document.addEventListener('DOMContentLoaded', () => {
     listenSeasons();
     listenLayout();
 
-    // 3. Listener de goles solo cuando el usuario entra a un equipo
-    // (enterTeam lo activa)
-    // Si seasons aún está vacío tras 3s, escribir DEFAULT_SEASONS en Firebase
-    setTimeout(async () => {
-      if (seasons.length === DEFAULT_SEASONS.length &&
-          JSON.stringify(seasons) === JSON.stringify(DEFAULT_SEASONS)) {
-        dbg('Sin temporadas en Firebase — escribiendo defaults', 'warn');
-        await fbWriteMeta('seasons', DEFAULT_SEASONS);
+    // 3. Restaurar último equipo y temporada desde Firebase
+    try {
+      const { db: fdb, doc, getDoc } = window._fb;
+
+      // Leer último equipo activo
+      const teamSnap = await getDoc(doc(fdb, 'meta', 'lastTeam'));
+      if (teamSnap.exists() && teamSnap.data().team && TEAMS.includes(teamSnap.data().team)) {
+        const lastTeam   = teamSnap.data().team;
+        const lastSeason = teamSnap.data().season || DEFAULT_SEASONS[DEFAULT_SEASONS.length - 1];
+        dbg(`Restaurando equipo: ${lastTeam} / ${lastSeason}`, 'ok');
+
+        activeTeam   = lastTeam;
+        activeSeason = lastSeason;
+
+        // Ocultar welcome, mostrar app directamente
+        document.getElementById('welcomeScreen').classList.add('hidden');
+        buildTeamNav();
+        buildMultiTeamChecks();
+        updateBadge();
+        renderTabla();
+
+        // Restaurar último panel
+        const panelSnap = await getDoc(doc(fdb, 'meta', 'lastPanel'));
+        const panelName = panelSnap.exists() ? (panelSnap.data().panel || 'importar') : 'importar';
+        const validPanels = ['importar','registro','bbdd','informes','comparativas'];
+        const panel = validPanels.includes(panelName) ? panelName : 'importar';
+        const panelTab = document.querySelector(`.mod-tab[onclick*="${panel}"]`);
+        if (panelTab) showMod(panel, panelTab);
+
+        // Activar listener de goles para el equipo restaurado
+        listenGoles(lastTeam, lastSeason);
+
+      } else {
+        // Sin equipo guardado → mostrar welcome
+        dbg('Sin equipo guardado — mostrando welcome', 'info');
+        renderWelcomeGrid();
       }
-    }, 3000);
+    } catch(e) {
+      dbg('Error restaurando equipo: ' + e.message, 'err');
+      renderWelcomeGrid();
+    }
+
+    // 4. Si no hay temporadas en Firebase aún, escribir defaults
+    setTimeout(async () => {
+      try {
+        const { db: fdb2, doc, getDoc } = window._fb;
+        const sSnap = await getDoc(doc(fdb2, 'meta', 'seasons'));
+        if (!sSnap.exists()) {
+          dbg('Sin temporadas en Firebase — escribiendo defaults', 'warn');
+          await fbWriteMeta('seasons', DEFAULT_SEASONS);
+        }
+      } catch(e) {}
+    }, 2000);
   });
 });
 
@@ -3520,7 +3563,7 @@ function enterTeam(team) {
   activeTeam = team;
 
   // Guardar equipo activo para restaurar al recargar
-  fbWriteMeta('lastTeam', {team});
+  fbWriteMeta('lastTeam', {team, season: activeSeason});
 
   // Ocultar welcome, mostrar app
   document.getElementById('welcomeScreen').classList.add('hidden');

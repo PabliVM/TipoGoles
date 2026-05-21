@@ -11,6 +11,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, writeBatch, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCNhXXGDxB3icjx-kbHtnqqL8Q40PyWIx4",
@@ -21,13 +22,26 @@ const firebaseConfig = {
   appId: "1:1035671728322:web:353002cfdff6c3723dcb5b"
 };
 
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
 
-// Exponer al scope global para el JS vanilla
+// Exponer Firestore al scope global
 window._fb = { db, collection, doc, setDoc, getDoc, getDocs, deleteDoc, writeBatch, onSnapshot };
-window._fbReady = true;
-window.dispatchEvent(new Event('firebase-ready'));
+
+// Login anónimo automático — necesario para que Firestore acepte escrituras
+// aunque las reglas sean "if true"
+signInAnonymously(auth)
+  .then(() => {
+    window._fbReady = true;
+    window.dispatchEvent(new Event('firebase-ready'));
+  })
+  .catch(err => {
+    console.error('Firebase anon auth error:', err);
+    // Intentar igualmente — puede funcionar sin auth con reglas abiertas
+    window._fbReady = true;
+    window.dispatchEvent(new Event('firebase-ready'));
+  });
 </script>
 <style>
 /* =====================================================

@@ -320,6 +320,9 @@ tr:hover .btn-edit{opacity:1}
 /* TOAST */
 .toast{position:fixed;bottom:60px;right:18px;background:var(--green);color:#fff;padding:9px 14px;border-radius:var(--r);font-size:12.5px;font-weight:600;box-shadow:var(--sh-lg);transform:translateY(16px);opacity:0;transition:all .22s ease;z-index:700;display:flex;align-items:center;gap:7px}
 .toast.show{transform:translateY(0);opacity:1}
+/* Debug panel */
+.debug-panel{position:fixed;bottom:52px;left:8px;background:rgba(0,0,0,.85);color:#0f0;font-family:monospace;font-size:10px;padding:6px 8px;border-radius:6px;z-index:800;max-width:320px;max-height:180px;overflow-y:auto;display:none}
+.debug-panel.visible{display:block}
 
 /* FOOTER */
 .app-footer{background:var(--rm);color:rgba(255,255,255,.5);font-size:10px;text-align:center;padding:9px;position:fixed;left:0;right:0;bottom:0;z-index:100}
@@ -1238,6 +1241,7 @@ tr:hover .btn-edit{opacity:1}
 </footer>
 
 <!-- TOAST -->
+<div class="debug-panel" id="debugPanel"></div>
 <div class="toast" id="toast"></div>
 
 <!-- MODAL NUEVA TEMPORADA -->
@@ -1548,6 +1552,35 @@ function setSyncState(state) {
   if (dot) dot.className = 'sync-dot ' + state;
 }
 
+// Debug log visible en pantalla (activar con triple click en el punto de sync)
+let _dbgLines = [];
+function dbg(msg, type='info') {
+  const colors = {info:'#0f0', warn:'#ff0', err:'#f44', ok:'#0ff'};
+  const color = colors[type] || '#0f0';
+  const time = new Date().toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  _dbgLines.push(`<span style="color:${color}">[${time}] ${msg}</span>`);
+  if (_dbgLines.length > 20) _dbgLines.shift();
+  const p = document.getElementById('debugPanel');
+  if (p && p.classList.contains('visible')) {
+    p.innerHTML = _dbgLines.join('<br>');
+    p.scrollTop = p.scrollHeight;
+  }
+  console.log(`[TG ${type.toUpperCase()}]`, msg);
+}
+
+// Triple click en sync dot → mostrar/ocultar debug
+document.addEventListener('DOMContentLoaded', () => {
+  let clicks = 0;
+  document.getElementById('syncDot')?.addEventListener('click', () => {
+    clicks++;
+    setTimeout(() => { clicks = 0; }, 500);
+    if (clicks >= 3) {
+      document.getElementById('debugPanel')?.classList.toggle('visible');
+      clicks = 0;
+    }
+  });
+});
+
 // ── Listeners onSnapshot activos (tiempo real) ───────────────────────────────
 const _listeners = {}; // { key: unsubscribe }
 
@@ -1564,7 +1597,9 @@ function listenGoles(team, season) {
   const colRef = collection(db, 'goles', dbKey(team, season), 'registros');
   _listeners[key] = onSnapshot(colRef,
     snap => {
-      db[dbKey(team, season)] = snap.docs.map(d => d.data());
+      const golesRecibidos = snap.docs.map(d => d.data());
+      db[dbKey(team, season)] = golesRecibidos;
+      dbg(`onSnapshot: ${golesRecibidos.length} goles de ${team}/${season}`, 'ok');
       setSyncState('ok');
       updateBadge();
       renderTabla();
@@ -1627,7 +1662,7 @@ function listenLayout() {
 
 // ── GUARDAR en Firestore ──────────────────────────────────────────────────────
 async function fbWriteGol(team, season, gol) {
-  if (!fbAvailable()) return;
+  if (!fbAvailable()) { dbg('fbWriteGol: FB no disponible', 'warn'); return; }
   const { db, doc, setDoc, collection } = window._fb;
   try {
     const id = String(gol._id).replace('.','_');
@@ -1668,6 +1703,7 @@ function addGol(team, season, gol) {
 
 // Guardar array completo (para importar CSV, editar, eliminar)
 async function setGoles(team, season, arr) {
+  dbg(`setGoles: ${team} ${season} → ${arr.length} goles. FB disponible: ${fbAvailable()}`, 'info');
   // 1. Pausar listener para evitar que onSnapshot machaque los datos mientras escribimos
   const key = 'goles_' + dbKey(team, season);
   stopListener(key);
@@ -1695,8 +1731,9 @@ async function setGoles(team, season, arr) {
         if (ops >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(fdb); ops = 0; }
       }
       if (ops > 0) await batch.commit();
-      setSyncState('ok');
+      setSyncState('ok'); dbg(`Batch OK: ${arr.length} goles escritos`, 'ok');
     } catch(e) {
+      dbg(`Batch ERROR: ${e.message}`, 'err');
       console.error('setGoles error:', e);
       setSyncState('err');
     }
@@ -1711,35 +1748,27 @@ async function setGoles(team, season, arr) {
   renderWelcomeGrid();
 }
 
+// saveAll — solo escribe en Firebase, sin local
 function saveAll() {
-  if (fbAvailable()) {
-    _fbBatchWriteGoles(activeTeam, activeSeason, currentGoles());
-    fbWriteMeta('seasons', seasons);
-    fbWriteMeta('layout', layoutState);
-  }
+  if (!fbAvailable()) { dbg('saveAll: Firebase no disponible aún', 'warn'); return; }
+  _fbBatchWriteGoles(activeTeam, activeSeason, currentGoles());
+  fbWriteMeta('seasons', seasons);
+  fbWriteMeta('layout', layoutState);
 }
 
+// loadAll — inicializa variables en memoria (Firebase las llenará via onSnapshot)
+// Firebase llenará los datos via onSnapshot
 async function loadAll() {
+  // Variables en memoria — solo fallback visual hasta que Firebase responda
   if (!seasons.length) seasons = [...DEFAULT_SEASONS];
-  if (!activeSeason) activeSeason = DEFAULT_SEASONS[DEFAULT_SEASONS.length - 1];
+  if (!activeSeason)   activeSeason = DEFAULT_SEASONS[DEFAULT_SEASONS.length - 1];
 }
 
-// Iniciar todos los listeners en tiempo real
-function startRealtimeListeners() {
+async function syncFromFirebase() {
   listenSeasons();
   listenLayout();
-  listenGoles(activeTeam, activeSeason);
-}
-
-// Cambiar contexto equipo+temporada: cambiar listener de goles
-function switchGolListener(team, season) {
-  listenGoles(team, season);
-}
-
-// Sincronización inicial (compatibilidad con código que la llama)
-async function syncFromFirebase() {
-  startRealtimeListeners();
   setSyncState('syncing');
+  dbg('Listeners seasons+layout iniciados', 'info');
 }
 
 async function syncCurrentTeam() {
@@ -1749,10 +1778,10 @@ async function syncCurrentTeam() {
 /* =====================================================
    INIT
    ===================================================== */
-document.addEventListener('DOMContentLoaded', async () => {
-  // Cargar datos locales primero (instantáneo)
-  await loadAll();
-  if (!seasons.length) seasons = [...DEFAULT_SEASONS];
+document.addEventListener('DOMContentLoaded', () => {
+  // Montar UI con defaults en memoria — Firebase llenará todo via onSnapshot
+  seasons    = [...DEFAULT_SEASONS];
+  activeSeason = DEFAULT_SEASONS[DEFAULT_SEASONS.length - 1];
 
   buildSeasonSelect();
   buildTeamNav();
@@ -1761,18 +1790,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   buildMultiTeamChecks();
   updateBadge();
   renderTabla();
-
-  // Mostrar welcome screen mientras Firebase carga
   renderWelcomeGrid();
-  // Firebase llenará los datos via listeners
+
+  // Triple click en sync dot → panel debug
+  let _clicks = 0;
+  document.getElementById('syncDot')?.addEventListener('click', () => {
+    _clicks++;
+    setTimeout(() => { _clicks = 0; }, 500);
+    if (_clicks >= 3) { document.getElementById('debugPanel')?.classList.toggle('visible'); _clicks = 0; }
+  });
 
   // Drag & drop
   const dz = document.getElementById('dropZone');
   dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
   dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
   dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); const f=e.dataTransfer.files[0]; if(f) processFile(f); });
-
-  // Dark mode se carga en el listener firebase-ready (abajo)
 
   // Restaurar gráficos tras imprimir
   window.addEventListener('afterprint', () => {
@@ -1785,49 +1817,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     for (const chart of Object.values(compCharts)) {
       try { chart.options.animation = false; chart.resize(); chart.update('none'); } catch(e) {}
     }
-    // Limpiar numeración tras imprimir
     document.querySelectorAll('.print-page-num').forEach(el => el.remove());
   });
 
-  // Inyectar numeración antes de imprimir (CSS @page counter no soportado en Chrome)
   window.addEventListener('beforeprint', () => {
-    // Eliminar anteriores
     document.querySelectorAll('.print-page-num').forEach(el => el.remove());
-    // Chrome no soporta counter(pages) en @page, así que
-    // añadimos un div fixed con el número de página en JS.
-    // No podemos saber el total de páginas antes de imprimir,
-    // pero sí podemos estimar: cada 2 gráficos ≈ 1 página.
-    // La solución más fiable: mostrar solo el número de página actual.
     const numDiv = document.createElement('div');
     numDiv.className = 'print-page-num';
-    numDiv.id = 'printPageNum';
-    numDiv.style.cssText = 'position:fixed;bottom:4mm;left:0;right:0;text-align:center;font-size:9px;color:#8b919e;font-family:"Segoe UI",sans-serif;z-index:99999;display:none';
+    numDiv.style.cssText = 'position:fixed;bottom:4mm;left:0;right:0;text-align:center;font-size:9px;color:#8b919e;font-family:"Segoe UI",sans-serif;z-index:99999';
     document.body.appendChild(numDiv);
   });
 
-  // Firebase SDK es módulo ES — siempre llega después del DOMContentLoaded.
-  // Usamos el evento 'firebase-ready' que dispara el módulo cuando termina.
+  // ── Firebase SDK llega siempre DESPUÉS del DOMContentLoaded (módulo ES) ──
   window.addEventListener('firebase-ready', async () => {
-    // 1. Iniciar listeners globales (seasons, layout)
-    listenSeasons();
-    listenLayout();
+    dbg('Firebase listo', 'ok');
+    setSyncState('syncing');
 
-    // 2. Dark mode desde Firebase
+    // 1. Dark mode desde Firestore
     try {
       const { db, doc, getDoc } = window._fb;
       const snap = await getDoc(doc(db, 'meta', 'darkMode'));
       if (snap.exists() && snap.data().on) {
         document.body.classList.add('dark');
         document.getElementById('darkBtn').innerHTML = '☀';
+        dbg('Dark mode: ON', 'info');
       }
-    } catch(e) {}
+    } catch(e) { dbg('Dark mode error: ' + e.message, 'err'); }
 
-    // 3. Si ya hay un equipo activo (welcome ya pasado), iniciar listener de goles
-    if (activeTeam) {
-      listenGoles(activeTeam, activeSeason);
-    }
+    // 2. Listeners en tiempo real: seasons y layout
+    listenSeasons();
+    listenLayout();
 
-    setSyncState('syncing');
+    // 3. Listener de goles solo cuando el usuario entra a un equipo
+    // (enterTeam lo activa)
+    // Si seasons aún está vacío tras 3s, escribir DEFAULT_SEASONS en Firebase
+    setTimeout(async () => {
+      if (seasons.length === DEFAULT_SEASONS.length &&
+          JSON.stringify(seasons) === JSON.stringify(DEFAULT_SEASONS)) {
+        dbg('Sin temporadas en Firebase — escribiendo defaults', 'warn');
+        await fbWriteMeta('seasons', DEFAULT_SEASONS);
+      }
+    }, 3000);
   });
 });
 
@@ -2229,6 +2259,7 @@ function finishImport(mapped, fileName, sheetInfo) {
   setGoles(activeTeam, activeSeason, [...existing, ...mapped]);
   updateBadge(); renderTabla();
   const shortName = fileName.length > 16 ? fileName.slice(0,16)+'…' : fileName;
+  dbg(`finishImport: ${mapped.length} goles → setGoles llamado`, 'info');
   showImportStatus('ok', `✅ ${mapped.length} goles importados a ${activeTeam} · ${activeSeason} (${sheetInfo})`);
   document.getElementById('importInfo').style.display = 'grid';
   document.getElementById('infoReg').textContent = mapped.length;

@@ -10,7 +10,7 @@
 <!-- Firebase SDKs -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, writeBatch, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, getDoc, getDocs, deleteDoc, writeBatch, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
@@ -27,7 +27,7 @@ const db   = getFirestore(app);
 const auth = getAuth(app);
 
 // Exponer Firestore al scope global
-window._fb = { db, collection, doc, setDoc, getDoc, getDocs, deleteDoc, writeBatch, onSnapshot };
+window._fb = { db, collection, doc, addDoc, setDoc, updateDoc, getDoc, getDocs, deleteDoc, writeBatch, onSnapshot, serverTimestamp };
 
 // Login anónimo automático — necesario para que Firestore acepte escrituras
 // aunque las reglas sean "if true"
@@ -775,6 +775,11 @@ tr:hover .btn-edit{opacity:1}
         <div class="import-title">Arrastra tu archivo aquí</div>
         <div class="import-sub">o haz clic para seleccionar · Excel (.xlsx/.xls) o CSV</div>
       </div>
+      <!-- Test Firebase directo -->
+      <button onclick="testFirebase()" style="margin-top:8px;padding:6px 14px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-family:var(--font)">
+        🔥 Test Firebase
+      </button>
+      <div id="fbTestResult" style="margin-top:6px;font-size:12px;font-weight:600"></div>
       <div class="import-status" id="importStatus"></div>
       <div class="import-info-grid" id="importInfo" style="display:none">
         <div class="info-chip"><div class="val" id="infoReg">—</div><div class="lbl">Registros</div></div>
@@ -1537,7 +1542,7 @@ const RM_PALETTE = QUAL_PALETTE;
 /* =====================================================
    ESTADO GLOBAL
    ===================================================== */
-let db = {};            // { 'CAS_2025/2026': [...goles] }
+let _golesCache = {};   // cache en memoria de goles por equipo+temporada
 let seasons = [];       // ['2025/2026']
 let activeTeam = 'CAS';
 let activeSeason = '2025/2026';
@@ -1564,6 +1569,51 @@ function fbAvailable() { return window._fbReady === true; }
 function setSyncState(state) {
   const dot = document.getElementById('syncDot');
   if (dot) dot.className = 'sync-dot ' + state;
+}
+
+// Test Firebase directo
+async function testFirebase() {
+  const el = document.getElementById('fbTestResult');
+  el.style.color = '#ea580c';
+  el.textContent = '⏳ Probando Firebase...';
+  dbg('Test Firebase iniciado', 'info');
+  dbg(`fbAvailable: ${fbAvailable()}`, 'info');
+  dbg(`window._fbReady: ${window._fbReady}`, 'info');
+
+  if (!window._fb) {
+    el.textContent = '❌ window._fb no existe — Firebase SDK no cargó';
+    dbg('window._fb undefined', 'err');
+    return;
+  }
+
+  if (!fbAvailable()) {
+    el.textContent = '❌ fbAvailable() = false — Firebase no listo';
+    dbg('fbAvailable false', 'err');
+    return;
+  }
+
+  try {
+    const { db, doc, setDoc, getDoc } = window._fb;
+    // Intentar escribir un documento de prueba
+    const testRef = doc(db, 'meta', 'test');
+    await setDoc(testRef, { ts: Date.now(), msg: 'test ok' });
+    dbg('Escritura test OK', 'ok');
+
+    // Verificar que se escribió
+    const snap = await getDoc(testRef);
+    if (snap.exists()) {
+      el.style.color = '#16a34a';
+      el.textContent = '✅ Firebase funciona — escritura y lectura OK';
+      dbg('Lectura test OK: ' + JSON.stringify(snap.data()), 'ok');
+    } else {
+      el.textContent = '⚠️ Escritura sin error pero documento no encontrado';
+      dbg('Documento test no encontrado tras escritura', 'warn');
+    }
+  } catch(e) {
+    el.style.color = '#dc2626';
+    el.textContent = '❌ Error: ' + e.message;
+    dbg('Test ERROR: ' + e.message + ' | code: ' + e.code, 'err');
+  }
 }
 
 // Debug log visible en pantalla (activar con triple click en el punto de sync)
@@ -1612,7 +1662,7 @@ function listenGoles(team, season) {
   _listeners[key] = onSnapshot(colRef,
     snap => {
       const golesRecibidos = snap.docs.map(d => d.data());
-      db[dbKey(team, season)] = golesRecibidos;
+      _golesCache[dbKey(team, season)] = golesRecibidos;
       dbg(`onSnapshot: ${golesRecibidos.length} goles de ${team}/${season}`, 'ok');
       setSyncState('ok');
       updateBadge();
@@ -1702,7 +1752,7 @@ async function fbWriteMeta(key, value) {
 }
 
 // ── API pública ───────────────────────────────────────────────────────────────
-function getGoles(team, season) { return db[dbKey(team, season)] || []; }
+function getGoles(team, season) { return _golesCache[dbKey(team, season)] || []; }
 function currentGoles() { return getGoles(activeTeam, activeSeason); }
 
 // Añadir gol individual
@@ -1786,9 +1836,8 @@ async function syncCurrentTeam() {
    ===================================================== */
 document.addEventListener('DOMContentLoaded', () => {
   // Montar UI con defaults en memoria — Firebase llenará todo via onSnapshot
-  seasons    = [...DEFAULT_SEASONS];
-  activeSeason = DEFAULT_SEASONS[DEFAULT_SEASONS.length - 1];
-
+  // NO inicializar seasons ni datos — Firebase los llenará via onSnapshot
+  // Solo montar estructura UI mínima
   buildSeasonSelect();
   buildTeamNav();
   buildJornadaSelect();

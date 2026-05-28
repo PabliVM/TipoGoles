@@ -367,6 +367,49 @@ tr:hover .btn-edit{opacity:1}
 /* SPINNER */
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+/* CONTEXTO ACTIVO — banner equipo+temporada en registro */
+.context-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--rm);
+  border-radius: var(--r);
+  padding: 10px 16px;
+  margin-bottom: 14px;
+}
+.context-banner-label {
+  font-size: 11px;
+  color: rgba(255,255,255,.7);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  flex-shrink: 0;
+}
+.context-banner-equipo {
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -.3px;
+  line-height: 1;
+}
+.context-banner-nombre {
+  font-size: 12px;
+  color: rgba(255,255,255,.75);
+  font-weight: 500;
+  margin-top: 1px;
+}
+.context-banner-sep {
+  width: 1px;
+  height: 32px;
+  background: rgba(255,255,255,.25);
+  flex-shrink: 0;
+}
+.context-banner-temporada {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+}
+
 /* =====================================================
    PANTALLA DE INICIO — SELECTOR DE EQUIPO
    ===================================================== */
@@ -806,6 +849,23 @@ tr:hover .btn-edit{opacity:1}
      PANEL: REGISTRO
 =================================================== -->
 <div id="panel-registro" class="panel">
+  <!-- Banner contexto: equipo + temporada activa -->
+  <div class="context-banner" id="registroBanner">
+    <div>
+      <div class="context-banner-equipo" id="bannerEquipo">CAS</div>
+      <div class="context-banner-nombre" id="bannerNombre">Castilla</div>
+    </div>
+    <div class="context-banner-sep"></div>
+    <div>
+      <div class="context-banner-label">Temporada</div>
+      <div class="context-banner-temporada" id="bannerTemporada">2025/2026</div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="font-size:11px;color:rgba(255,255,255,.6);text-align:right;line-height:1.5">
+      Registrando gol para<br>
+      <span style="color:#fff;font-weight:700" id="bannerFullCtx">CAS · 2025/2026</span>
+    </div>
+  </div>
   <div class="card">
     <div class="card-header">
       <div class="card-title"><span class="card-icon">✏️</span> Nuevo gol</div>
@@ -1978,7 +2038,22 @@ function onSeasonChange() {
   buildMultiTeamChecks();
   updateBadge();
   renderTabla();
-  if (fbAvailable()) listenGoles(activeTeam, activeSeason);
+  if (fbReady()) listenGoles(activeTeam, activeSeason);
+  updateContextBanner();
+}
+
+function updateContextBanner() {
+  const equipo   = activeTeam || 'CAS';
+  const nombre   = TEAM_FULL[equipo] || equipo;
+  const temporada = activeSeason || '—';
+  const eq  = document.getElementById('bannerEquipo');
+  const nom = document.getElementById('bannerNombre');
+  const tmp = document.getElementById('bannerTemporada');
+  const ctx = document.getElementById('bannerFullCtx');
+  if (eq)  eq.textContent  = equipo;
+  if (nom) nom.textContent = nombre;
+  if (tmp) tmp.textContent = temporada;
+  if (ctx) ctx.textContent = `${equipo} · ${temporada}`;
 }
 
 function buildTeamNav() {
@@ -3633,6 +3708,7 @@ function enterTeam(team) {
   // Sincronizar desde Firebase si hay conexión
   if (fbAvailable()) syncCurrentTeam();
 
+  updateContextBanner();
   // Ir a importar por defecto
   const firstTab = document.querySelector('.mod-tab');
   if (firstTab) showMod('importar', firstTab);

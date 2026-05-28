@@ -803,12 +803,7 @@ tr:hover .btn-edit{opacity:1}
 </nav>
 
 <!-- BANNER CONTEXTO GLOBAL -->
-<div class="context-banner" id="globalBanner" style="border-radius:0;margin:0">
-  <div>
-    <div class="context-banner-equipo" id="bannerEquipo">—</div>
-    <div class="context-banner-nombre" id="bannerNombre">—</div>
-  </div>
-  <div class="context-banner-sep"></div>
+<div class="context-banner" id="globalBanner" style="border-radius:0;margin:0;display:none">
   <div>
     <div class="context-banner-label">Temporada</div>
     <div class="context-banner-temporada" id="bannerTemporada">—</div>
@@ -1622,7 +1617,6 @@ let _dashCtx = {}; // contexto compartido entre renderDashboard y sus helpers
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function dbKey(team, season) { return team + '_' + season.replace(/\//g,'_'); }
 function fbAvailable() { return !!(window._fbReady && window._fb?.db); }
-function fbReady() { return fbAvailable(); } // alias
 
 function setSyncState(state) {
   const dot = document.getElementById('syncDot');
@@ -2037,19 +2031,16 @@ function onSeasonChange() {
   buildMultiTeamChecks();
   updateBadge();
   renderTabla();
-  if (fbReady()) listenGoles(activeTeam, activeSeason);
+  if (fbAvailable()) listenGoles(activeTeam, activeSeason);
   updateContextBanner();
 }
 
 function updateContextBanner() {
-  const equipo    = activeTeam || 'CAS';
-  const nombre    = TEAM_FULL[equipo] || equipo;
+  const equipo    = activeTeam || '';
   const temporada = activeSeason || '—';
-  const eq  = document.getElementById('bannerEquipo');
-  const nom = document.getElementById('bannerNombre');
+  const banner = document.getElementById('globalBanner');
+  if (banner) banner.style.display = equipo ? 'flex' : 'none';
   const tmp = document.getElementById('bannerTemporada');
-  if (eq)  eq.textContent  = equipo;
-  if (nom) nom.textContent = nombre;
   if (tmp) tmp.textContent = temporada;
 }
 
@@ -3724,7 +3715,10 @@ function onWelcomeSeasonChange() {
 
 function goToWelcome() {
   fbWriteMeta('lastTeam', {});
+  activeTeam = '';
   document.getElementById('welcomeScreen').classList.remove('hidden');
+  const banner = document.getElementById('globalBanner');
+  if (banner) banner.style.display = 'none';
   renderWelcomeGrid();
 }
 

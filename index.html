@@ -109,6 +109,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .mod-tab{padding:9px 16px;font-size:12px;font-weight:600;color:var(--text-mut);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--tr),border-color var(--tr);display:flex;align-items:center;gap:5px}
 .mod-tab:hover{color:var(--rm)}
 .mod-tab.active{color:var(--rm);border-bottom-color:var(--rm)}
+/* Barra de contexto equipo+temporada */
+.ctx-bar{background:var(--rm-bg);border-bottom:1px solid var(--border);padding:5px 18px;display:flex;align-items:center;gap:10px;font-family:var(--font)}
+.ctx-bar-team{font-size:13px;font-weight:800;color:var(--rm)}
+.ctx-bar-sep{color:var(--border);font-size:12px}
+.ctx-bar-name{font-size:12px;font-weight:500;color:var(--text-sec)}
+.ctx-bar-season{font-size:12px;font-weight:700;color:var(--text)}
+.ctx-bar-label{font-size:10px;color:var(--text-mut);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
 .mod-badge{background:var(--rm-bg);color:var(--rm);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px}
 
 /* MAIN */
@@ -800,6 +807,15 @@ tr:hover .btn-edit{opacity:1}
   <button class="mod-tab" onclick="showMod('informes',this)">📊 Informes</button>
   <button class="mod-tab" onclick="showMod('comparativas',this)">⚖️ Comparativas</button>
 </nav>
+<!-- Barra de contexto: equipo y temporada activos -->
+<div class="ctx-bar" id="ctxBar">
+  <span class="ctx-bar-team" id="ctxTeam">CAS</span>
+  <span class="ctx-bar-sep">·</span>
+  <span class="ctx-bar-name" id="ctxName">Castilla</span>
+  <span class="ctx-bar-sep">|</span>
+  <span class="ctx-bar-label">Temporada</span>
+  <span class="ctx-bar-season" id="ctxSeason">2025/2026</span>
+</div>
 
 <main class="main">
 
@@ -2043,9 +2059,10 @@ function onSeasonChange() {
 }
 
 function updateContextBanner() {
-  const equipo   = activeTeam || 'CAS';
-  const nombre   = TEAM_FULL[equipo] || equipo;
+  const equipo    = activeTeam || 'CAS';
+  const nombre    = TEAM_FULL[equipo] || equipo;
   const temporada = activeSeason || '—';
+  // Banner en panel registro
   const eq  = document.getElementById('bannerEquipo');
   const nom = document.getElementById('bannerNombre');
   const tmp = document.getElementById('bannerTemporada');
@@ -2054,6 +2071,13 @@ function updateContextBanner() {
   if (nom) nom.textContent = nombre;
   if (tmp) tmp.textContent = temporada;
   if (ctx) ctx.textContent = `${equipo} · ${temporada}`;
+  // Barra de contexto global (todas las pestañas)
+  const ctxTeam   = document.getElementById('ctxTeam');
+  const ctxName   = document.getElementById('ctxName');
+  const ctxSeason = document.getElementById('ctxSeason');
+  if (ctxTeam)   ctxTeam.textContent   = equipo;
+  if (ctxName)   ctxName.textContent   = nombre;
+  if (ctxSeason) ctxSeason.textContent = temporada;
 }
 
 function buildTeamNav() {

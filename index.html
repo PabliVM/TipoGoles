@@ -802,6 +802,18 @@ tr:hover .btn-edit{opacity:1}
   <button class="mod-tab" onclick="showMod('comparativas',this)">⚖️ Comparativas</button>
 </nav>
 
+<!-- BANNER CONTEXTO GLOBAL -->
+<div class="context-banner" id="globalBanner" style="border-radius:0;margin:0">
+  <div>
+    <div class="context-banner-equipo" id="bannerEquipo">—</div>
+    <div class="context-banner-nombre" id="bannerNombre">—</div>
+  </div>
+  <div class="context-banner-sep"></div>
+  <div>
+    <div class="context-banner-label">Temporada</div>
+    <div class="context-banner-temporada" id="bannerTemporada">—</div>
+  </div>
+</div>
 
 <main class="main">
 
@@ -1609,7 +1621,8 @@ let _dashCtx = {}; // contexto compartido entre renderDashboard y sus helpers
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function dbKey(team, season) { return team + '_' + season.replace(/\//g,'_'); }
-function fbAvailable() { return window._fbReady === true; }
+function fbAvailable() { return !!(window._fbReady && window._fb?.db); }
+function fbReady() { return fbAvailable(); } // alias
 
 function setSyncState(state) {
   const dot = document.getElementById('syncDot');
@@ -2008,13 +2021,14 @@ document.addEventListener('DOMContentLoaded', () => {
    SEASON & TEAM NAV
    ===================================================== */
 function buildSeasonSelect() {
-  const opts = seasons.map(s => `<option value="${s}" ${s===activeSeason?'selected':''}>${s}</option>`).join('');
-  // Header principal
+  const opts = seasons.length
+    ? seasons.map(s => `<option value="${s}" ${s===activeSeason?'selected':''}>${s}</option>`).join('')
+    : `<option value="${activeSeason}">${activeSeason}</option>`;
   const sel = document.getElementById('seasonSelect');
   if (sel) sel.innerHTML = opts;
-  // Header welcome
   const wSel = document.getElementById('welcomeSeasonSelect');
   if (wSel) wSel.innerHTML = opts;
+  updateContextBanner();
 }
 
 function onSeasonChange() {

@@ -368,6 +368,42 @@ tr:hover .btn-edit{opacity:1}
 /* SPINNER */
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+/* AUTOCOMPLETE DROPDOWN */
+.autocomplete-wrap { position: relative; }
+.autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  background: var(--surface);
+  border: 1.5px solid var(--rm);
+  border-top: none;
+  border-radius: 0 0 var(--r) var(--r);
+  box-shadow: var(--sh-lg);
+  z-index: 500;
+  max-height: 180px;
+  overflow-y: auto;
+  display: none;
+}
+.autocomplete-list.open { display: block; }
+.autocomplete-item {
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text);
+  transition: background var(--tr);
+  border-bottom: 1px solid var(--border-light);
+}
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item:hover, .autocomplete-item.selected {
+  background: var(--rm-bg);
+  color: var(--rm);
+}
+.autocomplete-item mark {
+  background: transparent;
+  color: var(--rm);
+  font-weight: 800;
+}
+
 /* CONTEXTO ACTIVO — banner equipo+temporada en registro */
 .context-banner {
   display: flex;
@@ -887,7 +923,14 @@ tr:hover .btn-edit{opacity:1}
         </div>
         <div class="field-group">
           <label class="field-label">Rival</label>
-          <input class="field-input" type="text" id="f-rival" placeholder="Nombre del rival">
+          <div class="autocomplete-wrap">
+            <input class="field-input" type="text" id="f-rival" placeholder="Nombre del rival"
+              autocomplete="off"
+              oninput="acFilter('f-rival','rival')"
+              onkeydown="acKeydown(event,'f-rival')"
+              onblur="acBlur('f-rival')">
+            <div class="autocomplete-list" id="ac-f-rival"></div>
+          </div>
         </div>
         <div class="field-group">
           <label class="field-label">Nivel rival</label>
@@ -909,7 +952,14 @@ tr:hover .btn-edit{opacity:1}
         </div>
         <div class="field-group">
           <label class="field-label">Goleador</label>
-          <input class="field-input" type="text" id="f-goleador" placeholder="Nombre">
+          <div class="autocomplete-wrap">
+            <input class="field-input" type="text" id="f-goleador" placeholder="Nombre"
+              autocomplete="off"
+              oninput="acFilter('f-goleador','goleador')"
+              onkeydown="acKeydown(event,'f-goleador')"
+              onblur="acBlur('f-goleador')">
+            <div class="autocomplete-list" id="ac-f-goleador"></div>
+          </div>
         </div>
         <div class="field-group">
           <label class="field-label">Minuto</label>
@@ -3749,6 +3799,97 @@ async function loadDashFilters() {
     updateBlockBadges();
     updateActiveChips();
   } catch(e) {}
+}
+
+/* =====================================================
+   AUTOCOMPLETE — sugerencias desde BBDD
+   ===================================================== */
+
+// Obtener valores únicos de un campo de todos los goles del equipo+temporada activos
+function acGetValues(field) {
+  const goles = currentGoles();
+  const vals  = goles.map(g => (g[field] || '').trim()).filter(Boolean);
+  return [...new Set(vals)].sort((a,b) => a.localeCompare(b, 'es'));
+}
+
+// Filtrar y mostrar la lista
+function acFilter(inputId, field) {
+  const input = document.getElementById(inputId);
+  const list  = document.getElementById('ac-' + inputId);
+  if (!input || !list) return;
+
+  const query = input.value.trim().toLowerCase();
+  const all   = acGetValues(field);
+
+  // Filtrar: incluir si contiene el texto escrito
+  const matches = query.length === 0
+    ? all.slice(0, 10)
+    : all.filter(v => v.toLowerCase().includes(query)).slice(0, 10);
+
+  if (!matches.length) { list.classList.remove('open'); return; }
+
+  list.innerHTML = matches.map(v => {
+    let display = v;
+    if (query) {
+      try {
+        const safeQ = query.replace(/[-[\]{}()*+?.,\^$|#\s]/g, '\$&');
+        display = v.replace(new RegExp('(' + safeQ + ')', 'gi'), '<mark>$1</mark>');
+      } catch(e) { display = v; }
+    }
+    return `<div class="autocomplete-item" data-value="${v}"
+      onmousedown="acSelect('${inputId}',this.dataset.value)">${display}</div>`;
+  }).join('');
+
+  list.classList.add('open');
+}
+
+// Seleccionar un item
+function acSelect(inputId, value) {
+  const input = document.getElementById(inputId);
+  const list  = document.getElementById('ac-' + inputId);
+  if (input) input.value = value;
+  if (list)  { list.classList.remove('open'); list.innerHTML = ''; }
+}
+
+// Navegar con teclado
+function acKeydown(e, inputId) {
+  const list  = document.getElementById('ac-' + inputId);
+  if (!list || !list.classList.contains('open')) return;
+  const items = list.querySelectorAll('.autocomplete-item');
+  const sel   = list.querySelector('.autocomplete-item.selected');
+  let idx = sel ? [...items].indexOf(sel) : -1;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (sel) sel.classList.remove('selected');
+    idx = (idx + 1) % items.length;
+    items[idx].classList.add('selected');
+    items[idx].scrollIntoView({block:'nearest'});
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (sel) sel.classList.remove('selected');
+    idx = (idx - 1 + items.length) % items.length;
+    items[idx].classList.add('selected');
+    items[idx].scrollIntoView({block:'nearest'});
+  } else if (e.key === 'Enter' || e.key === 'Tab') {
+    const activeSel = list.querySelector('.selected');
+    if (activeSel) {
+      e.preventDefault();
+      acSelect(inputId, activeSel.dataset.value);
+    } else {
+      list.classList.remove('open');
+    }
+  } else if (e.key === 'Escape') {
+    list.classList.remove('open');
+  }
+}
+
+// Cerrar al perder foco (con pequeño delay para permitir mousedown)
+function acBlur(inputId) {
+  setTimeout(() => {
+    const list = document.getElementById('ac-' + inputId);
+    if (list) list.classList.remove('open');
+  }, 150);
 }
 
 /* =====================================================

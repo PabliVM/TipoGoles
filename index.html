@@ -3371,7 +3371,40 @@ function renderDashboard() {
       case 'chartGoleador':{
         const entries = sortedCount(data,'goleador',15);
         const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
-        const plugin = alwaysLabelPlugin(id, false);
+        const maxVal = entries[0]?.[1] || 1;
+        const hBarPlugin = {
+          id:'hbar_goleador',
+          afterDatasetsDraw(chart) {
+            const c2 = chart.ctx;
+            const _tot = _dashCtx.total;
+            const _dark = _dashCtx.isDark;
+            chart.data.datasets[0].data.forEach((val, i) => {
+              if (!val) return;
+              const meta = chart.getDatasetMeta(0);
+              const el = meta.data[i];
+              const barH = el.height || 16;
+              const barEnd = el.x; // extremo derecho de la barra
+              const y = el.y;
+              const label = `${val}  (${pct(val,_tot)}%)`;
+              c2.save();
+              c2.font = `700 11px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'middle';
+              c2.textAlign = 'left';
+              // Dentro de la barra si hay espacio, si no fuera
+              const textW = c2.measureText(label).width;
+              if (barEnd - chart.chartArea.left > textW + 16) {
+                c2.fillStyle = '#fff';
+                c2.shadowColor = 'rgba(0,0,0,.4)';
+                c2.shadowBlur = 2;
+                c2.fillText(label, barEnd - textW - 8, y);
+              } else {
+                c2.fillStyle = _dark ? '#e4e6ea' : '#1f2937';
+                c2.fillText(label, barEnd + 6, y);
+              }
+              c2.restore();
+            });
+          }
+        };
         charts[id] = new Chart(ctx, {
           type:'bar',
           data:{labels:entries.map(x=>x[0]), datasets:[{
@@ -3379,15 +3412,15 @@ function renderDashboard() {
             backgroundColor:entries.map((_,i)=>QUAL_PALETTE[i%QUAL_PALETTE.length]),
             borderRadius:5, borderSkipped:false
           }]},
-          plugins:[plugin],
+          plugins:[hBarPlugin],
           options:{
             responsive:true, maintainAspectRatio:true,
-            layout:{padding:{top:22}},
+            layout:{padding:{right:80, top:4, bottom:4}},
             indexAxis:'y',
             plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,total)}%)`}}},
             scales:{
-              x:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}},
-              y:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}}
+              x:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1},max:maxVal*1.25},
+              y:{grid:{display:false},ticks:{color:tickColor,font:{size:11}}}
             }
           }
         }); break; }
@@ -3396,7 +3429,38 @@ function renderDashboard() {
       case 'chartRival':{
         const entries = sortedCount(data,'rival',15);
         const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
-        const plugin = alwaysLabelPlugin(id, false);
+        const maxVal2 = entries[0]?.[1] || 1;
+        const hBarPlugin2 = {
+          id:'hbar_rival',
+          afterDatasetsDraw(chart) {
+            const c2 = chart.ctx;
+            const _tot = _dashCtx.total;
+            const _dark = _dashCtx.isDark;
+            chart.data.datasets[0].data.forEach((val, i) => {
+              if (!val) return;
+              const meta = chart.getDatasetMeta(0);
+              const el = meta.data[i];
+              const barEnd = el.x;
+              const y = el.y;
+              const label = `${val}  (${pct(val,_tot)}%)`;
+              c2.save();
+              c2.font = `700 11px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'middle';
+              c2.textAlign = 'left';
+              const textW = c2.measureText(label).width;
+              if (barEnd - chart.chartArea.left > textW + 16) {
+                c2.fillStyle = '#fff';
+                c2.shadowColor = 'rgba(0,0,0,.4)';
+                c2.shadowBlur = 2;
+                c2.fillText(label, barEnd - textW - 8, y);
+              } else {
+                c2.fillStyle = _dark ? '#e4e6ea' : '#1f2937';
+                c2.fillText(label, barEnd + 6, y);
+              }
+              c2.restore();
+            });
+          }
+        };
         charts[id] = new Chart(ctx, {
           type:'bar',
           data:{labels:entries.map(x=>x[0]), datasets:[{
@@ -3404,15 +3468,15 @@ function renderDashboard() {
             backgroundColor:entries.map((_,i)=>QUAL_PALETTE[i%QUAL_PALETTE.length]),
             borderRadius:5, borderSkipped:false
           }]},
-          plugins:[plugin],
+          plugins:[hBarPlugin2],
           options:{
             responsive:true, maintainAspectRatio:true,
-            layout:{padding:{top:22}},
+            layout:{padding:{right:80, top:4, bottom:4}},
             indexAxis:'y',
             plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,total)}%)`}}},
             scales:{
-              x:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}},
-              y:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}}
+              x:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1},max:maxVal2*1.25},
+              y:{grid:{display:false},ticks:{color:tickColor,font:{size:11}}}
             }
           }
         }); break; }

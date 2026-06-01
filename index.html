@@ -2970,7 +2970,7 @@ function renderDashboard() {
     // Plugin de etiquetas: estrategia diferente según tipo de gráfico
     const labelPlugin = {
       id: 'lbl_'+id,
-      afterDatasetsDraw(chart) {
+      afterDraw(chart) {
         if (!getShowLabels(id)) return;
         const c2 = chart.ctx;
         const chartArea = chart.chartArea;
@@ -2990,26 +2990,25 @@ function renderDashboard() {
 
             if (isCircular) {
               const angle = el.endAngle - el.startAngle;
-              if (angle < 0.15) { c2.restore(); return; } // arco demasiado pequeño
+              if (angle < 0.15) { c2.restore(); return; }
 
               const midAngle = (el.startAngle + el.endAngle) / 2;
               const r = (el.outerRadius + el.innerRadius) / 2;
               const x = el.x + Math.cos(midAngle) * r;
               const y = el.y + Math.sin(midAngle) * r;
 
-              // Número encima
-              c2.fillStyle = '#fff';
-              c2.font = `800 11px 'Segoe UI',sans-serif`;
               c2.textAlign = 'center';
-              c2.textBaseline = 'bottom';
-              c2.shadowColor = 'rgba(0,0,0,.6)';
-              c2.shadowBlur = 3;
-              c2.fillText(String(val), x, y + 1);
-              // Porcentaje debajo
-              c2.font = `700 9px 'Segoe UI',sans-serif`;
+              c2.shadowColor = 'rgba(0,0,0,.7)';
+              c2.shadowBlur = 4;
+              // Número
               c2.fillStyle = '#fff';
+              c2.font = `bold 11px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'bottom';
+              c2.fillText(String(val), x, y + 1);
+              // Porcentaje
+              c2.font = `bold 9px 'Segoe UI',sans-serif`;
+              c2.shadowBlur = 3;
               c2.textBaseline = 'top';
-              c2.shadowBlur = 2;
               c2.fillText(pctTxt, x, y + 2);
 
             } else {
@@ -3119,7 +3118,7 @@ function renderDashboard() {
     if (!getShowLabels(id)) return null;
     return {
       id: 'mlbl_'+id,
-      afterDatasetsDraw(chart) {
+      afterDraw(chart) {
         if (!getShowLabels(id)) return;
         const c2 = chart.ctx;
         const _tot = _dashCtx.total;
@@ -3245,85 +3244,76 @@ function renderDashboard() {
     return insideBarPlugin('albl_'+id);
   }
 
+  // Dibuja etiquetas sobre un chart de barras — llamado desde animation.onComplete
+  function drawBarLabels(chart) {
+    const c2 = chart.ctx;
+    const _tot = _dashCtx.total || 1;
+    const _dark = _dashCtx.isDark;
+    const isH = chart.options.indexAxis === 'y';
+
+    chart.data.datasets.forEach((ds, di) => {
+      const meta = chart.getDatasetMeta(di);
+      if (meta.hidden) return;
+      meta.data.forEach((el, i) => {
+        const val = ds.data[i];
+        if (!val || val <= 0) return;
+
+        const barH = isH ? (el.height || el.width || 0) : Math.abs(el.base - el.y);
+        const barW = isH ? Math.abs(el.x - el.base) : (el.width || el.height || 0);
+        const pctTxt = pct(val, _tot) + '%';
+        const combined = `${val} (${pctTxt})`;
+
+        c2.save();
+        c2.font = `bold 10px 'Segoe UI',sans-serif`;
+        const textW = c2.measureText(combined).width;
+        const spaceInside = isH ? barW : barH;
+        const cx = isH ? el.base + (el.x - el.base) / 2 : el.x;
+        const cy = isH ? el.y : el.y + barH / 2;
+
+        if (spaceInside >= textW + 8) {
+          // Cabe completo DENTRO
+          c2.textAlign = 'center';
+          c2.textBaseline = 'middle';
+          c2.fillStyle = '#fff';
+          c2.shadowColor = 'rgba(0,0,0,.6)';
+          c2.shadowBlur = 3;
+          c2.fillText(combined, cx, cy);
+        } else if (spaceInside >= 20) {
+          // Solo número dentro
+          c2.textAlign = 'center';
+          c2.textBaseline = 'middle';
+          c2.fillStyle = '#fff';
+          c2.shadowColor = 'rgba(0,0,0,.6)';
+          c2.shadowBlur = 3;
+          c2.fillText(String(val), cx, cy);
+          // % encima
+          c2.shadowBlur = 0;
+          c2.fillStyle = _dark ? '#d1d5db' : '#374151';
+          c2.font = `600 9px 'Segoe UI',sans-serif`;
+          if (!isH) { c2.textBaseline = 'bottom'; c2.fillText(pctTxt, el.x, el.y - 2); }
+          else       { c2.textAlign = 'left'; c2.textBaseline = 'middle'; c2.fillText(pctTxt, el.x + 4, el.y); }
+        } else {
+          // Barra muy pequeña → fuera
+          c2.shadowBlur = 0;
+          c2.fillStyle = _dark ? '#e4e6ea' : '#1f2937';
+          c2.font = `bold 9px 'Segoe UI',sans-serif`;
+          if (isH) {
+            c2.textAlign = 'left'; c2.textBaseline = 'middle';
+            c2.fillText(combined, el.x + 4, el.y);
+          } else {
+            c2.textAlign = 'center'; c2.textBaseline = 'bottom';
+            c2.fillText(combined, el.x, el.y - 2);
+          }
+        }
+        c2.restore();
+      });
+    });
+  }
+
   function insideBarPlugin(pluginId) {
     return {
       id: pluginId,
-      afterDatasetsDraw(chart) {
-        const c2 = chart.ctx;
-        const _tot = _dashCtx.total;
-        const _dark = _dashCtx.isDark;
-        const isH = chart.options.indexAxis === 'y';
-
-        chart.data.datasets.forEach((ds, di) => {
-          const meta = chart.getDatasetMeta(di);
-          if (meta.hidden) return;
-          meta.data.forEach((el, i) => {
-            const val = ds.data[i];
-            if (!val || val <= 0) return;
-
-            const barH = isH ? (el.width  || 0) : Math.abs(el.base - el.y);
-            const barW = isH ? Math.abs(el.x - el.base) : (el.width || 0);
-
-            const pctTxt = pct(val, _tot) + '%';
-            const combined = `${val} (${pctTxt})`;
-            const onlyNum  = String(val);
-
-            c2.save();
-            c2.font = `700 10px 'Segoe UI',sans-serif`;
-            const textW = c2.measureText(combined).width;
-            const numW  = c2.measureText(onlyNum).width;
-
-            const cx = isH ? el.base + (el.x - el.base) / 2 : el.x;
-            const cy = isH ? el.y : el.y + barH / 2;
-
-            const spaceInside = isH ? barW : barH;
-
-            if (spaceInside > textW + 10) {
-              // Texto completo DENTRO
-              c2.textAlign = 'center';
-              c2.textBaseline = 'middle';
-              c2.fillStyle = '#fff';
-              c2.shadowColor = 'rgba(0,0,0,.5)';
-              c2.shadowBlur = 3;
-              c2.fillText(combined, cx, cy);
-
-            } else if (spaceInside > numW + 6) {
-              // Solo número DENTRO
-              c2.textAlign = 'center';
-              c2.textBaseline = 'middle';
-              c2.fillStyle = '#fff';
-              c2.shadowColor = 'rgba(0,0,0,.5)';
-              c2.shadowBlur = 3;
-              c2.fillText(onlyNum, cx, cy);
-              // % ENCIMA
-              c2.shadowBlur = 0;
-              c2.fillStyle = _dark ? '#9095a0' : '#374151';
-              c2.font = `600 9px 'Segoe UI',sans-serif`;
-              c2.textBaseline = 'bottom';
-              if (!isH) c2.fillText(pctTxt, el.x, el.y - 2);
-
-            } else {
-              // Barra muy pequeña: texto ENCIMA/AL LADO en oscuro
-              c2.shadowBlur = 0;
-              c2.fillStyle = _dark ? '#e4e6ea' : '#1f2937';
-              c2.font = `700 9px 'Segoe UI',sans-serif`;
-              if (isH) {
-                // Barra horizontal → texto a la derecha
-                c2.textAlign = 'left';
-                c2.textBaseline = 'middle';
-                c2.fillText(combined, el.x + 4, el.y);
-              } else {
-                // Barra vertical → texto encima
-                c2.textAlign = 'center';
-                c2.textBaseline = 'bottom';
-                c2.fillText(combined, el.x, el.y - 2);
-              }
-            }
-
-            c2.restore();
-          });
-        });
-      }
+      afterDraw(chart) { drawBarLabels(chart); }
     };
   }
 

@@ -644,22 +644,23 @@ tr:hover .btn-edit{opacity:1}
 
 /* ── PDF Header: fijo arriba — se repite en TODAS las páginas ── */
   .pdf-header {
-    display: flex !important;
-    position: fixed !important;
-    top: 6mm !important;
-    left: 10mm !important;
-    right: 10mm !important;
-    align-items: center !important;
-    gap: 12px !important;
-    background: #2563eb !important;
-    border-radius: 5px !important;
-    padding: 7px 12px !important;
-    margin: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    box-sizing: border-box !important;
-    z-index: 9999 !important;
-  }
+  display: flex !important;
+  position: fixed !important;
+  top: 4mm !important;
+  left: 10mm !important;
+  right: 10mm !important;
+  width: auto !important;
+  max-width: none !important;
+  height: 13mm !important;
+  align-items: center !important;
+  gap: 10px !important;
+  background: #2563eb !important;
+  border-radius: 5px !important;
+  padding: 5px 10px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  z-index: 9999 !important;
+}
 
   /* Clones del header insertados por JS para páginas 2+ */
   .pdf-header-clone {
@@ -4394,5 +4395,4 @@ function showToast(msg,type='green'){
 </script>
 </body>
 </html>
-
 

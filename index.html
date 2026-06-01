@@ -2935,7 +2935,7 @@ function renderDashboard() {
   // Update PDF header meta
   const teamsLabel = [activeTeam,...extraTeams].join(', ');
   document.getElementById('pdfTitle').textContent = `Tipología de Goles — ${teamsLabel}`;
-  document.getElementById('pdfSub').textContent = '';
+  document.getElementById('pdfSub').textContent = `Temporada ${activeSeason}`;
   document.getElementById('pdfMeta').innerHTML = `${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
 
   if(!data.length){
@@ -3755,7 +3755,7 @@ const PRINT_H_TALL = 260;   // gráficos full-width
 
 function exportPDF() {
   document.getElementById('pdfTitle').textContent = `Tipología de Goles — ${TEAM_FULL[activeTeam]||activeTeam}`;
-  document.getElementById('pdfSub').textContent = '';
+  document.getElementById('pdfSub').textContent = `Temporada ${activeSeason}`;
   document.getElementById('pdfMeta').innerHTML = `${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
   prepareChartsForPrint(charts, layoutState).then(() => {
     window.print();
@@ -4391,5 +4391,6 @@ function showToast(msg,type='green'){
 </script>
 </body>
 </html>
+
 
 

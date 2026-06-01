@@ -2869,7 +2869,7 @@ function resetLayout(){editorState=CHART_CATALOG.map(c=>({id:c.id,visible:c.visi
 /* =====================================================
    DASHBOARD — RENDER
    ===================================================== */
-function count(data,field){const a={};data.forEach(g=>{const v=g[field]||'Sin datos';a[v]=(a[v]||0)+1;});return a;}
+function count(data,field){const a={};data.forEach(g=>{const v=(g[field]??'').toString().trim();if(!v||v==='undefined'||v==='null')return;a[v]=(a[v]||0)+1;});return a;}
 function sortedCount(data,field,limit=999){return Object.entries(count(data,field)).sort((a,b)=>b[1]-a[1]).slice(0,limit);}
 function pct(n,t){return t?((n/t)*100).toFixed(1):'0';}
 
@@ -3221,24 +3221,33 @@ function renderDashboard() {
             const val = ds.data[i];
             if (!val || val <= 0) return;
             const barH = Math.abs(el.base - el.y);
+            const barW = el.width || 20;
             const pctTxt = pct(val, _tot) + '%';
             c2.save();
             c2.textAlign = 'center';
-            c2.shadowColor = 'rgba(0,0,0,.25)';
-            c2.shadowBlur = 2;
-            // Número dentro si hay espacio
-            if (barH >= 16) {
+
+            // Solo mostrar si la barra tiene al menos 8px de ancho (evita solapamiento)
+            if (barW < 8) { c2.restore(); return; }
+
+            // Número dentro si barra alta (>= 18px)
+            if (barH >= 18) {
               c2.fillStyle = '#fff';
-              c2.font = `700 9px 'Segoe UI',sans-serif`;
+              c2.font = `700 ${Math.min(11, Math.max(8, Math.floor(barW/3)))}px 'Segoe UI',sans-serif`;
               c2.textBaseline = 'middle';
+              c2.shadowColor = 'rgba(0,0,0,.4)';
+              c2.shadowBlur = 2;
               c2.fillText(String(val), el.x, el.y + barH/2);
+              c2.shadowBlur = 0;
             }
-            // % encima siempre
-            c2.shadowBlur = 0;
-            c2.fillStyle = _dark ? '#9095a0' : '#4b5563';
-            c2.font = `600 8px 'Segoe UI',sans-serif`;
-            c2.textBaseline = 'bottom';
-            c2.fillText(pctTxt, el.x, el.y - 2);
+
+            // % encima — solo si hay espacio (barra ancha suficiente > 18px)
+            if (barW >= 18) {
+              c2.fillStyle = _dark ? '#9095a0' : '#374151';
+              c2.font = `600 8px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'bottom';
+              c2.fillText(pctTxt, el.x, el.y - 2);
+            }
+
             c2.restore();
           });
         });
@@ -3330,9 +3339,12 @@ function renderDashboard() {
           plugins:[plugin],
           options:{
             responsive:true, maintainAspectRatio:true,
-            layout:{padding:{top:22}},
+            layout:{padding:{top:26, left:8, right:8}},
             plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,total)}%)`}}},
-            scales:{x:{grid:{color:gridColor},ticks:{color:tickColor}},y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
+            scales:{
+              x:{grid:{color:gridColor},ticks:{color:tickColor}},
+              y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}
+            }
           }
         }); break; }
 
@@ -3427,7 +3439,34 @@ function renderDashboard() {
       case 'chartTipologia':  renderChartColored(id,'tipologia');  break;
       case 'chartPosicRobo':  renderChartColored(id,'posicRobo');  break;
       case 'chartPrimerPase': renderChartColored(id,'primerPase'); break;
-      case 'chartZona':       renderChartColored(id,'zonaRemate'); break;
+      case 'chartZona':{
+        const e = sortedCount(data,'zonaRemate').filter(x=>x[1]>0);
+        const colors = e.map((x,i) => fieldColor(x[0], i));
+        const plugin = alwaysLabelPlugin(id, false);
+        const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
+        // Etiquetas del eje X abreviadas para que no se solapen
+        const shortLabels = e.map(x => x[0].length > 12 ? x[0].slice(0,11)+'…' : x[0]);
+        charts[id] = new Chart(ctx, {
+          type:'bar',
+          data:{labels:shortLabels, datasets:[{
+            data:e.map(x=>x[1]),
+            backgroundColor:colors,
+            borderRadius:5, borderSkipped:false
+          }]},
+          plugins:[plugin],
+          options:{
+            responsive:true, maintainAspectRatio:true,
+            layout:{padding:{top:22, left:4, right:4}},
+            plugins:{
+              legend:{display:false},
+              tooltip:{callbacks:{label:c=>` ${e[c.dataIndex]?.[0]||''}: ${c.parsed.y} (${pct(c.parsed.y,total)}%)`}}
+            },
+            scales:{
+              x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:9},maxRotation:35,minRotation:0}},
+              y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}
+            }
+          }
+        }); break; }
       case 'chartTipoPase':   renderChartColored(id,'tipoPase');   break;
       case 'chartSuperficie': renderSuperficieSVG(id, data); break;
       case 'chartZonaRobo':   renderZonaRoboSVG(id, data); break;

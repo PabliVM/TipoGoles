@@ -2068,11 +2068,19 @@ document.addEventListener('DOMContentLoaded', () => {
         updateBadge();
         renderTabla();
 
-        // Restaurar último panel
-        const panelSnap = await getDoc(doc(fdb, 'meta', 'lastPanel'));
-        const panelName = panelSnap.exists() ? (panelSnap.data().panel || 'importar') : 'importar';
+        // Restaurar último panel — sessionStorage primero (instantáneo), Firebase como fallback
         const validPanels = ['importar','registro','bbdd','informes','comparativas'];
-        const panel = validPanels.includes(panelName) ? panelName : 'importar';
+        let panel = 'importar';
+        try {
+          const ss = sessionStorage.getItem('tg-panel');
+          if (ss && validPanels.includes(ss)) {
+            panel = ss;
+          } else {
+            const panelSnap = await getDoc(doc(fdb, 'meta', 'lastPanel'));
+            const panelName = panelSnap.exists() ? (panelSnap.data().panel || 'importar') : 'importar';
+            panel = validPanels.includes(panelName) ? panelName : 'importar';
+          }
+        } catch(e) {}
         const panelTab = document.querySelector(`.mod-tab[onclick*="${panel}"]`);
         if (panelTab) showMod(panel, panelTab);
 
@@ -2315,6 +2323,8 @@ function showMod(name, btn) {
   if (name === 'informes') { loadDashFilters(); renderDashboard(); }
   if (name === 'bbdd') renderTabla();
   if (name === 'comparativas') renderComp();
+  // Guardar panel en sessionStorage (instantáneo) + Firebase (persistente entre dispositivos)
+  try { sessionStorage.setItem('tg-panel', name); } catch(e) {}
   fbWriteMeta('lastPanel', {panel: name});
 }
 
@@ -2980,33 +2990,26 @@ function renderDashboard() {
 
             if (isCircular) {
               const angle = el.endAngle - el.startAngle;
-              if (angle < 0.2) { c2.restore(); return; } // arco demasiado pequeño
+              if (angle < 0.15) { c2.restore(); return; } // arco demasiado pequeño
 
               const midAngle = (el.startAngle + el.endAngle) / 2;
               const r = (el.outerRadius + el.innerRadius) / 2;
               const x = el.x + Math.cos(midAngle) * r;
               const y = el.y + Math.sin(midAngle) * r;
 
-              // Fondo semitransparente para legibilidad
-              const label = `${val}
-${pctTxt}`;
-              c2.fillStyle = 'rgba(0,0,0,.35)';
-              c2.beginPath();
-              c2.roundRect(x-18, y-14, 36, 26, 4);
-              c2.fill();
-
-              // Número
+              // Número encima
               c2.fillStyle = '#fff';
               c2.font = `800 11px 'Segoe UI',sans-serif`;
+              c2.textAlign = 'center';
               c2.textBaseline = 'bottom';
-              c2.shadowColor = 'rgba(0,0,0,.5)';
-              c2.shadowBlur = 2;
+              c2.shadowColor = 'rgba(0,0,0,.6)';
+              c2.shadowBlur = 3;
               c2.fillText(String(val), x, y + 1);
-              // Porcentaje
+              // Porcentaje debajo
               c2.font = `700 9px 'Segoe UI',sans-serif`;
-              c2.fillStyle = 'rgba(255,255,255,.9)';
+              c2.fillStyle = '#fff';
               c2.textBaseline = 'top';
-              c2.shadowBlur = 0;
+              c2.shadowBlur = 2;
               c2.fillText(pctTxt, x, y + 2);
 
             } else {
@@ -3248,6 +3251,7 @@ ${pctTxt}`;
       afterDatasetsDraw(chart) {
         const c2 = chart.ctx;
         const _tot = _dashCtx.total;
+        const _dark = _dashCtx.isDark;
         const isH = chart.options.indexAxis === 'y';
 
         chart.data.datasets.forEach((ds, di) => {
@@ -3258,31 +3262,64 @@ ${pctTxt}`;
             if (!val || val <= 0) return;
 
             const barH = isH ? (el.width  || 0) : Math.abs(el.base - el.y);
-            const barW = isH ? Math.abs(el.base - el.x) : (el.width || 0);
-            if (barH < 10 || barW < 10) return; // barra demasiado pequeña
+            const barW = isH ? Math.abs(el.x - el.base) : (el.width || 0);
 
             const pctTxt = pct(val, _tot) + '%';
-            const combined = `${val}  (${pctTxt})`;
+            const combined = `${val} (${pctTxt})`;
+            const onlyNum  = String(val);
+
+            c2.save();
+            c2.font = `700 10px 'Segoe UI',sans-serif`;
+            const textW = c2.measureText(combined).width;
+            const numW  = c2.measureText(onlyNum).width;
 
             const cx = isH ? el.base + (el.x - el.base) / 2 : el.x;
             const cy = isH ? el.y : el.y + barH / 2;
 
-            c2.save();
-            c2.textAlign = 'center';
-            c2.textBaseline = 'middle';
-            c2.shadowColor = 'rgba(0,0,0,.5)';
-            c2.shadowBlur = 3;
-            c2.fillStyle = '#fff';
-            c2.font = `700 10px 'Segoe UI',sans-serif`;
+            const spaceInside = isH ? barW : barH;
 
-            // Si cabe el texto completo dentro
-            const textW = c2.measureText(combined).width;
-            if ((isH ? barW : barH) > textW + 8) {
+            if (spaceInside > textW + 10) {
+              // Texto completo DENTRO
+              c2.textAlign = 'center';
+              c2.textBaseline = 'middle';
+              c2.fillStyle = '#fff';
+              c2.shadowColor = 'rgba(0,0,0,.5)';
+              c2.shadowBlur = 3;
               c2.fillText(combined, cx, cy);
-            } else if ((isH ? barW : barH) > 22) {
-              // Solo el número
-              c2.fillText(String(val), cx, cy);
+
+            } else if (spaceInside > numW + 6) {
+              // Solo número DENTRO
+              c2.textAlign = 'center';
+              c2.textBaseline = 'middle';
+              c2.fillStyle = '#fff';
+              c2.shadowColor = 'rgba(0,0,0,.5)';
+              c2.shadowBlur = 3;
+              c2.fillText(onlyNum, cx, cy);
+              // % ENCIMA
+              c2.shadowBlur = 0;
+              c2.fillStyle = _dark ? '#9095a0' : '#374151';
+              c2.font = `600 9px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'bottom';
+              if (!isH) c2.fillText(pctTxt, el.x, el.y - 2);
+
+            } else {
+              // Barra muy pequeña: texto ENCIMA/AL LADO en oscuro
+              c2.shadowBlur = 0;
+              c2.fillStyle = _dark ? '#e4e6ea' : '#1f2937';
+              c2.font = `700 9px 'Segoe UI',sans-serif`;
+              if (isH) {
+                // Barra horizontal → texto a la derecha
+                c2.textAlign = 'left';
+                c2.textBaseline = 'middle';
+                c2.fillText(combined, el.x + 4, el.y);
+              } else {
+                // Barra vertical → texto encima
+                c2.textAlign = 'center';
+                c2.textBaseline = 'bottom';
+                c2.fillText(combined, el.x, el.y - 2);
+              }
             }
+
             c2.restore();
           });
         });

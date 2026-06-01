@@ -1644,6 +1644,13 @@ const DASH_FILTER_MAP = {
 };
 
 // Paleta cualitativa: colores bien diferenciados para doughnuts/categorías
+// Lista completa de estilos (todos los posibles del catálogo)
+const ALL_ESTILOS = ['Centro retrasado','Centro profundidad','Juego combinativo (paredes)',
+  'Juego combinativo (último pase)','Acción individual','Falta directa','Falta indirecta',
+  'Córner directo','Córner no directo','Saque de banda y centro','Saque de banda y combinativo',
+  'Penalti','Transicion','Juego directo','Saque de banda + tiro','Propia puerta',
+  'Equilibrio','Otros'];
+
 // Paleta cualitativa principal — colores bien diferenciados, buen contraste en PDF
 const QUAL_PALETTE = ['#1d4ed8','#15803d','#b91c1c','#c2410c','#6d28d9','#0e7490','#92400e','#9d174d','#065f46','#1e3a5f'];
 const RM_PALETTE = QUAL_PALETTE;
@@ -2803,13 +2810,15 @@ function renderEditorList() {
       let estiloOrderHtml = '';
       if (id === 'chartEstilo') {
         // Obtener estilos existentes en los datos actuales
-        const existingEstilos = [...new Set(currentGoles().map(g=>g.estilo).filter(Boolean))].sort();
+        // Usar lista completa de estilos + los que existan en los datos
+        const dataEstilos = [...new Set(currentGoles().map(g=>g.estilo).filter(Boolean))];
+        const allEstilos  = [...new Set([...ALL_ESTILOS, ...dataEstilos])];
         const orderArr = state.estiloOrder && state.estiloOrder.length
-          ? state.estiloOrder
-          : existingEstilos;
-        // Añadir estilos que no están en el orden
+          ? [...state.estiloOrder]
+          : [...allEstilos];
+        // Añadir estilos nuevos que no estén en el orden
         const inOrder = new Set(orderArr);
-        existingEstilos.forEach(e => { if (!inOrder.has(e)) orderArr.push(e); });
+        allEstilos.forEach(e => { if (!inOrder.has(e)) orderArr.push(e); });
         const items = orderArr.map((name, idx) => `
           <div class="estilo-order-item" data-idx="${idx}">
             <span style="font-size:9px;color:var(--text-mut);width:14px;text-align:center">${idx+1}</span>
@@ -2866,11 +2875,11 @@ function moveEstilo(id, idx, dir) {
   const s = editorState.find(e => e.id===id);
   if (!s) return;
   // Obtener orden actual
-  const existingEstilos = [...new Set(currentGoles().map(g=>g.estilo).filter(Boolean))].sort();
-  const arr = s.estiloOrder && s.estiloOrder.length ? [...s.estiloOrder] : [...existingEstilos];
-  // Añadir estilos que no están
-  const inOrder = new Set(arr);
-  existingEstilos.forEach(e => { if (!inOrder.has(e)) arr.push(e); });
+  const dataEstilos2 = [...new Set(currentGoles().map(g=>g.estilo).filter(Boolean))];
+  const allEstilos2  = [...new Set([...ALL_ESTILOS, ...dataEstilos2])];
+  const arr = s.estiloOrder && s.estiloOrder.length ? [...s.estiloOrder] : [...allEstilos2];
+  const inOrder2 = new Set(arr);
+  allEstilos2.forEach(e => { if (!inOrder2.has(e)) arr.push(e); });
   // Mover
   const newIdx = idx + dir;
   if (newIdx < 0 || newIdx >= arr.length) return;

@@ -618,10 +618,13 @@ tr:hover .btn-edit{opacity:1}
 
   /* --- Ocultar UI chrome --- */
   .header, .nav-teams, .nav-modules, .app-footer,
-  .dash-topbar, .dash-filter-panel, .editor-overlay,
-  .editor-sidebar, .toast, .btn-del, .btn-edit,
-  #btnToggleFilters, #btnResetFilters, #btnEditorOpen,
-  #btnExportPDF, #btnCompExportPDF { display: none !important; }
+.dash-topbar, .dash-filter-panel, .editor-overlay,
+.editor-sidebar, .toast, .btn-del, .btn-edit,
+#globalBanner, .context-banner,
+#btnToggleFilters, #btnResetFilters, #btnEditorOpen,
+#btnExportPDF, #btnCompExportPDF {
+  display: none !important;
+}
 
   body {
     background: #fff !important;
@@ -4391,6 +4394,5 @@ function showToast(msg,type='green'){
 </script>
 </body>
 </html>
-
 
 

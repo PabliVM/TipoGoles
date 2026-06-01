@@ -654,16 +654,23 @@ tr:hover .btn-edit{opacity:1}
   .pdf-header-clone {
     display: flex !important;
     background: #2563eb !important;
-    border-radius: 5px !important;
+    border-radius: 0 0 5px 5px !important;
     padding: 8px 12px !important;
-    margin-bottom: 8px !important;
+    margin-bottom: 10px !important;
     break-before: page !important;
     page-break-before: always !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    /* Mismas dimensiones que el header original */
+    align-items: center !important;
+    gap: 14px !important;
   }
+  .pdf-header-clone .pdf-header-logo { display: flex !important; }
+  .pdf-header-clone .pdf-header-title { color: #fff !important; font-size: 17px !important; font-weight: 800 !important; }
+  .pdf-header-clone .pdf-header-sub { color: rgba(255,255,255,.75) !important; }
+  .pdf-header-clone .pdf-header-meta { color: rgba(255,255,255,.65) !important; }
 
   /* ── KPIs ── */
   .kpi-grid {
@@ -1583,21 +1590,21 @@ const DEFAULT_SEASONS = ['2025/2026'];
 //   rank   → solo ranking
 //   svg    → visualización SVG propia
 const CHART_CATALOG = [
-  {id:'chartTramo',       title:'GOLES POR TRAMO DE MINUTO',  icon:'', bloque:'Generales',        full:true,  visible:true,  chartType:'bar',      dataType:'dual'},
-  {id:'chartLV',          title:'LOCAL VS VISITANTE',          icon:'', bloque:'Generales',        full:false, visible:true,  chartType:'bar',      dataType:'dual'},
-  {id:'chartGoleador',    title:'RANKING GOLEADORES',          icon:'', bloque:'Generales',        full:false, visible:true,  chartType:'rank',     dataType:'rank'},
-  {id:'chartRival',       title:'GOLES POR RIVAL',             icon:'', bloque:'Generales',        full:false, visible:false, chartType:'rank',     dataType:'rank'},
+  {id:'chartTramo',       title:'GOLES POR TRAMO DE MINUTO',  icon:'', bloque:'Generales',        full:true,  visible:true,  chartType:'bar_group',dataType:'dual'},
+  {id:'chartLV',          title:'LOCAL VS VISITANTE',          icon:'', bloque:'Generales',        full:false, visible:true,  chartType:'bar_group',dataType:'dual'},
   {id:'chartTipologia',   title:'GOLES POR TIPOLOGÍA',         icon:'', bloque:'Tácticos',         full:false, visible:true,  chartType:'doughnut', dataType:'single'},
   {id:'chartEstilo',      title:'RANKING DE ESTILOS',          icon:'', bloque:'Tácticos',         full:true,  visible:true,  chartType:'rank',     dataType:'rank'},
   {id:'chartZonaRobo',    title:'ZONAS DE ROBO',               icon:'', bloque:'Tácticos',         full:false, visible:true,  chartType:'svg',      dataType:'svg'},
   {id:'chartPosicRobo',   title:'CARRILES DE ROBO',            icon:'', bloque:'Tácticos',         full:false, visible:true,  chartType:'bar',      dataType:'single'},
-  {id:'chartPrimerPase',  title:'PRIMER PASE',                 icon:'', bloque:'Tácticos',         full:false, visible:false, chartType:'bar',      dataType:'single'},
+  {id:'chartPrimerPase',  title:'PRIMER PASE',                 icon:'', bloque:'Tácticos',         full:false, visible:true,  chartType:'bar',      dataType:'single'},
   {id:'chartZonaRoboXTip',title:'ZONA ROBO × TIPOLOGÍA',       icon:'', bloque:'Tácticos',         full:true,  visible:false, chartType:'bar',      dataType:'cross'},
   {id:'chartSuperficie',  title:'SUPERFICIE DE REMATE',        icon:'', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'svg',      dataType:'svg'},
   {id:'chartZona',        title:'ZONA DE REMATE',              icon:'', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar',      dataType:'single'},
   {id:'chartTipoPase',    title:'TIPO DE PASE',                icon:'', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'doughnut', dataType:'single'},
-  {id:'chartContactos',   title:'Nº DE CONTACTOS',             icon:'', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar',      dataType:'single'},
-  {id:'chartDifMarcador', title:'DIFERENCIA EN MARCADOR',      icon:'', bloque:'Técnico-tácticos', full:false, visible:false, chartType:'bar',      dataType:'single'},
+  {id:'chartContactos',   title:'Nº DE CONTACTOS',             icon:'', bloque:'Técnico-tácticos', full:false, visible:true,  chartType:'bar',      dataType:'single'},
+  {id:'chartDifMarcador', title:'DIFERENCIA EN MARCADOR',      icon:'', bloque:'Técnico-tácticos', full:true,  visible:true,  chartType:'bar_group',dataType:'dual_lv'},
+  {id:'chartGoleador',    title:'RANKING GOLEADORES',          icon:'', bloque:'Final',            full:false, visible:true,  chartType:'bar',      dataType:'rank'},
+  {id:'chartRival',       title:'GOLES POR RIVAL',             icon:'', bloque:'Final',            full:false, visible:true,  chartType:'bar',      dataType:'rank'},
 ];
 
 // Tipos de gráfico disponibles por dataType
@@ -1637,9 +1644,44 @@ const DASH_FILTER_MAP = {
 };
 
 // Paleta cualitativa: colores bien diferenciados para doughnuts/categorías
-const QUAL_PALETTE = ['#2563eb','#16a34a','#dc2626','#ea580c','#7c3aed','#0891b2','#ca8a04','#db2777','#059669','#9333ea'];
-// RM_PALETTE kept for backwards compat — ahora apunta a la cualitativa
+// Paleta cualitativa principal — colores bien diferenciados, buen contraste en PDF
+const QUAL_PALETTE = ['#1d4ed8','#15803d','#b91c1c','#c2410c','#6d28d9','#0e7490','#92400e','#9d174d','#065f46','#1e3a5f'];
 const RM_PALETTE = QUAL_PALETTE;
+
+// Paleta fija por campo — garantiza colores consistentes entre informes
+const FIELD_COLORS = {
+  // favor
+  'A favor':  '#15803d',
+  'En contra':'#b91c1c',
+  // lv
+  'Local':    '#1d4ed8',
+  'Visitante':'#c2410c',
+  // tipologia
+  'Balón parado':    '#1d4ed8',
+  'Transiciones':    '#15803d',
+  'Juego directo':   '#b91c1c',
+  'Juego posicional':'#c2410c',
+  'Otros':           '#6d28d9',
+  // posicRobo
+  'Carril central':  '#1d4ed8',
+  'Banda':           '#c2410c',
+  // primerPase
+  'Hacia adelante':  '#15803d',
+  'Horizontal':      '#1d4ed8',
+  'Hacia detrás':    '#b91c1c',
+  // tipoPase
+  'Raso':  '#1d4ed8',
+  'Aereo': '#c2410c',
+  // zonaRemate
+  '1er palo':               '#1d4ed8',
+  '2º palo':                '#15803d',
+  '2º palo (espalda 2º central)':'#b91c1c',
+  'Penalti':                '#c2410c',
+  'Vértice':                '#6d28d9',
+  'Fuera del área':         '#0e7490',
+  'Área pequeña':           '#92400e',
+  // nContactos — colores por índice
+};
 
 /* =====================================================
    ESTADO GLOBAL
@@ -2747,12 +2789,23 @@ function renderEditorList() {
           <span>${state.showLabels ? 'Etiquetas visibles' : 'Solo en hover'}</span>
         </div>` : '';
 
+      // Para chartEstilo: añadir campo de orden personalizado
+      const estiloOrderHtml = (id === 'chartEstilo') ? `
+        <div style="margin-top:6px">
+          <div style="font-size:9px;color:var(--text-mut);margin-bottom:3px;font-weight:700">ORDEN DE ESTILOS (separado por comas)</div>
+          <input type="text" class="field-input" style="font-size:10px;padding:3px 6px"
+            placeholder="ej: Juego posicional, Transiciones, Balón parado, ..."
+            value="${state.estiloOrder ? state.estiloOrder.join(', ') : ''}"
+            onchange="setEstiloOrder('${id}', this.value)"
+            id="estiloOrderInput">
+        </div>` : '';
+
       html += `<div class="chart-item ${visible?'active':''}" id="ei-${id}">
         <button class="chart-item-toggle" onclick="toggleChartVisible('${id}')"></button>
         <div class="chart-item-info" style="flex:1;min-width:0">
           <div class="chart-item-name">${cat?.icon||''} ${cat?.title||id}</div>
           <div style="display:flex;align-items:center;gap:6px;margin-top:3px">${typeSel}</div>
-          <div class="chart-item-extras">${paletteHtml}${labelsHtml}</div>
+          <div class="chart-item-extras">${paletteHtml}${labelsHtml}${estiloOrderHtml}</div>
         </div>
         <div class="chart-item-order">
           <button class="btn-order" onclick="moveChart('${id}',-1)" ${i===0?'disabled':''}>▲</button>
@@ -2785,6 +2838,13 @@ function toggleLabels(id) {
   renderEditorList();
 }
 
+function setEstiloOrder(id, val) {
+  const s = editorState.find(e => e.id===id);
+  if (!s) return;
+  const arr = val.split(',').map(x=>x.trim()).filter(Boolean);
+  s.estiloOrder = arr.length ? arr : null;
+}
+
 function moveChart(id,dir){
   const cat=CHART_CATALOG.find(c=>c.id===id);
   const bloqueIds=CHART_CATALOG.filter(c=>c.bloque===cat.bloque).map(c=>c.id);
@@ -2797,7 +2857,13 @@ function moveChart(id,dir){
   renderEditorList();
 }
 
-function applyLayout(){layoutState=editorState.map(s=>({...s}));fbWriteMeta('layout',layoutState);closeEditor();renderDashboard();showToast('📊 Informe actualizado');}
+function applyLayout(){
+  layoutState=editorState.map(s=>({...s}));
+  fbWriteMeta('layout',layoutState);
+  closeEditor();
+  renderDashboard();
+  showToast('📊 Informe actualizado');
+}
 function resetLayout(){editorState=CHART_CATALOG.map(c=>({id:c.id,visible:c.visible,chartType:c.chartType,palette:'rm',showLabels:false}));renderEditorList();}
 
 /* =====================================================
@@ -2884,7 +2950,7 @@ function renderDashboard() {
     const realType   = (isH||isGroup) ? 'bar' : type;
     const ctx        = document.getElementById(id)?.getContext('2d'); if(!ctx) return;
     const isCircular = realType==='doughnut'||realType==='pie'||realType==='polarArea';
-    const showLbl    = getShowLabels(id);
+    const showLbl    = true; // Siempre visible — informe debe ser legible en PDF
     const _total     = _dashCtx.total;
     const _dark      = _dashCtx.isDark;
     const _gc        = _dashCtx.gridColor;
@@ -3070,80 +3136,301 @@ function renderDashboard() {
     };
   }
 
+  // ── Helper: obtener color para un valor concreto de un campo ────────────────
+  function fieldColor(val, idx) {
+    return FIELD_COLORS[val] || QUAL_PALETTE[idx % QUAL_PALETTE.length];
+  }
+
+  // ── Helper: renderChart con colores por valor ─────────────────────────────
+  function renderChartColored(id, field) {
+    const type = typeMap[id] || 'bar';
+    const _total = _dashCtx.total;
+    if (type === 'rank') { mkRankColored(id, sortedCount(data, field, 12)); return; }
+    const e = sortedCount(data, field).filter(x=>x[1]>0);
+    const isDonut = type === 'doughnut' || type === 'polarArea';
+    const colors = e.map((x,i) => fieldColor(x[0], i));
+    mkC(id, type, e.map(x=>x[0]), [{
+      data: e.map(x=>x[1]),
+      backgroundColor: colors,
+      borderWidth: isDonut ? 2 : 0,
+      borderColor: isDonut ? surfColor : undefined,
+      borderRadius: isDonut ? 0 : 5,
+      borderSkipped: false
+    }], isDonut ? {
+      legend: true, legendPos: 'right',
+      plugins:{tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,_total)}%)`}}}
+    } : {});
+  }
+
+  // ── Helper: mkRank con colores por item ────────────────────────────────────
+  function mkRankColored(id, entries) {
+    const el = document.getElementById(id); if (!el || !entries.length) return;
+    const max = entries[0][1];
+    const _total = _dashCtx.total;
+    el.innerHTML = entries.map(([name,cnt],i) => {
+      const color = QUAL_PALETTE[i % QUAL_PALETTE.length];
+      return `<div class="rank-item">
+        <div class="rank-pos" style="background:${color}22;color:${color}">${i+1}</div>
+        <div class="rank-bar-wrap">
+          <div class="rank-name">${esc(name)}</div>
+          <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(cnt/max*100).toFixed(1)}%;background:${color}"></div></div>
+        </div>
+        <div class="rank-val">${cnt} <span style="font-size:9.5px;color:var(--text-mut)">(${pct(cnt,_total)}%)</span></div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Helper: gráfico de barras agrupadas dual ──────────────────────────────
+  function mkDualGrouped(id, labels, ds1Label, ds1Data, ds2Label, ds2Data, c1, c2) {
+    const ctx = document.getElementById(id)?.getContext('2d'); if (!ctx) return;
+    const plugin = makeMultiLabelPlugin(id);
+    charts[id] = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [
+        {label:ds1Label, data:ds1Data, backgroundColor:c1, borderRadius:4, borderSkipped:false},
+        {label:ds2Label, data:ds2Data, backgroundColor:c2, borderRadius:4, borderSkipped:false}
+      ]},
+      plugins: plugin ? [plugin] : [],
+      options: {
+        responsive:true, maintainAspectRatio:true,
+        layout:{padding:{top:22}},
+        plugins:{
+          legend:{display:true,labels:{color:tickColor,font:{size:10},padding:12,boxWidth:10}},
+          tooltip:{mode:'index'}
+        },
+        scales:{
+          x:{grid:{color:gridColor},ticks:{color:tickColor}},
+          y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}
+        }
+      }
+    });
+  }
+
+  // ── Helper: plugin SIEMPRE visible (para PDF) ─────────────────────────────
+  function alwaysLabelPlugin(id, isGrouped) {
+    return {
+      id: 'albl_'+id,
+      afterDatasetsDraw(chart) {
+        const c2 = chart.ctx;
+        const _tot = _dashCtx.total;
+        const _dark = _dashCtx.isDark;
+        chart.data.datasets.forEach((ds, di) => {
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          meta.data.forEach((el, i) => {
+            const val = ds.data[i];
+            if (!val || val <= 0) return;
+            const barH = Math.abs(el.base - el.y);
+            const pctTxt = pct(val, _tot) + '%';
+            c2.save();
+            c2.textAlign = 'center';
+            c2.shadowColor = 'rgba(0,0,0,.25)';
+            c2.shadowBlur = 2;
+            // Número dentro si hay espacio
+            if (barH >= 16) {
+              c2.fillStyle = '#fff';
+              c2.font = `700 9px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'middle';
+              c2.fillText(String(val), el.x, el.y + barH/2);
+            }
+            // % encima siempre
+            c2.shadowBlur = 0;
+            c2.fillStyle = _dark ? '#9095a0' : '#4b5563';
+            c2.font = `600 8px 'Segoe UI',sans-serif`;
+            c2.textBaseline = 'bottom';
+            c2.fillText(pctTxt, el.x, el.y - 2);
+            c2.restore();
+          });
+        });
+      }
+    };
+  }
+
   for(const id of visibleIds){
     const type=typeMap[id];
     switch(id){
+
+      // ── TRAMO DE MINUTO: barras agrupadas A favor / En contra ─────────────
       case 'chartTramo':{
         const tramos=['0-10','11-20','21-30','31-40','41-50','51-60','61-70','71-80','81-90'];
-        const tramoType = typeMap['chartTramo'] || 'bar';
-        const isGroup = tramoType === 'bar_group';
-        const ctx=document.getElementById('chartTramo')?.getContext('2d'); if(!ctx) break;
-        const afData  = tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='A favor').length);
-        const ecData  = tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='En contra').length);
-        const tramoPlugin = makeMultiLabelPlugin('chartTramo');
-        charts['chartTramo']=new Chart(ctx,{type:'bar',
-          data:{labels:tramos,datasets:[
-            {label:'A favor',   data:afData, backgroundColor:'#16a34a',borderRadius:4,borderSkipped:false, stack:isGroup?'af':'g'},
-            {label:'En contra', data:ecData, backgroundColor:'#dc2626',borderRadius:4,borderSkipped:false, stack:isGroup?'ec':'g'}
-          ]},
-          plugins: tramoPlugin ? [tramoPlugin] : [],
-          options:{responsive:true,maintainAspectRatio:true,
-            layout:{padding:{top: tramoPlugin?4:0}},
-            plugins:{legend:{display:true,labels:{color:tickColor,font:{size:10},padding:12,boxWidth:10}},tooltip:{mode:'index'}},
-            scales:{x:{stacked:!isGroup,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:!isGroup,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
-          }}); break; }
+        mkDualGrouped(id, tramos,
+          'A favor',   tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='A favor').length),
+          'En contra', tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='En contra').length),
+          '#15803d', '#b91c1c');
+        break; }
+
+      // ── LOCAL VS VISITANTE: A favor / En contra agrupados ─────────────────
       case 'chartLV':{
-        const lD=['A favor','En contra'].map(f=>data.filter(g=>g.lv==='Local'&&g.favor===f).length);
-        const vD=['A favor','En contra'].map(f=>data.filter(g=>g.lv==='Visitante'&&g.favor===f).length);
-        mkC('chartLV','bar',['Local','Visitante'],[
-          {label:'A favor',data:[lD[0],vD[0]],backgroundColor:'#16a34a',borderRadius:5,borderSkipped:false},
-          {label:'En contra',data:[lD[1],vD[1]],backgroundColor:'#dc2626',borderRadius:5,borderSkipped:false}
-        ],{legend:true,plugins:{tooltip:{mode:'index'}}}); break; }
+        const lTotal = data.filter(g=>g.lv==='Local').length;
+        const vTotal = data.filter(g=>g.lv==='Visitante').length;
+        const lAF = data.filter(g=>g.lv==='Local'&&g.favor==='A favor').length;
+        const lEC = data.filter(g=>g.lv==='Local'&&g.favor==='En contra').length;
+        const vAF = data.filter(g=>g.lv==='Visitante'&&g.favor==='A favor').length;
+        const vEC = data.filter(g=>g.lv==='Visitante'&&g.favor==='En contra').length;
+        // Etiquetas con total y %
+        const labels = [
+          `Local (${lTotal} · ${pct(lTotal,total)}%)`,
+          `Visitante (${vTotal} · ${pct(vTotal,total)}%)`
+        ];
+        mkDualGrouped(id, labels,
+          'A favor',   [lAF, vAF],
+          'En contra', [lEC, vEC],
+          '#15803d', '#b91c1c');
+        break; }
+
+      // ── DIFERENCIA EN MARCADOR: barras Local/Visitante agrupadas ─────────
+      case 'chartDifMarcador':{
+        const allRange=['-10','-9','-8','-7','-6','-5','-4','-3','-2','-1','0','1','2','3','4','5','6','7','8','9','10'];
+        // Contar por dif y L/V
+        const dm={};
+        data.forEach(g=>{
+          const k=String(g.dif??0);
+          if(!dm[k]) dm[k]={l:0,v:0};
+          if(g.lv==='Local') dm[k].l++;
+          else dm[k].v++;
+        });
+        const filtRange = allRange.filter(k=>dm[k]);
+        const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
+        const plugin = alwaysLabelPlugin(id, true);
+        charts[id] = new Chart(ctx, {
+          type:'bar',
+          data:{labels:filtRange, datasets:[
+            {label:'Local',     data:filtRange.map(k=>dm[k]?.l||0), backgroundColor:'#1d4ed8', borderRadius:4, borderSkipped:false},
+            {label:'Visitante', data:filtRange.map(k=>dm[k]?.v||0), backgroundColor:'#c2410c', borderRadius:4, borderSkipped:false}
+          ]},
+          plugins:[plugin],
+          options:{
+            responsive:true, maintainAspectRatio:true,
+            layout:{padding:{top:22}},
+            plugins:{
+              legend:{display:true,labels:{color:tickColor,font:{size:10},padding:12,boxWidth:10}},
+              tooltip:{mode:'index'}
+            },
+            scales:{
+              x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:9}}},
+              y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}
+            }
+          }
+        }); break; }
+
+      // ── Nº CONTACTOS: colores por posición ────────────────────────────────
       case 'chartContactos':{
         const order=['1','2','3','4','5','6','7','8','9','10','10+'];
         const cm=count(data,'nContactos');
-        mkC('chartContactos',type,order,[{data:order.map(k=>cm[k]||0),backgroundColor:RM_PALETTE,borderRadius:5,borderSkipped:false}]); break; }
-      case 'chartDifMarcador':{
-        // Diferencia en marcador: siempre barras, nunca doughnut
-        const dm={};data.forEach(g=>{const k=String(g.dif??0);dm[k]=(dm[k]||0)+1;});
-        // Solo mostrar valores que existen (filtrar ceros)
-        const allRange=['-10','-9','-8','-7','-6','-5','-4','-3','-2','-1','0','1','2','3','4','5','6','7','8','9','10'];
-        const filtRange=allRange.filter(k=>dm[k]>0);
-        mkC('chartDifMarcador','bar',filtRange,[{
-          data:filtRange.map(k=>dm[k]||0),
-          backgroundColor:filtRange.map(k=>Number(k)<0?'#dc2626':'#2563eb'),
-          borderRadius:5,borderSkipped:false
-        }]); break; }
+        const vals = order.filter(k=>cm[k]>0);
+        const plugin = alwaysLabelPlugin(id, false);
+        const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
+        charts[id] = new Chart(ctx, {
+          type:'bar',
+          data:{labels:vals, datasets:[{
+            data:vals.map(k=>cm[k]||0),
+            backgroundColor:vals.map((_,i)=>QUAL_PALETTE[i%QUAL_PALETTE.length]),
+            borderRadius:5, borderSkipped:false
+          }]},
+          plugins:[plugin],
+          options:{
+            responsive:true, maintainAspectRatio:true,
+            layout:{padding:{top:22}},
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,total)}%)`}}},
+            scales:{x:{grid:{color:gridColor},ticks:{color:tickColor}},y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
+          }
+        }); break; }
+
+      // ── ZONA ROBO × TIPOLOGÍA: colores + etiquetas ────────────────────────
       case 'chartZonaRoboXTip':{
         const tips=[...new Set(data.map(g=>g.tipologia).filter(Boolean))];
         const zonas=['Z1','Z2','Z3','Z4'];
-        const crossPal = getPalette(id);
-        const crossType = typeMap[id] || 'bar';
-        const crossGroup = crossType === 'bar_group';
+        const zonaCols=['#1d4ed8','#15803d','#b91c1c','#c2410c'];
         const ctx=document.getElementById(id)?.getContext('2d'); if(!ctx) break;
-        const crossPlugin = makeMultiLabelPlugin(id);
+        const plugin = alwaysLabelPlugin(id, true);
         charts[id]=new Chart(ctx,{type:'bar',
           data:{labels:tips,datasets:zonas.map((z,i)=>({
             label:z,data:tips.map(t=>data.filter(g=>g.tipologia===t&&g.zonaRobo===z).length),
-            backgroundColor:crossPal[i%crossPal.length],borderRadius:3,borderSkipped:false,
-            stack:crossGroup?z:'z'
+            backgroundColor:zonaCols[i],borderRadius:3,borderSkipped:false
           }))},
-          plugins: crossPlugin ? [crossPlugin] : [],
+          plugins:[plugin],
           options:{responsive:true,maintainAspectRatio:true,
-            layout:{padding:{top: crossPlugin?4:0}},
+            layout:{padding:{top:22}},
             plugins:{legend:{display:true,labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},tooltip:{mode:'index'}},
-            scales:{x:{stacked:!crossGroup,grid:{color:gridColor},ticks:{color:tickColor}},y:{stacked:!crossGroup,beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
+            scales:{x:{grid:{color:gridColor},ticks:{color:tickColor}},y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
           }}); break; }
-      case 'chartTipologia': renderChart(id,'tipologia'); break;
+
+      // ── GOLEADORES: barras con color por goleador ─────────────────────────
+      case 'chartGoleador':{
+        const entries = sortedCount(data,'goleador',15);
+        const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
+        const plugin = alwaysLabelPlugin(id, false);
+        charts[id] = new Chart(ctx, {
+          type:'bar',
+          data:{labels:entries.map(x=>x[0]), datasets:[{
+            data:entries.map(x=>x[1]),
+            backgroundColor:entries.map((_,i)=>QUAL_PALETTE[i%QUAL_PALETTE.length]),
+            borderRadius:5, borderSkipped:false
+          }]},
+          plugins:[plugin],
+          options:{
+            responsive:true, maintainAspectRatio:true,
+            layout:{padding:{top:22}},
+            indexAxis:'y',
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,total)}%)`}}},
+            scales:{
+              x:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}},
+              y:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}}
+            }
+          }
+        }); break; }
+
+      // ── RIVAL: barras con color por rival ─────────────────────────────────
+      case 'chartRival':{
+        const entries = sortedCount(data,'rival',15);
+        const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
+        const plugin = alwaysLabelPlugin(id, false);
+        charts[id] = new Chart(ctx, {
+          type:'bar',
+          data:{labels:entries.map(x=>x[0]), datasets:[{
+            data:entries.map(x=>x[1]),
+            backgroundColor:entries.map((_,i)=>QUAL_PALETTE[i%QUAL_PALETTE.length]),
+            borderRadius:5, borderSkipped:false
+          }]},
+          plugins:[plugin],
+          options:{
+            responsive:true, maintainAspectRatio:true,
+            layout:{padding:{top:22}},
+            indexAxis:'y',
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,total)}%)`}}},
+            scales:{
+              x:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}},
+              y:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}}
+            }
+          }
+        }); break; }
+
+      // ── ESTILOS: rank con orden configurable ──────────────────────────────
+      case 'chartEstilo':{
+        const st = _dashCtx.stateMap[id];
+        const customOrder = st?.estiloOrder || null;
+        let entries = sortedCount(data,'estilo', 999);
+        if (customOrder && customOrder.length) {
+          // Respetar orden configurado por el usuario; incluir todos aunque sean 0
+          const cntMap = Object.fromEntries(entries);
+          entries = customOrder.map(name => [name, cntMap[name] || 0]);
+          // Añadir los que no estén en el orden personalizado
+          const inOrder = new Set(customOrder);
+          sortedCount(data,'estilo',999).forEach(([name,cnt]) => {
+            if (!inOrder.has(name)) entries.push([name, cnt]);
+          });
+        }
+        mkRankColored(id, entries);
+        break; }
+
+      // ── GRÁFICOS SIMPLES CON COLORES POR VALOR ────────────────────────────
+      case 'chartTipologia':  renderChartColored(id,'tipologia');  break;
+      case 'chartPosicRobo':  renderChartColored(id,'posicRobo');  break;
+      case 'chartPrimerPase': renderChartColored(id,'primerPase'); break;
+      case 'chartZona':       renderChartColored(id,'zonaRemate'); break;
+      case 'chartTipoPase':   renderChartColored(id,'tipoPase');   break;
       case 'chartSuperficie': renderSuperficieSVG(id, data); break;
       case 'chartZonaRobo':   renderZonaRoboSVG(id, data); break;
-      case 'chartPosicRobo':  renderChart(id,'posicRobo'); break;
-      case 'chartZona':       renderChart(id,'zonaRemate'); break;
-      case 'chartTipoPase':   renderChart(id,'tipoPase'); break;
-      case 'chartPrimerPase': renderChart(id,'primerPase'); break;
-      case 'chartEstilo':     mkRank(id,sortedCount(data,'estilo',12)); break;
-      case 'chartGoleador':   mkRank(id,sortedCount(data,'goleador',10)); break;
-      case 'chartRival':      mkRank(id,sortedCount(data,'rival',10)); break;
     }
   }
 }

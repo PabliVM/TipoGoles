@@ -2979,25 +2979,34 @@ function renderDashboard() {
             c2.shadowBlur = 0;
 
             if (isCircular) {
-              // Doughnut/Polar: etiqueta centrada en el arco si hay espacio
-              // Solo mostrar si el arco tiene suficiente ángulo (> 15°)
               const angle = el.endAngle - el.startAngle;
-              if (angle < 0.26) { c2.restore(); return; } // < ~15°, demasiado pequeño
+              if (angle < 0.2) { c2.restore(); return; } // arco demasiado pequeño
 
               const midAngle = (el.startAngle + el.endAngle) / 2;
               const r = (el.outerRadius + el.innerRadius) / 2;
               const x = el.x + Math.cos(midAngle) * r;
               const y = el.y + Math.sin(midAngle) * r;
 
+              // Fondo semitransparente para legibilidad
+              const label = `${val}
+${pctTxt}`;
+              c2.fillStyle = 'rgba(0,0,0,.35)';
+              c2.beginPath();
+              c2.roundRect(x-18, y-14, 36, 26, 4);
+              c2.fill();
+
               // Número
               c2.fillStyle = '#fff';
               c2.font = `800 11px 'Segoe UI',sans-serif`;
               c2.textBaseline = 'bottom';
+              c2.shadowColor = 'rgba(0,0,0,.5)';
+              c2.shadowBlur = 2;
               c2.fillText(String(val), x, y + 1);
               // Porcentaje
-              c2.font = `600 9px 'Segoe UI',sans-serif`;
-              c2.fillStyle = 'rgba(255,255,255,.85)';
+              c2.font = `700 9px 'Segoe UI',sans-serif`;
+              c2.fillStyle = 'rgba(255,255,255,.9)';
               c2.textBaseline = 'top';
+              c2.shadowBlur = 0;
               c2.fillText(pctTxt, x, y + 2);
 
             } else {

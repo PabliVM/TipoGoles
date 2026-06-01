@@ -633,10 +633,11 @@ tr:hover .btn-edit{opacity:1}
   }
 
   .print-page {
-    page-break-after: always;
-    break-after: page;
-    width: 100%;
-  }
+  page-break-after: always;
+  break-after: page;
+  width: 100%;
+  padding-top: 0;
+}
 
   .print-page:last-child {
     page-break-after: auto;
@@ -644,18 +645,18 @@ tr:hover .btn-edit{opacity:1}
   }
 
   .print-page .pdf-header {
-    display: flex !important;
-    position: static !important;
-    width: 100% !important;
-    height: 13mm !important;
-    align-items: center !important;
-    gap: 10px !important;
-    background: #2563eb !important;
-    border-radius: 5px !important;
-    padding: 4px 10px !important;
-    margin: 0 0 8mm 0 !important;
-    box-sizing: border-box !important;
-  }
+  display: flex !important;
+  position: static !important;
+  width: 100% !important;
+  height: 13mm !important;
+  align-items: center !important;
+  gap: 10px !important;
+  background: #2563eb !important;
+  border-radius: 5px !important;
+  padding: 4px 10px !important;
+  margin: 0 0 8mm 0 !important;
+  box-sizing: border-box !important;
+}
 
   .print-page .kpi-grid {
     display: grid !important;
@@ -694,22 +695,9 @@ tr:hover .btn-edit{opacity:1}
 }
 
 /* PDF header — only visible when printing */
+/* PDF header — oculto en pantalla */
 .pdf-header {
-  display: flex !important;
-  position: fixed !important;
-  top: 4mm !important;
-  left: 10mm !important;
-  right: 10mm !important;
-  width: auto !important;
-  height: 13mm !important;
-  align-items: center !important;
-  gap: 10px !important;
-  background: #2563eb !important;
-  border-radius: 5px !important;
-  padding: 4px 10px !important;
-  margin: 0 !important;
-  box-sizing: border-box !important;
-  z-index: 9999 !important;
+  display: none;
 }
 }
 .pdf-header-logo {

@@ -612,51 +612,40 @@ tr:hover .btn-edit{opacity:1}
 
 @media print {
   @page {
-  size: A4 portrait;
-  margin: 22mm 10mm 10mm 10mm;
-}
-
-  .header, .nav-teams, .nav-modules, .app-footer,
-  .dash-topbar, .dash-filter-panel, .editor-overlay,
-  .editor-sidebar, .toast, .btn-del, .btn-edit,
-  #globalBanner, .context-banner,
-  #btnToggleFilters, #btnResetFilters, #btnEditorOpen,
-  #btnExportPDF, #btnCompExportPDF {
-    display: none !important;
+    size: A4 portrait;
+    margin: 10mm;
   }
 
   body {
     background: #fff !important;
-    color: #000 !important;
-    font-size: 10px;
-    padding: 0 !important;
     margin: 0 !important;
+    padding: 0 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
-  .main {
-    max-width: none !important;
-    width: 100% !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  .panel {
+  body > *:not(#printArea) {
     display: none !important;
   }
 
-  .panel.active {
+  #printArea {
     display: block !important;
-    padding: 0 !important;
   }
 
-  .pdf-header {
+  .print-page {
+    page-break-after: always;
+    break-after: page;
+    width: 100%;
+  }
+
+  .print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .print-page .pdf-header {
     display: flex !important;
-    position: fixed !important;
-    top: -17mm !important;
-    left: 0 !important;
-    right: 0 !important;
+    position: static !important;
     width: 100% !important;
     height: 13mm !important;
     align-items: center !important;
@@ -664,99 +653,43 @@ tr:hover .btn-edit{opacity:1}
     background: #2563eb !important;
     border-radius: 5px !important;
     padding: 4px 10px !important;
-    margin: 0 !important;
+    margin: 0 0 8mm 0 !important;
     box-sizing: border-box !important;
-    z-index: 9999 !important;
   }
 
-  .pdf-header-clone {
-    display: none !important;
-  }
-
-  .kpi-grid {
+  .print-page .kpi-grid {
     display: grid !important;
-    grid-template-columns: repeat(5,1fr) !important;
+    grid-template-columns: repeat(5, 1fr) !important;
     gap: 4px !important;
-    margin-bottom: 6px !important;
+    margin-bottom: 6mm !important;
   }
 
-  .kpi-card {
-    border: 1px solid #ddd !important;
-    border-radius: 4px !important;
-    padding: 5px 7px !important;
-    break-inside: avoid;
-  }
-
-  .kpi-value { font-size: 16px !important; }
-  .kpi-label { font-size: 8px !important; }
-  .kpi-sub { font-size: 8px !important; }
-
-  .charts-dynamic {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 8px !important;
-  }
-
-  .chart-card {
-    border: 1px solid #ddd !important;
-    border-radius: 5px !important;
+  .print-page .chart-card {
+    width: 100% !important;
+    margin-bottom: 7mm !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    overflow: visible !important;
-    width: 100% !important;
-    margin-top: 0 !important;
-    margin-bottom: 8px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 5px !important;
+    overflow: hidden !important;
   }
 
-  .chart-card {
-  padding-top: 16mm !important;
-  margin-bottom: 8mm !important;
-  break-inside: avoid !important;
-  page-break-inside: avoid !important;
- }
-
- .chart-card:first-of-type {
-  padding-top: 0 !important;
-}
-
-  .chart-card.full-width {
-    grid-column: 1 !important;
-  }
-
-  .chart-head {
+  .print-page .chart-head {
     padding: 5px 10px !important;
     border-bottom: 1px solid #eee !important;
   }
 
-  .chart-title {
+  .print-page .chart-title {
     font-size: 9.5px !important;
     font-weight: 800 !important;
-    letter-spacing: .4px;
   }
 
-  .chart-body {
+  .print-page .chart-body {
     padding: 10px !important;
-    overflow: visible !important;
   }
 
-  .chart-body canvas {
-    display: block !important;
-    width: 100% !important;
-  }
-
-  .rank-list { gap: 4px !important; }
-  .rank-item { gap: 8px !important; }
-  .rank-name { font-size: 10px !important; }
-  .rank-val { font-size: 10px !important; }
-  .rank-bar-bg { height: 5px !important; }
-  .rank-bar-fill {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  .chart-body .rank-list {
-    max-height: none !important;
-    overflow: visible !important;
+  .pdf-header-sub {
+    display: none !important;
   }
 }
 
@@ -3776,8 +3709,65 @@ function exportPDF() {
   document.getElementById('pdfSub').textContent = `Temporada ${activeSeason}`;
   document.getElementById('pdfMeta').innerHTML = `${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
   prepareChartsForPrint(charts, layoutState).then(() => {
-    window.print();
+  buildPrintPages();
+  window.print();
+});
+}
+
+function buildPrintPages() {
+  document.getElementById('printArea')?.remove();
+
+  const panel = document.getElementById('panel-informes');
+  const header = document.getElementById('pdfHeader');
+  const kpis = document.getElementById('kpiGrid');
+  const cards = [...panel.querySelectorAll('.chart-card')];
+
+  const printArea = document.createElement('div');
+  printArea.id = 'printArea';
+
+  function cloneHeader() {
+    return header.cloneNode(true);
+  }
+
+  function cloneCard(card) {
+    const clone = card.cloneNode(true);
+
+    const originalCanvas = card.querySelector('canvas');
+    const clonedCanvas = clone.querySelector('canvas');
+
+    if (originalCanvas && clonedCanvas) {
+      const img = document.createElement('img');
+      img.src = originalCanvas.toDataURL('image/png');
+      img.style.width = '100%';
+      img.style.display = 'block';
+      clonedCanvas.replaceWith(img);
+    }
+
+    return clone;
+  }
+
+  function createPage() {
+    const page = document.createElement('div');
+    page.className = 'print-page';
+    page.appendChild(cloneHeader());
+    printArea.appendChild(page);
+    return page;
+  }
+
+  let page = createPage();
+
+  const kpiClone = kpis.cloneNode(true);
+  page.appendChild(kpiClone);
+
+  cards.forEach((card, index) => {
+    if (index > 0 && index % 2 === 0) {
+      page = createPage();
+    }
+
+    page.appendChild(cloneCard(card));
   });
+
+  document.body.appendChild(printArea);
 }
 
 function exportCompPDF() {

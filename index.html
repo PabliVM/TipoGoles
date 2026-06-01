@@ -2800,15 +2800,29 @@ function renderEditorList() {
         </div>` : '';
 
       // Para chartEstilo: añadir campo de orden personalizado
-      const estiloOrderHtml = (id === 'chartEstilo') ? `
-        <div style="margin-top:6px">
-          <div style="font-size:9px;color:var(--text-mut);margin-bottom:3px;font-weight:700">ORDEN DE ESTILOS (separado por comas)</div>
-          <input type="text" class="field-input" style="font-size:10px;padding:3px 6px"
-            placeholder="ej: Juego posicional, Transiciones, Balón parado, ..."
-            value="${state.estiloOrder ? state.estiloOrder.join(', ') : ''}"
-            onchange="setEstiloOrder('${id}', this.value)"
-            id="estiloOrderInput">
-        </div>` : '';
+      let estiloOrderHtml = '';
+      if (id === 'chartEstilo') {
+        // Obtener estilos existentes en los datos actuales
+        const existingEstilos = [...new Set(currentGoles().map(g=>g.estilo).filter(Boolean))].sort();
+        const orderArr = state.estiloOrder && state.estiloOrder.length
+          ? state.estiloOrder
+          : existingEstilos;
+        // Añadir estilos que no están en el orden
+        const inOrder = new Set(orderArr);
+        existingEstilos.forEach(e => { if (!inOrder.has(e)) orderArr.push(e); });
+        const items = orderArr.map((name, idx) => `
+          <div class="estilo-order-item" data-idx="${idx}">
+            <span style="font-size:9px;color:var(--text-mut);width:14px;text-align:center">${idx+1}</span>
+            <span class="eoi-name">${name}</span>
+            <button class="estilo-order-btn" onclick="moveEstilo('${id}',${idx},-1)" ${idx===0?'disabled':''}>▲</button>
+            <button class="estilo-order-btn" onclick="moveEstilo('${id}',${idx},1)" ${idx===orderArr.length-1?'disabled':''}>▼</button>
+          </div>`).join('');
+        estiloOrderHtml = `
+          <div style="margin-top:6px">
+            <div style="font-size:9px;color:var(--text-mut);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Orden de estilos</div>
+            <div class="estilo-order-list" id="estiloOrderList">${items || '<span style="font-size:10px;color:var(--text-mut)">Sin datos aún</span>'}</div>
+          </div>`;
+      }
 
       html += `<div class="chart-item ${visible?'active':''}" id="ei-${id}">
         <button class="chart-item-toggle" onclick="toggleChartVisible('${id}')"></button>
@@ -2848,11 +2862,21 @@ function toggleLabels(id) {
   renderEditorList();
 }
 
-function setEstiloOrder(id, val) {
+function moveEstilo(id, idx, dir) {
   const s = editorState.find(e => e.id===id);
   if (!s) return;
-  const arr = val.split(',').map(x=>x.trim()).filter(Boolean);
-  s.estiloOrder = arr.length ? arr : null;
+  // Obtener orden actual
+  const existingEstilos = [...new Set(currentGoles().map(g=>g.estilo).filter(Boolean))].sort();
+  const arr = s.estiloOrder && s.estiloOrder.length ? [...s.estiloOrder] : [...existingEstilos];
+  // Añadir estilos que no están
+  const inOrder = new Set(arr);
+  existingEstilos.forEach(e => { if (!inOrder.has(e)) arr.push(e); });
+  // Mover
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= arr.length) return;
+  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+  s.estiloOrder = arr;
+  renderEditorList();
 }
 
 function moveChart(id,dir){

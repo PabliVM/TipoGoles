@@ -3158,17 +3158,38 @@ ${pctTxt}`;
     const e = sortedCount(data, field).filter(x=>x[1]>0);
     const isDonut = type === 'doughnut' || type === 'polarArea';
     const colors = e.map((x,i) => fieldColor(x[0], i));
-    mkC(id, type, e.map(x=>x[0]), [{
-      data: e.map(x=>x[1]),
-      backgroundColor: colors,
-      borderWidth: isDonut ? 2 : 0,
-      borderColor: isDonut ? surfColor : undefined,
-      borderRadius: isDonut ? 0 : 5,
-      borderSkipped: false
-    }], isDonut ? {
-      legend: true, legendPos: 'right',
-      plugins:{tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,_total)}%)`}}}
-    } : {});
+    const _plugin = isDonut ? null : insideBarPlugin('rc_'+id);
+    const ctx2 = document.getElementById(id)?.getContext('2d');
+    if (!ctx2) return;
+    if (charts[id]) { try{charts[id].destroy();}catch(e){} }
+    charts[id] = new Chart(ctx2, {
+      type: type === 'bar_h' ? 'bar' : (type || 'bar'),
+      data:{labels: e.map(x=>x[0]), datasets:[{
+        data: e.map(x=>x[1]),
+        backgroundColor: colors,
+        borderWidth: isDonut ? 2 : 0,
+        borderColor: isDonut ? surfColor : undefined,
+        borderRadius: isDonut ? 0 : 5,
+        borderSkipped: false
+      }]},
+      plugins: _plugin ? [_plugin] : [],
+      options:{
+        responsive:true, maintainAspectRatio:true,
+        indexAxis: type==='bar_h' ? 'y' : 'x',
+        layout:{padding:{top:4}},
+        plugins: isDonut ? {
+          legend:{display:true,position:'right',labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},
+          tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,_total)}%)`}}
+        } : {
+          legend:{display:false},
+          tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed} (${pct(c.parsed?.y??c.parsed,_total)}%)`}}
+        },
+        scales: isDonut ? {} : {
+          x:{grid:{color:_dashCtx.gridColor},ticks:{color:_dashCtx.tickColor,font:{size:10}}},
+          y:{beginAtZero:true,grid:{color:_dashCtx.gridColor},ticks:{color:_dashCtx.tickColor,stepSize:1}}
+        }
+      }
+    });
   }
 
   // ── Helper: mkRank con colores por item ────────────────────────────────────
@@ -3216,47 +3237,52 @@ ${pctTxt}`;
   }
 
   // ── Helper: plugin SIEMPRE visible (para PDF) ─────────────────────────────
-  function alwaysLabelPlugin(id, isGrouped) {
+  // Plugin universal: número + % SIEMPRE dentro de la barra
+  function alwaysLabelPlugin(id) {
+    return insideBarPlugin('albl_'+id);
+  }
+
+  function insideBarPlugin(pluginId) {
     return {
-      id: 'albl_'+id,
+      id: pluginId,
       afterDatasetsDraw(chart) {
         const c2 = chart.ctx;
         const _tot = _dashCtx.total;
-        const _dark = _dashCtx.isDark;
+        const isH = chart.options.indexAxis === 'y';
+
         chart.data.datasets.forEach((ds, di) => {
           const meta = chart.getDatasetMeta(di);
           if (meta.hidden) return;
           meta.data.forEach((el, i) => {
             const val = ds.data[i];
             if (!val || val <= 0) return;
-            const barH = Math.abs(el.base - el.y);
-            const barW = el.width || 20;
+
+            const barH = isH ? (el.width  || 0) : Math.abs(el.base - el.y);
+            const barW = isH ? Math.abs(el.base - el.x) : (el.width || 0);
+            if (barH < 10 || barW < 10) return; // barra demasiado pequeña
+
             const pctTxt = pct(val, _tot) + '%';
+            const combined = `${val}  (${pctTxt})`;
+
+            const cx = isH ? el.base + (el.x - el.base) / 2 : el.x;
+            const cy = isH ? el.y : el.y + barH / 2;
+
             c2.save();
             c2.textAlign = 'center';
+            c2.textBaseline = 'middle';
+            c2.shadowColor = 'rgba(0,0,0,.5)';
+            c2.shadowBlur = 3;
+            c2.fillStyle = '#fff';
+            c2.font = `700 10px 'Segoe UI',sans-serif`;
 
-            // Solo mostrar si la barra tiene al menos 8px de ancho (evita solapamiento)
-            if (barW < 8) { c2.restore(); return; }
-
-            // Número dentro si barra alta (>= 18px)
-            if (barH >= 18) {
-              c2.fillStyle = '#fff';
-              c2.font = `700 ${Math.min(11, Math.max(8, Math.floor(barW/3)))}px 'Segoe UI',sans-serif`;
-              c2.textBaseline = 'middle';
-              c2.shadowColor = 'rgba(0,0,0,.4)';
-              c2.shadowBlur = 2;
-              c2.fillText(String(val), el.x, el.y + barH/2);
-              c2.shadowBlur = 0;
+            // Si cabe el texto completo dentro
+            const textW = c2.measureText(combined).width;
+            if ((isH ? barW : barH) > textW + 8) {
+              c2.fillText(combined, cx, cy);
+            } else if ((isH ? barW : barH) > 22) {
+              // Solo el número
+              c2.fillText(String(val), cx, cy);
             }
-
-            // % encima — solo si hay espacio (barra ancha suficiente > 18px)
-            if (barW >= 18) {
-              c2.fillStyle = _dark ? '#9095a0' : '#374151';
-              c2.font = `600 8px 'Segoe UI',sans-serif`;
-              c2.textBaseline = 'bottom';
-              c2.fillText(pctTxt, el.x, el.y - 2);
-            }
-
             c2.restore();
           });
         });
@@ -3309,7 +3335,7 @@ ${pctTxt}`;
         });
         const filtRange = allRange.filter(k=>dm[k]);
         const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
-        const plugin = alwaysLabelPlugin(id, true);
+        const plugin = insideBarPlugin('dif_'+id);
         charts[id] = new Chart(ctx, {
           type:'bar',
           data:{labels:filtRange, datasets:[
@@ -3336,7 +3362,7 @@ ${pctTxt}`;
         const order=['1','2','3','4','5','6','7','8','9','10','10+'];
         const cm=count(data,'nContactos');
         const vals = order.filter(k=>cm[k]>0);
-        const plugin = alwaysLabelPlugin(id, false);
+        const plugin = insideBarPlugin('cont_'+id);
         const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
         charts[id] = new Chart(ctx, {
           type:'bar',
@@ -3363,7 +3389,7 @@ ${pctTxt}`;
         const zonas=['Z1','Z2','Z3','Z4'];
         const zonaCols=['#1d4ed8','#15803d','#b91c1c','#c2410c'];
         const ctx=document.getElementById(id)?.getContext('2d'); if(!ctx) break;
-        const plugin = alwaysLabelPlugin(id, true);
+        const plugin = insideBarPlugin('cross_'+id);
         charts[id]=new Chart(ctx,{type:'bar',
           data:{labels:tips,datasets:zonas.map((z,i)=>({
             label:z,data:tips.map(t=>data.filter(g=>g.tipologia===t&&g.zonaRobo===z).length),

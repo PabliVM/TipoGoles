@@ -3003,7 +3003,7 @@ function renderDashboard() {
     // Plugin de etiquetas: estrategia diferente según tipo de gráfico
     const labelPlugin = {
       id: 'lbl_'+id,
-      afterDraw(chart) {
+      afterRender(chart) {
         if (!getShowLabels(id)) return;
         const c2 = chart.ctx;
         const chartArea = chart.chartArea;
@@ -3151,7 +3151,7 @@ function renderDashboard() {
     if (!getShowLabels(id)) return null;
     return {
       id: 'mlbl_'+id,
-      afterDraw(chart) {
+      afterRender(chart) {
         if (!getShowLabels(id)) return;
         const c2 = chart.ctx;
         const _tot = _dashCtx.total;
@@ -3277,76 +3277,68 @@ function renderDashboard() {
     return insideBarPlugin('albl_'+id);
   }
 
-  // Dibuja etiquetas sobre un chart de barras — llamado desde animation.onComplete
-  function drawBarLabels(chart) {
-    const c2 = chart.ctx;
-    const _tot = _dashCtx.total || 1;
-    const _dark = _dashCtx.isDark;
-    const isH = chart.options.indexAxis === 'y';
+  // Dibuja etiquetas sobre un chart — función pura sin plugin
+  function drawBarLabels(chartInst) {
+    if (!chartInst || !chartInst.ctx) return;
+    const c2  = chartInst.ctx;
+    const tot = _dashCtx.total || 1;
+    const drk = _dashCtx.isDark;
+    const isH = chartInst.options.indexAxis === 'y';
 
-    chart.data.datasets.forEach((ds, di) => {
-      const meta = chart.getDatasetMeta(di);
-      if (meta.hidden) return;
+    chartInst.data.datasets.forEach((ds, di) => {
+      const meta = chartInst.getDatasetMeta(di);
+      if (!meta || meta.hidden) return;
       meta.data.forEach((el, i) => {
         const val = ds.data[i];
         if (!val || val <= 0) return;
 
-        const barH = isH ? (el.height || el.width || 0) : Math.abs(el.base - el.y);
-        const barW = isH ? Math.abs(el.x - el.base) : (el.width || el.height || 0);
-        const pctTxt = pct(val, _tot) + '%';
-        const combined = `${val} (${pctTxt})`;
+        const barH  = isH ? (el.height||0) : Math.abs((el.base||0) - (el.y||0));
+        const barW  = isH ? Math.abs((el.x||0) - (el.base||0)) : (el.width||0);
+        const p     = pct(val, tot) + '%';
+        const full  = `${val} (${p})`;
+        const cx    = isH ? (el.base||0) + ((el.x||0)-(el.base||0))/2 : (el.x||0);
+        const cy    = isH ? (el.y||0) : (el.y||0) + barH/2;
+        const space = isH ? barW : barH;
 
         c2.save();
-        c2.font = `bold 10px 'Segoe UI',sans-serif`;
-        const textW = c2.measureText(combined).width;
-        const spaceInside = isH ? barW : barH;
-        const cx = isH ? el.base + (el.x - el.base) / 2 : el.x;
-        const cy = isH ? el.y : el.y + barH / 2;
+        c2.font = 'bold 10px Segoe UI,sans-serif';
+        const tw = c2.measureText(full).width;
 
-        if (spaceInside >= textW + 8) {
-          // Cabe completo DENTRO
-          c2.textAlign = 'center';
-          c2.textBaseline = 'middle';
-          c2.fillStyle = '#fff';
-          c2.shadowColor = 'rgba(0,0,0,.6)';
-          c2.shadowBlur = 3;
-          c2.fillText(combined, cx, cy);
-        } else if (spaceInside >= 20) {
-          // Solo número dentro
-          c2.textAlign = 'center';
-          c2.textBaseline = 'middle';
-          c2.fillStyle = '#fff';
-          c2.shadowColor = 'rgba(0,0,0,.6)';
-          c2.shadowBlur = 3;
+        if (space >= tw + 8) {
+          // texto completo dentro
+          c2.textAlign='center'; c2.textBaseline='middle';
+          c2.shadowColor='rgba(0,0,0,.7)'; c2.shadowBlur=3;
+          c2.fillStyle='#fff';
+          c2.fillText(full, cx, cy);
+        } else if (space >= 20) {
+          // número dentro + % fuera
+          c2.textAlign='center'; c2.textBaseline='middle';
+          c2.shadowColor='rgba(0,0,0,.7)'; c2.shadowBlur=3;
+          c2.fillStyle='#fff';
           c2.fillText(String(val), cx, cy);
-          // % encima
-          c2.shadowBlur = 0;
-          c2.fillStyle = _dark ? '#d1d5db' : '#374151';
-          c2.font = `600 9px 'Segoe UI',sans-serif`;
-          if (!isH) { c2.textBaseline = 'bottom'; c2.fillText(pctTxt, el.x, el.y - 2); }
-          else       { c2.textAlign = 'left'; c2.textBaseline = 'middle'; c2.fillText(pctTxt, el.x + 4, el.y); }
+          c2.shadowBlur=0;
+          c2.fillStyle = drk ? '#d1d5db' : '#374151';
+          c2.font = '600 9px Segoe UI,sans-serif';
+          if (isH) { c2.textAlign='left'; c2.textBaseline='middle'; c2.fillText(p, (el.x||0)+4, el.y||0); }
+          else     { c2.textBaseline='bottom'; c2.fillText(p, el.x||0, (el.y||0)-2); }
         } else {
-          // Barra muy pequeña → fuera
-          c2.shadowBlur = 0;
-          c2.fillStyle = _dark ? '#e4e6ea' : '#1f2937';
-          c2.font = `bold 9px 'Segoe UI',sans-serif`;
-          if (isH) {
-            c2.textAlign = 'left'; c2.textBaseline = 'middle';
-            c2.fillText(combined, el.x + 4, el.y);
-          } else {
-            c2.textAlign = 'center'; c2.textBaseline = 'bottom';
-            c2.fillText(combined, el.x, el.y - 2);
-          }
+          // barra pequeña → texto fuera
+          c2.shadowBlur=0;
+          c2.fillStyle = drk ? '#e4e6ea' : '#1f2937';
+          c2.font = 'bold 9px Segoe UI,sans-serif';
+          if (isH) { c2.textAlign='left'; c2.textBaseline='middle'; c2.fillText(full,(el.x||0)+4,el.y||0); }
+          else     { c2.textAlign='center'; c2.textBaseline='bottom'; c2.fillText(full,el.x||0,(el.y||0)-2); }
         }
         c2.restore();
       });
     });
   }
 
+  // Plugin que usa afterRender (último hook disponible en Chart.js 4)
   function insideBarPlugin(pluginId) {
     return {
       id: pluginId,
-      afterDraw(chart) { drawBarLabels(chart); }
+      afterRender(chart) { drawBarLabels(chart); }
     };
   }
 

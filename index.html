@@ -3188,7 +3188,7 @@ function renderDashboard() {
     const e = sortedCount(data, field).filter(x=>x[1]>0);
     const isDonut = type === 'doughnut' || type === 'polarArea';
     const colors = e.map((x,i) => fieldColor(x[0], i));
-    const _plugin = isDonut ? null : insideBarPlugin('rc_'+id);
+    const _plugin = isDonut ? doughnutLabelPlugin('rcd_'+id) : insideBarPlugin('rc_'+id);
     const ctx2 = document.getElementById(id)?.getContext('2d');
     if (!ctx2) return;
     if (charts[id]) { try{charts[id].destroy();}catch(e){} }
@@ -3240,10 +3240,102 @@ function renderDashboard() {
     }).join('');
   }
 
+  // ── Helper: etiquetas SIEMPRE dentro de barras agrupadas (número arriba, % debajo) ──
+  function dualBarLabelPlugin(pluginId) {
+    return {
+      id: pluginId,
+      afterDatasetsDraw(chart) {
+        const c2 = chart.ctx;
+        const _tot = _dashCtx.total || 1;
+        const drk = _dashCtx.isDark;
+        chart.data.datasets.forEach((ds, di) => {
+          const meta = chart.getDatasetMeta(di);
+          if (!meta || meta.hidden) return;
+          meta.data.forEach((el, i) => {
+            const val = ds.data[i];
+            if (!val || val <= 0) return;
+            const barH = Math.abs((el.base||0) - (el.y||0));
+            const p = pct(val, _tot) + '%';
+            const cy = (el.y||0) + barH/2;
+            c2.save();
+            c2.textAlign = 'center';
+            if (barH >= 24) {
+              // número y % apilados dentro de la barra
+              c2.shadowColor = 'rgba(0,0,0,.55)'; c2.shadowBlur = 2;
+              c2.fillStyle = '#fff';
+              c2.font = `800 11px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'bottom';
+              c2.fillText(String(val), el.x, cy + 1);
+              c2.font = `700 9px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'top';
+              c2.fillText(p, el.x, cy + 2);
+            } else if (barH >= 13) {
+              // número dentro, % encima de la barra
+              c2.shadowColor = 'rgba(0,0,0,.55)'; c2.shadowBlur = 2;
+              c2.fillStyle = '#fff';
+              c2.font = `800 9px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'middle';
+              c2.fillText(String(val), el.x, cy);
+              c2.shadowBlur = 0;
+              c2.fillStyle = drk ? '#9095a0' : '#5a6170';
+              c2.font = `700 8.5px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'bottom';
+              c2.fillText(p, el.x, (el.y||0) - 2);
+            } else {
+              // barra muy pequeña: número y % encima
+              c2.shadowBlur = 0;
+              c2.fillStyle = drk ? '#e4e6ea' : '#1f2937';
+              c2.font = `700 8.5px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'bottom';
+              c2.fillText(`${val} · ${p}`, el.x, (el.y||0) - 2);
+            }
+            c2.restore();
+          });
+        });
+      }
+    };
+  }
+
+  // ── Helper: etiquetas SIEMPRE dentro de los segmentos de doughnut/pie ──────
+  function doughnutLabelPlugin(pluginId) {
+    return {
+      id: pluginId,
+      afterDatasetsDraw(chart) {
+        const c2 = chart.ctx;
+        const _tot = _dashCtx.total || 1;
+        const meta = chart.getDatasetMeta(0);
+        if (!meta) return;
+        (chart.data.datasets[0]?.data || []).forEach((val, i) => {
+          if (!val || val <= 0) return;
+          const arc = meta.data[i];
+          if (!arc) return;
+          const sweep = Math.abs(arc.endAngle - arc.startAngle);
+          if (sweep < 0.16) return; // segmento demasiado pequeño para texto
+          const ang = (arc.startAngle + arc.endAngle) / 2;
+          const r   = (arc.innerRadius + arc.outerRadius) / 2;
+          const x = arc.x + Math.cos(ang) * r;
+          const y = arc.y + Math.sin(ang) * r;
+          c2.save();
+          c2.textAlign = 'center';
+          c2.shadowColor = 'rgba(0,0,0,.7)';
+          c2.shadowBlur = 4;
+          c2.fillStyle = '#fff';
+          c2.font = `bold 12px 'Segoe UI',sans-serif`;
+          c2.textBaseline = 'bottom';
+          c2.fillText(String(val), x, y + 1);
+          c2.font = `bold 9.5px 'Segoe UI',sans-serif`;
+          c2.textBaseline = 'top';
+          c2.fillText(pct(val, _tot) + '%', x, y + 2);
+          c2.restore();
+        });
+      }
+    };
+  }
+
   // ── Helper: gráfico de barras agrupadas dual ──────────────────────────────
   function mkDualGrouped(id, labels, ds1Label, ds1Data, ds2Label, ds2Data, c1, c2) {
     const ctx = document.getElementById(id)?.getContext('2d'); if (!ctx) return;
-    const plugin = makeMultiLabelPlugin(id);
+    const plugin = dualBarLabelPlugin('dg_'+id);
     charts[id] = new Chart(ctx, {
       type: 'bar',
       data: { labels, datasets: [

@@ -2962,9 +2962,10 @@ function renderDashboard() {
     const fullCls = cat.full ? 'full-width' : '';
     const tallCls = cat.full ? 'tall' : '';
     let inner;
-    if(isSVG)       inner = `<div class="svg-chart-wrap" id="${id}"></div>`;
-    else if(isRank) inner = `<div class="rank-list" id="${id}"></div>`;
-    else            inner = `<canvas id="${id}"></canvas>`;
+    if(isSVG)                    inner = `<div class="svg-chart-wrap" id="${id}"></div>`;
+    else if(id==='chartEstilo')  inner = `<div id="estiloWrap" style="position:relative;width:100%"><canvas id="chartEstilo" style="max-height:none"></canvas></div>`;
+    else if(isRank)              inner = `<div class="rank-list" id="${id}"></div>`;
+    else                         inner = `<canvas id="${id}"></canvas>`;
     const palDot = (!isSVG && !isRank) ? `<span style="width:8px;height:8px;border-radius:50%;background:${(PALETTES[st.palette||'rm']?.colors[0])||'#2563eb'};display:inline-block;margin-left:6px"></span>` : '';
     html += `<div class="chart-card ${fullCls}">
       <div class="chart-head">
@@ -3670,7 +3671,62 @@ function renderDashboard() {
             if (!inOrder.has(name)) entries.push([name, cnt]);
           });
         }
-        mkRankColored(id, entries);
+        const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
+        // Altura dinámica → barras gruesas aunque haya muchos estilos
+        const wrap = document.getElementById('estiloWrap');
+        if (wrap) wrap.style.height = Math.max(entries.length * 26 + 24, 140) + 'px';
+        const maxValE = Math.max(...entries.map(e=>e[1]), 1);
+        const _totE  = _dashCtx.total;
+        const _darkE = _dashCtx.isDark;
+        const estiloLblPlugin = {
+          id:'hbar_estilo',
+          afterDatasetsDraw(chart) {
+            const c2 = chart.ctx;
+            const meta = chart.getDatasetMeta(0);
+            chart.data.datasets[0].data.forEach((val, i) => {
+              const el = meta.data[i]; if(!el) return;
+              const barEnd = el.x;
+              const y = el.y;
+              const label = `${val} (${pct(val,_totE)}%)`;
+              c2.save();
+              c2.font = `700 11px 'Segoe UI',sans-serif`;
+              c2.textBaseline = 'middle';
+              c2.textAlign = 'left';
+              const textW = c2.measureText(label).width;
+              if (val > 0 && barEnd - chart.chartArea.left > textW + 16) {
+                // dentro de la barra
+                c2.fillStyle = '#fff';
+                c2.shadowColor = 'rgba(0,0,0,.4)'; c2.shadowBlur = 2;
+                c2.fillText(label, barEnd - textW - 8, y);
+              } else {
+                // fuera (barra corta o valor 0)
+                c2.fillStyle = _darkE ? '#e4e6ea' : '#1f2937';
+                c2.fillText(label, barEnd + 6, y);
+              }
+              c2.restore();
+            });
+          }
+        };
+        charts[id] = new Chart(ctx, {
+          type:'bar',
+          data:{labels:entries.map(x=>x[0]), datasets:[{
+            data:entries.map(x=>x[1]),
+            backgroundColor:entries.map((_,i)=>QUAL_PALETTE[i%QUAL_PALETTE.length]),
+            borderRadius:5, borderSkipped:false,
+            barThickness:16, maxBarThickness:22
+          }]},
+          plugins:[estiloLblPlugin],
+          options:{
+            responsive:true, maintainAspectRatio:false,
+            layout:{padding:{right:72, left:2, top:2, bottom:2}},
+            indexAxis:'y',
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.x} (${pct(c.parsed.x,_totE)}%)`}}},
+            scales:{
+              x:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1},max:maxValE*1.25},
+              y:{grid:{display:false},ticks:{color:tickColor,font:{size:11}}}
+            }
+          }
+        });
         break; }
 
       // ── GRÁFICOS SIMPLES CON COLORES POR VALOR ────────────────────────────

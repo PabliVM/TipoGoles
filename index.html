@@ -633,11 +633,11 @@ tr:hover .btn-edit{opacity:1}
   }
 
   .print-page {
-  page-break-after: always;
-  break-after: page;
-  width: 100%;
-  padding-top: 0;
-}
+    page-break-after: always;
+    break-after: page;
+    width: 100%;
+    padding-top: 0;
+  }
 
   .print-page:last-child {
     page-break-after: auto;
@@ -645,18 +645,18 @@ tr:hover .btn-edit{opacity:1}
   }
 
   .print-page .pdf-header {
-  display: flex !important;
-  position: static !important;
-  width: 100% !important;
-  height: 13mm !important;
-  align-items: center !important;
-  gap: 10px !important;
-  background: #2563eb !important;
-  border-radius: 5px !important;
-  padding: 4px 10px !important;
-  margin: 0 0 8mm 0 !important;
-  box-sizing: border-box !important;
-}
+    display: flex !important;
+    position: static !important;
+    width: 100% !important;
+    height: 13mm !important;
+    align-items: center !important;
+    gap: 10px !important;
+    background: #2563eb !important;
+    border-radius: 5px !important;
+    padding: 4px 10px !important;
+    margin: 0 0 8mm 0 !important;
+    box-sizing: border-box !important;
+  }
 
   .print-page .kpi-grid {
     display: grid !important;
@@ -694,11 +694,9 @@ tr:hover .btn-edit{opacity:1}
   }
 }
 
-/* PDF header — only visible when printing */
-/* PDF header — oculto en pantalla */
+/* PDF header — oculto en pantalla, solo visible al imprimir */
 .pdf-header {
   display: none;
-}
 }
 .pdf-header-logo {
   width: 42px; height: 42px; border-radius: 50%;
@@ -1945,6 +1943,31 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTabla();
   renderWelcomeGrid();
 
+  // ── Restauración instantánea desde sessionStorage (refresco de la pestaña) ──
+  // Evita el "salto a inicio" al recargar: si ya había un equipo activo en la sesión,
+  // se restaura de inmediato sin esperar a Firebase.
+  try {
+    const ssTeam   = sessionStorage.getItem('tg-team');
+    const ssSeason = sessionStorage.getItem('tg-season');
+    if (ssTeam && TEAMS.includes(ssTeam)) {
+      activeTeam   = ssTeam;
+      activeSeason = ssSeason || activeSeason;
+      window._restoredFromSession = true;
+      document.getElementById('welcomeScreen')?.classList.add('hidden');
+      buildSeasonSelect();
+      buildTeamNav();
+      buildMultiTeamChecks();
+      updateBadge();
+      renderTabla();
+      updateContextBanner();
+      const validPanels = ['importar','registro','bbdd','informes','comparativas'];
+      const ssPanel = sessionStorage.getItem('tg-panel');
+      const panel = (ssPanel && validPanels.includes(ssPanel)) ? ssPanel : 'importar';
+      const panelTab = document.querySelector(`.mod-tab[onclick*="${panel}"]`);
+      if (panelTab) showMod(panel, panelTab);
+    }
+  } catch(e) {}
+
   // Triple click en sync dot → panel debug
   let _clicks = 0;
   document.getElementById('syncDot')?.addEventListener('click', () => {
@@ -1961,6 +1984,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Restaurar gráficos tras imprimir
   window.addEventListener('afterprint', () => {
+    document.getElementById('printArea')?.remove();
     document.querySelectorAll('.chart-body canvas, .comp-chart-body canvas').forEach(c => {
       c.style.width = ''; c.style.height = '';
     });
@@ -1990,7 +2014,9 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const { db, doc, getDoc } = window._fb;
       const snap = await getDoc(doc(db, 'meta', 'darkMode'));
-      if (snap.exists() && snap.data().on) {
+      let _dm = null;
+      if (snap.exists() && snap.data().data) { try { _dm = JSON.parse(snap.data().data); } catch(e){} }
+      if (_dm && _dm.on) {
         document.body.classList.add('dark');
         document.getElementById('darkBtn').innerHTML = '☀';
         dbg('Dark mode: ON', 'info');
@@ -2001,54 +2027,70 @@ document.addEventListener('DOMContentLoaded', () => {
     listenSeasons();
     listenLayout();
 
-    // 3. Restaurar último equipo y temporada desde Firebase
+    // 3. Restaurar último equipo y temporada
     try {
       const { db: fdb, doc, getDoc } = window._fb;
 
-      // Leer último equipo activo
-      const teamSnap = await getDoc(doc(fdb, 'meta', 'lastTeam'));
-      if (teamSnap.exists() && teamSnap.data().team && TEAMS.includes(teamSnap.data().team)) {
-        const lastTeam   = teamSnap.data().team;
-        const lastSeason = teamSnap.data().season || DEFAULT_SEASONS[DEFAULT_SEASONS.length - 1];
-        dbg(`Restaurando equipo: ${lastTeam} / ${lastSeason}`, 'ok');
-
-        activeTeam   = lastTeam;
-        activeSeason = lastSeason;
-
-        // Ocultar welcome, mostrar app directamente
-        document.getElementById('welcomeScreen').classList.add('hidden');
-        buildTeamNav();
-        buildMultiTeamChecks();
-        updateBadge();
-        renderTabla();
-
-        // Restaurar último panel — sessionStorage primero (instantáneo), Firebase como fallback
-        const validPanels = ['importar','registro','bbdd','informes','comparativas'];
-        let panel = 'importar';
-        try {
-          const ss = sessionStorage.getItem('tg-panel');
-          if (ss && validPanels.includes(ss)) {
-            panel = ss;
-          } else {
-            const panelSnap = await getDoc(doc(fdb, 'meta', 'lastPanel'));
-            const panelName = panelSnap.exists() ? (panelSnap.data().panel || 'importar') : 'importar';
-            panel = validPanels.includes(panelName) ? panelName : 'importar';
-          }
-        } catch(e) {}
-        const panelTab = document.querySelector(`.mod-tab[onclick*="${panel}"]`);
-        if (panelTab) showMod(panel, panelTab);
-
-        // Activar listener de goles para el equipo restaurado
-        listenGoles(lastTeam, lastSeason);
-
+      // Si ya restauramos desde sessionStorage (refresco de pestaña), solo activamos el listener de goles
+      if (window._restoredFromSession) {
+        dbg(`Sesión ya restaurada: ${activeTeam} / ${activeSeason}`, 'ok');
+        listenGoles(activeTeam, activeSeason);
       } else {
-        // Sin equipo guardado → mostrar welcome
-        dbg('Sin equipo guardado — mostrando welcome', 'info');
-        renderWelcomeGrid();
+        // Leer último equipo activo desde Firebase (pestaña nueva / primera carga)
+        const teamSnap = await getDoc(doc(fdb, 'meta', 'lastTeam'));
+        let _lt = null;
+        if (teamSnap.exists() && teamSnap.data().data) {
+          try { _lt = JSON.parse(teamSnap.data().data); } catch(e) {}
+        }
+        if (_lt && _lt.team && TEAMS.includes(_lt.team)) {
+          const lastTeam   = _lt.team;
+          const lastSeason = _lt.season || DEFAULT_SEASONS[DEFAULT_SEASONS.length - 1];
+          dbg(`Restaurando equipo: ${lastTeam} / ${lastSeason}`, 'ok');
+
+          activeTeam   = lastTeam;
+          activeSeason = lastSeason;
+          try { sessionStorage.setItem('tg-team', lastTeam); sessionStorage.setItem('tg-season', lastSeason); } catch(e) {}
+
+          // Ocultar welcome, mostrar app directamente
+          document.getElementById('welcomeScreen').classList.add('hidden');
+          buildSeasonSelect();
+          buildTeamNav();
+          buildMultiTeamChecks();
+          updateBadge();
+          renderTabla();
+          updateContextBanner();
+
+          // Restaurar último panel — sessionStorage primero (instantáneo), Firebase como fallback
+          const validPanels = ['importar','registro','bbdd','informes','comparativas'];
+          let panel = 'importar';
+          try {
+            const ss = sessionStorage.getItem('tg-panel');
+            if (ss && validPanels.includes(ss)) {
+              panel = ss;
+            } else {
+              const panelSnap = await getDoc(doc(fdb, 'meta', 'lastPanel'));
+              let _lp = null;
+              if (panelSnap.exists() && panelSnap.data().data) {
+                try { _lp = JSON.parse(panelSnap.data().data); } catch(e) {}
+              }
+              if (_lp && validPanels.includes(_lp.panel)) panel = _lp.panel;
+            }
+          } catch(e) {}
+          const panelTab = document.querySelector(`.mod-tab[onclick*="${panel}"]`);
+          if (panelTab) showMod(panel, panelTab);
+
+          // Activar listener de goles para el equipo restaurado
+          listenGoles(lastTeam, lastSeason);
+
+        } else {
+          // Sin equipo guardado → mostrar welcome
+          dbg('Sin equipo guardado — mostrando welcome', 'info');
+          renderWelcomeGrid();
+        }
       }
     } catch(e) {
       dbg('Error restaurando equipo: ' + e.message, 'err');
-      renderWelcomeGrid();
+      if (!window._restoredFromSession) renderWelcomeGrid();
     }
 
     // 4. Si no hay temporadas en Firebase aún, escribir defaults
@@ -2081,6 +2123,8 @@ function buildSeasonSelect() {
 
 function onSeasonChange() {
   activeSeason = document.getElementById('seasonSelect').value;
+  try { sessionStorage.setItem('tg-season', activeSeason); } catch(e) {}
+  if (activeTeam) fbWriteMeta('lastTeam', {team: activeTeam, season: activeSeason});
   buildCompSelects();
   buildMultiTeamChecks();
   updateBadge();
@@ -2107,6 +2151,10 @@ function buildTeamNav() {
 
 function switchTeam(team, btn) {
   activeTeam = team;
+  // Persistir el equipo activo para que sobreviva a un refresco
+  fbWriteMeta('lastTeam', {team, season: activeSeason});
+  try { sessionStorage.setItem('tg-team', team); sessionStorage.setItem('tg-season', activeSeason); } catch(e) {}
+  window._restoredFromSession = true;
   document.querySelectorAll('.team-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   buildMultiTeamChecks();
@@ -2347,7 +2395,7 @@ function processCSV(file) {
   readerUtf.onload = function(e) {
     const text = e.target.result;
     // Detectar corrupción: si hay caracteres de reemplazo U+FFFD, usar Latin-1
-    if (text.includes(' ')) {
+    if (text.includes('�')) {
       readCSVLatin1(file);
     } else {
       parseCSVText(text, file.name);
@@ -2400,7 +2448,7 @@ const COL_MAP = {
   goleador:    ['Goleador','GOLEADOR'],
   minuto:      ['Minuto','MINUTO'],
   tramo:       ['Tramo minuto','TRAMO MINUTO','Tramo Minuto'],
-  tipologia:   ['Tipología','Tipologia','TIPOLOGÍA','TIPOLOGIA','tipolog a'],
+  tipologia:   ['Tipología','Tipologia','TIPOLOGÍA','TIPOLOGIA','tipolog�a'],
   estilo:      ['Estilo','ESTILO'],
   zonaRobo:    ['Zona de Robo','ZONA DE ROBO','Zona de robo','zona de robo'],
   posicRobo:   ['Posicionamiento del robo','POSICIONAMIENTO DEL ROBO','Posicionamiento del Robo'],
@@ -3697,9 +3745,9 @@ function exportPDF() {
   document.getElementById('pdfSub').textContent = `Temporada ${activeSeason}`;
   document.getElementById('pdfMeta').innerHTML = `${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
   prepareChartsForPrint(charts, layoutState).then(() => {
-  buildPrintPages();
-  window.print();
-});
+    buildPrintPages();
+    window.print();
+  });
 }
 
 function buildPrintPages() {
@@ -4212,8 +4260,10 @@ function renderWelcomeGrid() {
 function enterTeam(team) {
   activeTeam = team;
 
-  // Guardar equipo activo para restaurar al recargar
+  // Guardar equipo activo para restaurar al recargar (Firebase + sessionStorage)
   fbWriteMeta('lastTeam', {team, season: activeSeason});
+  try { sessionStorage.setItem('tg-team', team); sessionStorage.setItem('tg-season', activeSeason); } catch(e) {}
+  window._restoredFromSession = true;
 
   // Ocultar welcome, mostrar app
   document.getElementById('welcomeScreen').classList.add('hidden');
@@ -4246,6 +4296,12 @@ function onWelcomeSeasonChange() {
 
 function goToWelcome() {
   fbWriteMeta('lastTeam', {});
+  try {
+    sessionStorage.removeItem('tg-team');
+    sessionStorage.removeItem('tg-season');
+    sessionStorage.removeItem('tg-panel');
+  } catch(e) {}
+  window._restoredFromSession = false;
   activeTeam = '';
   document.getElementById('welcomeScreen').classList.remove('hidden');
   const banner = document.getElementById('globalBanner');
@@ -4387,4 +4443,3 @@ function showToast(msg,type='green'){
 </script>
 </body>
 </html>
-

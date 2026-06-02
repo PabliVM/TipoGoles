@@ -3100,7 +3100,7 @@ function renderDashboard() {
 
   function mkRank(id, entries) {
     const el=document.getElementById(id); if(!el||!entries.length) return;
-    const max=entries[0][1]; const pal=getPalette(id); const _total=_dashCtx.total;
+    const max=Math.max(...entries.map(e=>e[1]),1); const pal=getPalette(id); const _total=_dashCtx.total;
     el.innerHTML=entries.map(([name,cnt],i)=>`<div class="rank-item">
       <div class="rank-pos" style="background:${pal[0]}22;color:${pal[0]}">${i+1}</div>
       <div class="rank-bar-wrap">
@@ -3225,7 +3225,7 @@ function renderDashboard() {
   // ── Helper: mkRank con colores por item ────────────────────────────────────
   function mkRankColored(id, entries) {
     const el = document.getElementById(id); if (!el || !entries.length) return;
-    const max = entries[0][1];
+    const max = Math.max(...entries.map(e => e[1]), 1);
     const _total = _dashCtx.total;
     el.innerHTML = entries.map(([name,cnt],i) => {
       const color = QUAL_PALETTE[i % QUAL_PALETTE.length];

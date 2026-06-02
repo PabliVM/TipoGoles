@@ -1809,7 +1809,7 @@ function listenLayout() {
             const forceType = c.dataType === 'svg' || c.dataType === 'rank';
             const chartType = forceType ? c.chartType : (p?.chartType || c.chartType);
             return p
-              ? { id:c.id, visible:p.visible, chartType, palette:p.palette||'rm', showLabels:p.showLabels||false }
+              ? { id:c.id, visible:p.visible, chartType, palette:p.palette||'rm', showLabels:p.showLabels||false, estiloOrder:p.estiloOrder||null }
               : { id:c.id, visible:c.visible, chartType:c.chartType, palette:'rm', showLabels:false };
           });
           if (document.getElementById('panel-informes')?.classList.contains('active')) renderDashboard();

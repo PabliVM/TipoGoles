@@ -3265,7 +3265,7 @@ function renderDashboard() {
         indexAxis: type==='bar_h' ? 'y' : 'x',
         layout:{padding:{top: isDonut ? 4 : 20}},
         plugins: isDonut ? {
-          legend:{display:true,position:'right',labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},
+          legend:{display:true,position:'right',labels:{color:tickColor,font:{size:13},padding:10,boxWidth:14,boxHeight:14}},
           tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,_total)}%)`}}
         } : {
           legend:{display:false},
@@ -3404,7 +3404,7 @@ function renderDashboard() {
         responsive:true, maintainAspectRatio:true,
         layout:{padding:{top:22}},
         plugins:{
-          legend:{display:true,labels:{color:tickColor,font:{size:10},padding:12,boxWidth:10}},
+          legend:{display:true,labels:{color:tickColor,font:{size:13},padding:12,boxWidth:14,boxHeight:14}},
           tooltip:{mode:'index'}
         },
         scales:{
@@ -3543,7 +3543,7 @@ function renderDashboard() {
             responsive:true, maintainAspectRatio:true,
             layout:{padding:{top:22}},
             plugins:{
-              legend:{display:true,labels:{color:tickColor,font:{size:10},padding:12,boxWidth:10}},
+              legend:{display:true,labels:{color:tickColor,font:{size:13},padding:12,boxWidth:14,boxHeight:14}},
               tooltip:{mode:'index'}
             },
             scales:{
@@ -3594,7 +3594,7 @@ function renderDashboard() {
           plugins:[plugin],
           options:{responsive:true,maintainAspectRatio:true,
             layout:{padding:{top:22}},
-            plugins:{legend:{display:true,labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},tooltip:{mode:'index'}},
+            plugins:{legend:{display:true,labels:{color:tickColor,font:{size:13},padding:10,boxWidth:14,boxHeight:14}},tooltip:{mode:'index'}},
             scales:{x:{grid:{color:gridColor},ticks:{color:tickColor}},y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}}
           }}); break; }
 

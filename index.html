@@ -690,7 +690,10 @@ tr:hover .btn-edit{opacity:1}
   }
 
   .pdf-header-sub {
-    display: none !important;
+    display: block !important;
+    color: rgba(255,255,255,.85) !important;
+    font-size: 9px !important;
+    margin-top: 1px !important;
   }
 }
 
@@ -3996,6 +3999,10 @@ function buildPrintPages() {
   const printArea = document.createElement('div');
   printArea.id = 'printArea';
 
+  // Mapa canvas → instancia de Chart, para forzar repintado antes de capturar
+  const canvasToChart = new Map();
+  Object.values(charts).forEach(c => { if (c && c.canvas) canvasToChart.set(c.canvas, c); });
+
   function cloneHeader() {
     return header.cloneNode(true);
   }
@@ -4007,8 +4014,11 @@ function buildPrintPages() {
     const clonedCanvas = clone.querySelector('canvas');
 
     if (originalCanvas && clonedCanvas) {
+      // Forzar un repintado síncrono para que el lienzo no esté vacío al capturarlo
+      const ch = canvasToChart.get(originalCanvas);
+      if (ch) { try { ch.options.animation = false; ch.update('none'); } catch(e){} }
       const img = document.createElement('img');
-      img.src = originalCanvas.toDataURL('image/png');
+      try { img.src = originalCanvas.toDataURL('image/png'); } catch(e){}
       img.style.width = '100%';
       img.style.display = 'block';
       clonedCanvas.replaceWith(img);

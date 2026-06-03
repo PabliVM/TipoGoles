@@ -4103,31 +4103,32 @@ async function prepareChartsForPrint(chartMap, layout) {
     // 1) Capturar el lienzo TAL CUAL está pintado en pantalla (garantía: no vacío)
     try { _printImages[id] = canvas.toDataURL('image/png'); } catch(e) {}
 
-    const isFull = fullSet.has(id) ||
-                   canvas.closest('.chart-card.full-width') !== null ||
-                   canvas.closest('.comp-chart-wrap') !== null;
-
-    const isEstilo = id === 'chartEstilo';
-    const targetW = isFull ? PRINT_W_FULL : PRINT_W_HALF;
-    // El ranking de estilos necesita altura proporcional al nº de barras para no aplastarse
-    const targetH = isEstilo
-      ? Math.max((chart.data.labels?.length || 12) * 26 + 24, 260)
-      : (isFull ? PRINT_H_TALL : PRINT_H_NORM);
-
-    // 2) Redimensionar a tamaño de impresión y recapturar (mejor resolución)
-    canvas.style.width  = targetW + 'px';
-    canvas.style.height = targetH + 'px';
-    canvas.width  = targetW;
-    canvas.height = targetH;
-
-    chart.options.animation = false;
-    chart.resize(targetW, targetH);
-    chart.update('none');           // recalcula sin animación
-    try { chart.draw(); } catch(e) {} // fuerza el pintado síncrono
+    // 2) Redimensionar a tamaño de impresión y recapturar (mejor resolución).
+    //    Todo dentro de try/catch: si un gráfico falla, se conserva la captura de pantalla
+    //    y no se rompe el resto de la exportación.
     try {
+      const isFull = fullSet.has(id) ||
+                     canvas.closest('.chart-card.full-width') !== null ||
+                     canvas.closest('.comp-chart-wrap') !== null;
+
+      const isEstilo = id === 'chartEstilo';
+      const targetW = isFull ? PRINT_W_FULL : PRINT_W_HALF;
+      // El ranking de estilos necesita altura proporcional al nº de barras para no aplastarse
+      const targetH = isEstilo
+        ? Math.max((chart.data.labels?.length || 12) * 26 + 24, 260)
+        : (isFull ? PRINT_H_TALL : PRINT_H_NORM);
+
+      canvas.style.width  = targetW + 'px';
+      canvas.style.height = targetH + 'px';
+      canvas.width  = targetW;
+      canvas.height = targetH;
+
+      chart.options.animation = false;
+      chart.resize(targetW, targetH);
+      chart.update('none');             // recalcula sin animación
+      try { chart.draw(); } catch(e) {} // fuerza el pintado síncrono
       const u = canvas.toDataURL('image/png');
-      // Usar la versión de impresión solo si no salió vacía
-      if (u && u.length > 4000) _printImages[id] = u;
+      if (u && u.length > 4000) _printImages[id] = u; // usar versión de impresión si no salió vacía
     } catch(e) {}
   }
 

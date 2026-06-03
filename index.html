@@ -3597,7 +3597,7 @@ function renderDashboard() {
       case 'chartZonaRoboXTip':{
         const tips=[...new Set(data.map(g=>g.tipologia).filter(Boolean))];
         const zonas=['Z1','Z2','Z3','Z4'];
-        const zonaCols=['#1d4ed8','#15803d','#b91c1c','#c2410c'];
+        const zonaCols=['#2563eb','#16a34a','#dc2626','#f97316'];
         const ctx=document.getElementById(id)?.getContext('2d'); if(!ctx) break;
         const plugin = insideBarPlugin('cross_'+id);
         charts[id]=new Chart(ctx,{type:'bar',

@@ -1597,8 +1597,18 @@ const ALL_ESTILOS = ['Centro retrasado','Centro profundidad','Juego combinativo 
   'Equilibrio','Otros'];
 
 // Paleta cualitativa principal — colores bien diferenciados, buen contraste en PDF
-const QUAL_PALETTE = ['#1d4ed8','#15803d','#b91c1c','#c2410c','#6d28d9','#0e7490','#92400e','#9d174d','#065f46','#1e3a5f'];
+const QUAL_PALETTE = ['#2563eb','#f97316','#16a34a','#dc2626','#a855f7','#ec4899','#06b6d4','#eab308','#14b8a6','#84cc16','#f43f5e','#6366f1','#fb923c','#0ea5e9','#d946ef','#65a30d','#9333ea','#0891b2'];
 const RM_PALETTE = QUAL_PALETTE;
+
+// Devuelve texto oscuro o claro según lo claro/oscuro que sea el fondo (para que la etiqueta se lea)
+function idealText(hex){
+  if(!hex || typeof hex!=='string' || hex[0]!=='#') return '#fff';
+  const m = hex.length===4
+    ? hex.slice(1).split('').map(c=>parseInt(c+c,16))
+    : [parseInt(hex.substr(1,2),16),parseInt(hex.substr(3,2),16),parseInt(hex.substr(5,2),16)];
+  const L = (0.299*m[0] + 0.587*m[1] + 0.114*m[2])/255;
+  return L > 0.6 ? '#1f2937' : '#fff';
+}
 
 // Paleta fija por campo — garantiza colores consistentes entre informes
 const FIELD_COLORS = {
@@ -3207,9 +3217,11 @@ function renderDashboard() {
           c2.save();
           c2.textAlign = 'center';
           if (val > 0 && barH >= 24) {
-            // número y % dentro de la barra
-            c2.fillStyle = '#fff';
-            c2.shadowColor = 'rgba(0,0,0,.5)'; c2.shadowBlur = 2;
+            // número y % dentro de la barra (texto claro u oscuro según el color)
+            const bgs = chart.data.datasets[0].backgroundColor;
+            const txt = idealText(Array.isArray(bgs) ? bgs[i] : bgs);
+            c2.fillStyle = txt;
+            c2.shadowColor = txt==='#fff' ? 'rgba(0,0,0,.5)' : 'rgba(255,255,255,.55)'; c2.shadowBlur = 2;
             c2.font = `800 10px 'Segoe UI',sans-serif`;
             c2.textBaseline = 'bottom';
             c2.fillText(String(val), el.x, (el.y||0) + barH/2 + 1);
@@ -3374,9 +3386,11 @@ function renderDashboard() {
           const y = arc.y + Math.sin(ang) * r;
           c2.save();
           c2.textAlign = 'center';
-          c2.shadowColor = 'rgba(0,0,0,.7)';
+          const bgs = chart.data.datasets[0].backgroundColor;
+          const txt = idealText(Array.isArray(bgs) ? bgs[i] : bgs);
+          c2.shadowColor = txt==='#fff' ? 'rgba(0,0,0,.7)' : 'rgba(255,255,255,.6)';
           c2.shadowBlur = 4;
-          c2.fillStyle = '#fff';
+          c2.fillStyle = txt;
           c2.font = `bold 12px 'Segoe UI',sans-serif`;
           c2.textBaseline = 'bottom';
           c2.fillText(String(val), x, y + 1);
@@ -3624,8 +3638,10 @@ function renderDashboard() {
               // Dentro de la barra si hay espacio, si no fuera
               const textW = c2.measureText(label).width;
               if (barEnd - chart.chartArea.left > textW + 16) {
-                c2.fillStyle = '#fff';
-                c2.shadowColor = 'rgba(0,0,0,.4)';
+                const bg = chart.data.datasets[0].backgroundColor[i];
+                const txt = idealText(bg);
+                c2.fillStyle = txt;
+                c2.shadowColor = txt==='#fff' ? 'rgba(0,0,0,.4)' : 'rgba(255,255,255,.5)';
                 c2.shadowBlur = 2;
                 c2.fillText(label, barEnd - textW - 8, y);
               } else {
@@ -3680,8 +3696,10 @@ function renderDashboard() {
               c2.textAlign = 'left';
               const textW = c2.measureText(label).width;
               if (barEnd - chart.chartArea.left > textW + 16) {
-                c2.fillStyle = '#fff';
-                c2.shadowColor = 'rgba(0,0,0,.4)';
+                const bg = chart.data.datasets[0].backgroundColor[i];
+                const txt = idealText(bg);
+                c2.fillStyle = txt;
+                c2.shadowColor = txt==='#fff' ? 'rgba(0,0,0,.4)' : 'rgba(255,255,255,.5)';
                 c2.shadowBlur = 2;
                 c2.fillText(label, barEnd - textW - 8, y);
               } else {
@@ -3750,9 +3768,11 @@ function renderDashboard() {
               c2.textAlign = 'left';
               const textW = c2.measureText(label).width;
               if (val > 0 && barEnd - chart.chartArea.left > textW + 16) {
-                // dentro de la barra
-                c2.fillStyle = '#fff';
-                c2.shadowColor = 'rgba(0,0,0,.4)'; c2.shadowBlur = 2;
+                // dentro de la barra: texto claro u oscuro según el color
+                const bg = chart.data.datasets[0].backgroundColor[i];
+                const txt = idealText(bg);
+                c2.fillStyle = txt;
+                c2.shadowColor = txt==='#fff' ? 'rgba(0,0,0,.4)' : 'rgba(255,255,255,.5)'; c2.shadowBlur = 2;
                 c2.fillText(label, barEnd - textW - 8, y);
               } else {
                 // fuera (barra corta o valor 0)

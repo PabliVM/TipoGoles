@@ -1613,35 +1613,35 @@ function idealText(hex){
 // Paleta fija por campo — garantiza colores consistentes entre informes
 const FIELD_COLORS = {
   // favor
-  'A favor':  '#15803d',
-  'En contra':'#b91c1c',
+  'A favor':  '#16a34a',
+  'En contra':'#dc2626',
   // lv
-  'Local':    '#1d4ed8',
-  'Visitante':'#c2410c',
+  'Local':    '#2563eb',
+  'Visitante':'#f97316',
   // tipologia
-  'Balón parado':    '#1d4ed8',
-  'Transiciones':    '#15803d',
-  'Juego directo':   '#b91c1c',
-  'Juego posicional':'#c2410c',
-  'Otros':           '#6d28d9',
+  'Balón parado':    '#2563eb',
+  'Transiciones':    '#16a34a',
+  'Juego directo':   '#dc2626',
+  'Juego posicional':'#f97316',
+  'Otros':           '#a855f7',
   // posicRobo
-  'Carril central':  '#1d4ed8',
-  'Banda':           '#c2410c',
+  'Carril central':  '#2563eb',
+  'Banda':           '#f97316',
   // primerPase
-  'Hacia adelante':  '#15803d',
-  'Horizontal':      '#1d4ed8',
-  'Hacia detrás':    '#b91c1c',
+  'Hacia adelante':  '#16a34a',
+  'Horizontal':      '#2563eb',
+  'Hacia detrás':    '#dc2626',
   // tipoPase
-  'Raso':  '#1d4ed8',
-  'Aereo': '#c2410c',
+  'Raso':  '#2563eb',
+  'Aereo': '#f97316',
   // zonaRemate
-  '1er palo':               '#1d4ed8',
-  '2º palo':                '#15803d',
-  '2º palo (espalda 2º central)':'#b91c1c',
-  'Penalti':                '#c2410c',
-  'Vértice':                '#6d28d9',
-  'Fuera del área':         '#0e7490',
-  'Área pequeña':           '#92400e',
+  '1er palo':               '#2563eb',
+  '2º palo':                '#16a34a',
+  '2º palo (espalda 2º central)':'#dc2626',
+  'Penalti':                '#f97316',
+  'Vértice':                '#a855f7',
+  'Fuera del área':         '#06b6d4',
+  'Área pequeña':           '#eab308',
   // nContactos — colores por índice
 };
 
@@ -3510,7 +3510,7 @@ function renderDashboard() {
         mkDualGrouped(id, tramos,
           'A favor',   tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='A favor').length),
           'En contra', tramos.map(t=>data.filter(g=>g.tramo===t&&g.favor==='En contra').length),
-          '#15803d', '#b91c1c');
+          '#16a34a', '#dc2626');
         break; }
 
       // ── LOCAL VS VISITANTE: A favor / En contra agrupados ─────────────────
@@ -3529,7 +3529,7 @@ function renderDashboard() {
         mkDualGrouped(id, labels,
           'A favor',   [lAF, vAF],
           'En contra', [lEC, vEC],
-          '#15803d', '#b91c1c');
+          '#16a34a', '#dc2626');
         break; }
 
       // ── DIFERENCIA EN MARCADOR: barras Local/Visitante agrupadas ─────────
@@ -3549,8 +3549,8 @@ function renderDashboard() {
         charts[id] = new Chart(ctx, {
           type:'bar',
           data:{labels:filtRange, datasets:[
-            {label:'Local',     data:filtRange.map(k=>dm[k]?.l||0), backgroundColor:'#1d4ed8', borderRadius:4, borderSkipped:false},
-            {label:'Visitante', data:filtRange.map(k=>dm[k]?.v||0), backgroundColor:'#c2410c', borderRadius:4, borderSkipped:false}
+            {label:'Local',     data:filtRange.map(k=>dm[k]?.l||0), backgroundColor:'#2563eb', borderRadius:4, borderSkipped:false},
+            {label:'Visitante', data:filtRange.map(k=>dm[k]?.v||0), backgroundColor:'#f97316', borderRadius:4, borderSkipped:false}
           ]},
           plugins:[plugin],
           options:{

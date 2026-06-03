@@ -3468,17 +3468,25 @@ function renderDashboard() {
           c2.shadowColor='rgba(0,0,0,.7)'; c2.shadowBlur=3;
           c2.fillStyle='#fff';
           c2.fillText(full, cx, cy);
-        } else if (space >= 20) {
-          // número dentro + % fuera
-          c2.textAlign='center'; c2.textBaseline='middle';
-          c2.shadowColor='rgba(0,0,0,.7)'; c2.shadowBlur=3;
+        } else if (space >= 22) {
+          // barra media → número y % dentro
+          c2.textAlign='center';
+          c2.shadowColor='rgba(0,0,0,.6)'; c2.shadowBlur=2;
           c2.fillStyle='#fff';
-          c2.fillText(String(val), cx, cy);
-          c2.shadowBlur=0;
-          c2.fillStyle = drk ? '#d1d5db' : '#374151';
-          c2.font = '600 9px Segoe UI,sans-serif';
-          if (isH) { c2.textAlign='left'; c2.textBaseline='middle'; c2.fillText(p, (el.x||0)+4, el.y||0); }
-          else     { c2.textBaseline='bottom'; c2.fillText(p, el.x||0, (el.y||0)-2); }
+          if (isH) {
+            // horizontal: número centrado dentro, % a la derecha
+            c2.textBaseline='middle';
+            c2.fillText(String(val), cx, cy);
+            c2.shadowBlur=0; c2.fillStyle = drk ? '#d1d5db' : '#374151';
+            c2.font='600 9px Segoe UI,sans-serif';
+            c2.textAlign='left'; c2.fillText(p, (el.x||0)+4, el.y||0);
+          } else {
+            // vertical: número arriba y % debajo, ambos dentro
+            c2.font='800 10px Segoe UI,sans-serif'; c2.textBaseline='bottom';
+            c2.fillText(String(val), cx, cy+1);
+            c2.font='600 9px Segoe UI,sans-serif'; c2.textBaseline='top';
+            c2.fillText(p, cx, cy+2);
+          }
         } else {
           // barra pequeña → texto fuera
           c2.shadowBlur=0;

@@ -3978,6 +3978,9 @@ const PRINT_W_FULL = 664;   // igual
 const PRINT_H_NORM = 220;   // más alto para que se vea bien
 const PRINT_H_TALL = 260;   // gráficos full-width
 
+// Caché de imágenes (dataURL) capturadas justo tras redibujar cada gráfico para el PDF
+let _printImages = {};
+
 function exportPDF() {
   document.getElementById('pdfTitle').textContent = `Tipología de Goles — ${TEAM_FULL[activeTeam]||activeTeam}`;
   document.getElementById('pdfSub').textContent = `Temporada ${activeSeason}`;
@@ -3999,9 +4002,9 @@ function buildPrintPages() {
   const printArea = document.createElement('div');
   printArea.id = 'printArea';
 
-  // Mapa canvas → instancia de Chart, para forzar repintado antes de capturar
-  const canvasToChart = new Map();
-  Object.values(charts).forEach(c => { if (c && c.canvas) canvasToChart.set(c.canvas, c); });
+  // Mapa canvas → id de gráfico, para usar la imagen ya capturada en prepareChartsForPrint
+  const canvasToId = new Map();
+  Object.entries(charts).forEach(([id, c]) => { if (c && c.canvas) canvasToId.set(c.canvas, id); });
 
   function cloneHeader() {
     return header.cloneNode(true);
@@ -4014,11 +4017,16 @@ function buildPrintPages() {
     const clonedCanvas = clone.querySelector('canvas');
 
     if (originalCanvas && clonedCanvas) {
-      // Forzar un repintado síncrono para que el lienzo no esté vacío al capturarlo
-      const ch = canvasToChart.get(originalCanvas);
-      if (ch) { try { ch.options.animation = false; ch.update('none'); } catch(e){} }
+      const id = canvasToId.get(originalCanvas);
+      let url = id ? _printImages[id] : null;
+      if (!url) {
+        // respaldo: redibujar y capturar al vuelo
+        const ch = id ? charts[id] : null;
+        if (ch) { try { ch.options.animation = false; ch.update('none'); ch.draw(); } catch(e){} }
+        try { url = originalCanvas.toDataURL('image/png'); } catch(e){}
+      }
       const img = document.createElement('img');
-      try { img.src = originalCanvas.toDataURL('image/png'); } catch(e){}
+      if (url) img.src = url;
       img.style.width = '100%';
       img.style.display = 'block';
       clonedCanvas.replaceWith(img);
@@ -4084,12 +4092,16 @@ function exportCompPDF() {
  * Después de window.print() el navegador restaura el layout normal.
  */
 async function prepareChartsForPrint(chartMap, layout) {
+  _printImages = {};
   // Determinar si cada chart es full-width
   const fullSet = new Set(CHART_CATALOG.filter(c => c.full).map(c => c.id));
 
   for (const [id, chart] of Object.entries(chartMap)) {
     const canvas = chart.canvas;
     if (!canvas) continue;
+
+    // 1) Capturar el lienzo TAL CUAL está pintado en pantalla (garantía: no vacío)
+    try { _printImages[id] = canvas.toDataURL('image/png'); } catch(e) {}
 
     const isFull = fullSet.has(id) ||
                    canvas.closest('.chart-card.full-width') !== null ||
@@ -4098,19 +4110,24 @@ async function prepareChartsForPrint(chartMap, layout) {
     const targetW = isFull ? PRINT_W_FULL : PRINT_W_HALF;
     const targetH = isFull ? PRINT_H_TALL : PRINT_H_NORM;
 
-    // Fijar dimensiones físicas del canvas
+    // 2) Redimensionar a tamaño de impresión y recapturar (mejor resolución)
     canvas.style.width  = targetW + 'px';
     canvas.style.height = targetH + 'px';
     canvas.width  = targetW;
     canvas.height = targetH;
 
-    // Actualizar opciones del chart para el nuevo tamaño
     chart.options.animation = false;
     chart.resize(targetW, targetH);
-    chart.update('none'); // sin animación
+    chart.update('none');           // recalcula sin animación
+    try { chart.draw(); } catch(e) {} // fuerza el pintado síncrono
+    try {
+      const u = canvas.toDataURL('image/png');
+      // Usar la versión de impresión solo si no salió vacía
+      if (u && u.length > 4000) _printImages[id] = u;
+    } catch(e) {}
   }
 
-  // Esperar 2 frames para que el render complete antes de imprimir
+  // Esperar 2 frames para que el navegador asiente el layout antes de imprimir
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 }
 

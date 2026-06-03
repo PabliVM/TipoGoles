@@ -3509,7 +3509,7 @@ function renderDashboard() {
   function insideBarPlugin(pluginId) {
     return {
       id: pluginId,
-      afterRender(chart) { drawBarLabels(chart); }
+      afterDatasetsDraw(chart) { drawBarLabels(chart); }
     };
   }
 
@@ -4107,8 +4107,12 @@ async function prepareChartsForPrint(chartMap, layout) {
                    canvas.closest('.chart-card.full-width') !== null ||
                    canvas.closest('.comp-chart-wrap') !== null;
 
+    const isEstilo = id === 'chartEstilo';
     const targetW = isFull ? PRINT_W_FULL : PRINT_W_HALF;
-    const targetH = isFull ? PRINT_H_TALL : PRINT_H_NORM;
+    // El ranking de estilos necesita altura proporcional al nº de barras para no aplastarse
+    const targetH = isEstilo
+      ? Math.max((chart.data.labels?.length || 12) * 26 + 24, 260)
+      : (isFull ? PRINT_H_TALL : PRINT_H_NORM);
 
     // 2) Redimensionar a tamaño de impresión y recapturar (mejor resolución)
     canvas.style.width  = targetW + 'px';

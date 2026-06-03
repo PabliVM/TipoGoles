@@ -1635,6 +1635,16 @@ const FIELD_COLORS = {
   // nContactos — colores por índice
 };
 
+// Conjunto completo de opciones por campo — para mostrar TODAS aunque valgan 0
+const FIELD_OPTIONS = {
+  tipologia:  ['Balón parado','Transiciones','Juego directo','Juego posicional','Otros'],
+  posicRobo:  ['Carril central','Banda'],
+  primerPase: ['Horizontal','Hacia detrás','Hacia adelante'],
+  tipoPase:   ['Aereo','Raso'],
+  zonaRemate: ['1er palo','2º palo','2º palo (espalda 2º central)','Penalti','Vértice','Fuera del área','Área pequeña'],
+  nContactos: ['1','2','3','4','5','6','7','8','9','10','10+'],
+};
+
 /* =====================================================
    ESTADO GLOBAL
    ===================================================== */
@@ -3182,14 +3192,60 @@ function renderDashboard() {
   }
 
   // ── Helper: renderChart con colores por valor ─────────────────────────────
+  // ── Plugin de etiquetas para barras coloreadas: muestra valor+% INCLUSO si es 0 ──
+  function coloredBarLabelPlugin(pluginId) {
+    return {
+      id: pluginId,
+      afterDatasetsDraw(chart) {
+        const c2 = chart.ctx;
+        const _tot = _dashCtx.total || 1;
+        const drk = _dashCtx.isDark;
+        const meta = chart.getDatasetMeta(0);
+        (chart.data.datasets[0]?.data || []).forEach((val, i) => {
+          const el = meta.data[i]; if (!el) return;
+          const barH = Math.abs((el.base||0) - (el.y||0));
+          c2.save();
+          c2.textAlign = 'center';
+          if (val > 0 && barH >= 24) {
+            // número y % dentro de la barra
+            c2.fillStyle = '#fff';
+            c2.shadowColor = 'rgba(0,0,0,.5)'; c2.shadowBlur = 2;
+            c2.font = `800 10px 'Segoe UI',sans-serif`;
+            c2.textBaseline = 'bottom';
+            c2.fillText(String(val), el.x, (el.y||0) + barH/2 + 1);
+            c2.font = `600 9px 'Segoe UI',sans-serif`;
+            c2.textBaseline = 'top';
+            c2.fillText(pct(val,_tot)+'%', el.x, (el.y||0) + barH/2 + 2);
+          } else {
+            // barra corta o valor 0 → encima de la barra
+            c2.shadowBlur = 0;
+            c2.fillStyle = drk ? '#9095a0' : '#5a6170';
+            c2.font = `700 9px 'Segoe UI',sans-serif`;
+            c2.textBaseline = 'bottom';
+            c2.fillText(`${val} (${pct(val,_tot)}%)`, el.x, (el.y||0) - 2);
+          }
+          c2.restore();
+        });
+      }
+    };
+  }
+
   function renderChartColored(id, field) {
     const type = typeMap[id] || 'bar';
     const _total = _dashCtx.total;
     if (type === 'rank') { mkRankColored(id, sortedCount(data, field, 12)); return; }
-    const e = sortedCount(data, field).filter(x=>x[1]>0);
     const isDonut = type === 'doughnut' || type === 'polarArea';
+    // Si el campo tiene un conjunto fijo de opciones, mostrarlas TODAS (incluidas las de 0)
+    const fullOpts = FIELD_OPTIONS[field];
+    let e;
+    if (fullOpts) {
+      const cm = count(data, field);
+      e = fullOpts.map(o => [o, cm[o] || 0]);
+    } else {
+      e = sortedCount(data, field).filter(x=>x[1]>0);
+    }
     const colors = e.map((x,i) => fieldColor(x[0], i));
-    const _plugin = isDonut ? doughnutLabelPlugin('rcd_'+id) : insideBarPlugin('rc_'+id);
+    const _plugin = isDonut ? doughnutLabelPlugin('rcd_'+id) : coloredBarLabelPlugin('cb_'+id);
     const ctx2 = document.getElementById(id)?.getContext('2d');
     if (!ctx2) return;
     if (charts[id]) { try{charts[id].destroy();}catch(e){} }
@@ -3207,7 +3263,7 @@ function renderDashboard() {
       options:{
         responsive:true, maintainAspectRatio:true,
         indexAxis: type==='bar_h' ? 'y' : 'x',
-        layout:{padding:{top:4}},
+        layout:{padding:{top: isDonut ? 4 : 20}},
         plugins: isDonut ? {
           legend:{display:true,position:'right',labels:{color:tickColor,font:{size:10},padding:10,boxWidth:10}},
           tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,_total)}%)`}}
@@ -3501,8 +3557,8 @@ function renderDashboard() {
       case 'chartContactos':{
         const order=['1','2','3','4','5','6','7','8','9','10','10+'];
         const cm=count(data,'nContactos');
-        const vals = order.filter(k=>cm[k]>0);
-        const plugin = insideBarPlugin('cont_'+id);
+        const vals = order;
+        const plugin = coloredBarLabelPlugin('cont_'+id);
         const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
         charts[id] = new Chart(ctx, {
           type:'bar',
@@ -3734,9 +3790,10 @@ function renderDashboard() {
       case 'chartPosicRobo':  renderChartColored(id,'posicRobo');  break;
       case 'chartPrimerPase': renderChartColored(id,'primerPase'); break;
       case 'chartZona':{
-        const e = sortedCount(data,'zonaRemate').filter(x=>x[1]>0);
+        const cmZ = count(data,'zonaRemate');
+        const e = FIELD_OPTIONS.zonaRemate.map(z => [z, cmZ[z]||0]);
         const colors = e.map((x,i) => fieldColor(x[0], i));
-        const plugin = alwaysLabelPlugin(id, false);
+        const plugin = coloredBarLabelPlugin('cbz_'+id);
         const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
         // Etiquetas del eje X abreviadas para que no se solapen
         const shortLabels = e.map(x => x[0].length > 12 ? x[0].slice(0,11)+'…' : x[0]);

@@ -3216,18 +3216,20 @@ function renderDashboard() {
           const barH = Math.abs((el.base||0) - (el.y||0));
           c2.save();
           c2.textAlign = 'center';
-          if (val > 0 && barH >= 24) {
+          if (val > 0 && barH >= 16) {
             // número y % dentro de la barra (texto claro u oscuro según el color)
             const bgs = chart.data.datasets[0].backgroundColor;
             const txt = idealText(Array.isArray(bgs) ? bgs[i] : bgs);
+            const cy = (el.y||0) + barH/2;
+            const small = barH < 30;
             c2.fillStyle = txt;
             c2.shadowColor = txt==='#fff' ? 'rgba(0,0,0,.5)' : 'rgba(255,255,255,.55)'; c2.shadowBlur = 2;
-            c2.font = `800 10px 'Segoe UI',sans-serif`;
+            c2.font = small ? `800 9px 'Segoe UI',sans-serif` : `800 10px 'Segoe UI',sans-serif`;
             c2.textBaseline = 'bottom';
-            c2.fillText(String(val), el.x, (el.y||0) + barH/2 + 1);
-            c2.font = `600 9px 'Segoe UI',sans-serif`;
+            c2.fillText(String(val), el.x, cy + (small ? 0 : 1));
+            c2.font = small ? `600 8px 'Segoe UI',sans-serif` : `600 9px 'Segoe UI',sans-serif`;
             c2.textBaseline = 'top';
-            c2.fillText(pct(val,_tot)+'%', el.x, (el.y||0) + barH/2 + 2);
+            c2.fillText(pct(val,_tot)+'%', el.x, cy + (small ? 0 : 2));
           } else {
             // barra corta o valor 0 → encima de la barra
             c2.shadowBlur = 0;

@@ -695,6 +695,7 @@ tr:hover .btn-edit{opacity:1}
     font-size: 9px !important;
     margin-top: 1px !important;
   }
+  #buildBadge { display: none !important; }
 }
 
 /* PDF header — oculto en pantalla, solo visible al imprimir */
@@ -717,6 +718,7 @@ tr:hover .btn-edit{opacity:1}
 </style>
 </head>
 <body>
+<div id="buildBadge" style="position:fixed;bottom:5px;right:8px;font-size:11px;font-weight:700;color:#fff;background:#16a34a;padding:2px 8px;border-radius:8px;z-index:99999;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.25)">PDF v4 ✅</div>
 
 <!-- PANTALLA DE INICIO -->
 <div class="welcome-screen" id="welcomeScreen">
@@ -4701,3 +4703,4 @@ function showToast(msg,type='green'){
 </script>
 </body>
 </html>
+  

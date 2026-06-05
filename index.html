@@ -2935,6 +2935,17 @@ function resetLayout(){editorState=CHART_CATALOG.map(c=>({id:c.id,visible:c.visi
 function count(data,field){const a={};data.forEach(g=>{const v=(g[field]??'').toString().trim();if(!v||v==='undefined'||v==='null')return;a[v]=(a[v]||0)+1;});return a;}
 function sortedCount(data,field,limit=999){return Object.entries(count(data,field)).sort((a,b)=>b[1]-a[1]).slice(0,limit);}
 function pct(n,t){return t?((n/t)*100).toFixed(1):'0';}
+// Calcula porcentajes solo sobre respuestas válidas del campo/gráfico, no sobre todos los registros filtrados.
+function isFilled(v){const s=(v??'').toString().trim();return !!s&&s!=='undefined'&&s!=='null';}
+function entriesTotal(entries){return entries.reduce((sum,x)=>sum+(Number(x?.[1])||0),0)||1;}
+function chartAnsweredTotal(chart){
+  return (chart?.data?.datasets||[]).reduce((sum,ds,di)=>{
+    const meta=chart.getDatasetMeta?.(di);
+    if(meta?.hidden) return sum;
+    return sum+(ds.data||[]).reduce((a,v)=>a+(Number(v)||0),0);
+  },0)||1;
+}
+function fieldAnsweredTotal(data,field){return data.filter(g=>isFilled(g[field])).length||1;}
 
 function renderDashboard() {
   const data = getDashData();
@@ -2960,13 +2971,15 @@ function renderDashboard() {
   const enContra=data.filter(g=>g.favor==='En contra').length;
   const local=data.filter(g=>g.lv==='Local').length;
   const visitante=data.filter(g=>g.lv==='Visitante').length;
+  const favorTotal = aFavor + enContra || 1;
+  const lvTotal = local + visitante || 1;
 
   document.getElementById('kpiGrid').innerHTML=`
     <div class="kpi-card"><div class="kpi-label">Total</div><div class="kpi-value">${total}</div><div class="kpi-sub">goles</div></div>
-    <div class="kpi-card green"><div class="kpi-label">A favor</div><div class="kpi-value" style="color:var(--green)">${aFavor}</div><div class="kpi-sub">${pct(aFavor,total)}%</div></div>
-    <div class="kpi-card red"><div class="kpi-label">En contra</div><div class="kpi-value" style="color:var(--red)">${enContra}</div><div class="kpi-sub">${pct(enContra,total)}%</div></div>
-    <div class="kpi-card"><div class="kpi-label">Local</div><div class="kpi-value">${local}</div><div class="kpi-sub">${pct(local,total)}%</div></div>
-    <div class="kpi-card orange"><div class="kpi-label">Visitante</div><div class="kpi-value" style="color:var(--orange)">${visitante}</div><div class="kpi-sub">${pct(visitante,total)}%</div></div>
+    <div class="kpi-card green"><div class="kpi-label">A favor</div><div class="kpi-value" style="color:var(--green)">${aFavor}</div><div class="kpi-sub">${pct(aFavor,favorTotal)}%</div></div>
+    <div class="kpi-card red"><div class="kpi-label">En contra</div><div class="kpi-value" style="color:var(--red)">${enContra}</div><div class="kpi-sub">${pct(enContra,favorTotal)}%</div></div>
+    <div class="kpi-card"><div class="kpi-label">Local</div><div class="kpi-value">${local}</div><div class="kpi-sub">${pct(local,lvTotal)}%</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">Visitante</div><div class="kpi-value" style="color:var(--orange)">${visitante}</div><div class="kpi-sub">${pct(visitante,lvTotal)}%</div></div>
   `;
 
   // Destruir charts previos
@@ -3037,7 +3050,7 @@ function renderDashboard() {
             const val = ds.data[i];
             if (!val || val <= 0) return;
 
-            const pctTxt = pct(val, _total) + '%';
+            const pctTxt = pct(val, chartAnsweredTotal(chart)) + '%';
             c2.save();
             c2.textAlign = 'center';
             c2.shadowBlur = 0;
@@ -3113,7 +3126,7 @@ function renderDashboard() {
             position: opts.legendPos || 'top',
             labels:{color:_tc, font:{size:10}, padding:12, boxWidth:12, boxHeight:12}
           },
-          tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed?.r??c.parsed} (${pct(c.parsed?.y??c.parsed?.r??c.parsed,_total)}%)`}}
+          tooltip:{callbacks:{label:c=>{const v=c.parsed?.y??c.parsed?.r??c.parsed;return ` ${v} (${pct(v,chartAnsweredTotal(c.chart))}%)`;}}}
         },
         scales: isCircular ? {} : {
           x:{grid:{color:_gc},ticks:{color:_tc,font:{size:10}}},
@@ -3126,7 +3139,7 @@ function renderDashboard() {
 
   function mkRank(id, entries) {
     const el=document.getElementById(id); if(!el||!entries.length) return;
-    const max=Math.max(...entries.map(e=>e[1]),1); const pal=getPalette(id); const _total=_dashCtx.total;
+    const max=Math.max(...entries.map(e=>e[1]),1); const pal=getPalette(id); const _total=entriesTotal(entries);
     el.innerHTML=entries.map(([name,cnt],i)=>`<div class="rank-item">
       <div class="rank-pos" style="background:${pal[0]}22;color:${pal[0]}">${i+1}</div>
       <div class="rank-bar-wrap">
@@ -3138,7 +3151,7 @@ function renderDashboard() {
   }
 
   function renderChart(id, field) {
-    const type=typeMap[id]||'bar'; const _total=_dashCtx.total; const _sc=_dashCtx.surfColor;
+    const type=typeMap[id]||'bar'; const _sc=_dashCtx.surfColor;
     if(type==='rank'){mkRank(id,sortedCount(data,field,12));return;}
     const pal=getPalette(id); const e=sortedCount(data,field);
     const isDonut=type==='doughnut'||type==='polarArea';
@@ -3163,7 +3176,7 @@ function renderDashboard() {
     }], isDonut ? {
       legend: true,
       legendPos: 'right',
-      plugins:{tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,_total)}%)`}}}
+      plugins:{tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,chartAnsweredTotal(c.chart))}%)`}}}
     } : {});
   }
 
@@ -3213,7 +3226,7 @@ function renderDashboard() {
       id: pluginId,
       afterDatasetsDraw(chart) {
         const c2 = chart.ctx;
-        const _tot = _dashCtx.total || 1;
+        const _tot = chartAnsweredTotal(chart);
         const drk = _dashCtx.isDark;
         const meta = chart.getDatasetMeta(0);
         (chart.data.datasets[0]?.data || []).forEach((val, i) => {
@@ -3251,7 +3264,6 @@ function renderDashboard() {
 
   function renderChartColored(id, field) {
     const type = typeMap[id] || 'bar';
-    const _total = _dashCtx.total;
     if (type === 'rank') { mkRankColored(id, sortedCount(data, field, 12)); return; }
     const isDonut = type === 'doughnut' || type === 'polarArea';
     // Si el campo tiene un conjunto fijo de opciones, mostrarlas TODAS (incluidas las de 0)
@@ -3285,10 +3297,10 @@ function renderDashboard() {
         layout:{padding:{top: isDonut ? 4 : 20}},
         plugins: isDonut ? {
           legend:{display:true,position:'right',labels:{color:tickColor,font:{size:13},padding:10,boxWidth:14,boxHeight:14}},
-          tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,_total)}%)`}}
+          tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,chartAnsweredTotal(c.chart))}%)`}}
         } : {
           legend:{display:false},
-          tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed} (${pct(c.parsed?.y??c.parsed,_total)}%)`}}
+          tooltip:{callbacks:{label:c=>{const v=c.parsed?.y??c.parsed;return ` ${v} (${pct(v,chartAnsweredTotal(c.chart))}%)`;}}}
         },
         scales: isDonut ? {} : {
           x:{grid:{color:_dashCtx.gridColor},ticks:{color:_dashCtx.tickColor,font:{size:10}}},
@@ -3302,7 +3314,7 @@ function renderDashboard() {
   function mkRankColored(id, entries) {
     const el = document.getElementById(id); if (!el || !entries.length) return;
     const max = Math.max(...entries.map(e => e[1]), 1);
-    const _total = _dashCtx.total;
+    const _total = entriesTotal(entries);
     el.innerHTML = entries.map(([name,cnt],i) => {
       const color = QUAL_PALETTE[i % QUAL_PALETTE.length];
       return `<div class="rank-item">
@@ -3322,7 +3334,7 @@ function renderDashboard() {
       id: pluginId,
       afterDatasetsDraw(chart) {
         const c2 = chart.ctx;
-        const _tot = _dashCtx.total || 1;
+        const _tot = chartAnsweredTotal(chart);
         const drk = _dashCtx.isDark;
         chart.data.datasets.forEach((ds, di) => {
           const meta = chart.getDatasetMeta(di);
@@ -3378,7 +3390,7 @@ function renderDashboard() {
       id: pluginId,
       afterDatasetsDraw(chart) {
         const c2 = chart.ctx;
-        const _tot = _dashCtx.total || 1;
+        const _tot = chartAnsweredTotal(chart);
         const meta = chart.getDatasetMeta(0);
         if (!meta) return;
         (chart.data.datasets[0]?.data || []).forEach((val, i) => {
@@ -3446,7 +3458,7 @@ function renderDashboard() {
   function drawBarLabels(chartInst) {
     if (!chartInst || !chartInst.ctx) return;
     const c2  = chartInst.ctx;
-    const tot = _dashCtx.total || 1;
+    const tot = chartAnsweredTotal(chartInst);
     const drk = _dashCtx.isDark;
     const isH = chartInst.options.indexAxis === 'y';
 
@@ -3533,14 +3545,15 @@ function renderDashboard() {
       case 'chartLV':{
         const lTotal = data.filter(g=>g.lv==='Local').length;
         const vTotal = data.filter(g=>g.lv==='Visitante').length;
+        const lvAnsweredTotal = lTotal + vTotal || 1;
         const lAF = data.filter(g=>g.lv==='Local'&&g.favor==='A favor').length;
         const lEC = data.filter(g=>g.lv==='Local'&&g.favor==='En contra').length;
         const vAF = data.filter(g=>g.lv==='Visitante'&&g.favor==='A favor').length;
         const vEC = data.filter(g=>g.lv==='Visitante'&&g.favor==='En contra').length;
         // Etiquetas con total y %
         const labels = [
-          `Local (${lTotal} · ${pct(lTotal,total)}%)`,
-          `Visitante (${vTotal} · ${pct(vTotal,total)}%)`
+          `Local (${lTotal} · ${pct(lTotal,lvAnsweredTotal)}%)`,
+          `Visitante (${vTotal} · ${pct(vTotal,lvAnsweredTotal)}%)`
         ];
         mkDualGrouped(id, labels,
           'A favor',   [lAF, vAF],
@@ -3554,10 +3567,11 @@ function renderDashboard() {
         // Contar por dif y L/V
         const dm={};
         data.forEach(g=>{
-          const k=String(g.dif??0);
+          if(!isFilled(g.dif)) return;
+          const k=String(g.dif);
           if(!dm[k]) dm[k]={l:0,v:0};
           if(g.lv==='Local') dm[k].l++;
-          else dm[k].v++;
+          else if(g.lv==='Visitante') dm[k].v++;
         });
         const filtRange = allRange.filter(k=>dm[k]);
         const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
@@ -3601,7 +3615,7 @@ function renderDashboard() {
           options:{
             responsive:true, maintainAspectRatio:true,
             layout:{padding:{top:26, left:8, right:8}},
-            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,total)}%)`}}},
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,chartAnsweredTotal(c.chart))}%)`}}},
             scales:{
               x:{grid:{color:gridColor},ticks:{color:tickColor}},
               y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}
@@ -3633,11 +3647,12 @@ function renderDashboard() {
         const entries = sortedCount(data,'goleador',15);
         const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
         const maxVal = entries[0]?.[1] || 1;
+        const entriesTotalGoleador = entriesTotal(entries);
         const hBarPlugin = {
           id:'hbar_goleador',
           afterDatasetsDraw(chart) {
             const c2 = chart.ctx;
-            const _tot = _dashCtx.total;
+            const _tot = entriesTotalGoleador;
             const _dark = _dashCtx.isDark;
             chart.data.datasets[0].data.forEach((val, i) => {
               if (!val) return;
@@ -3680,7 +3695,7 @@ function renderDashboard() {
             responsive:true, maintainAspectRatio:true,
             layout:{padding:{right:80, top:4, bottom:4}},
             indexAxis:'y',
-            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,total)}%)`}}},
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,entriesTotalGoleador)}%)`}}},
             scales:{
               x:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1},max:maxVal*1.25},
               y:{grid:{display:false},ticks:{color:tickColor,font:{size:11}}}
@@ -3693,11 +3708,12 @@ function renderDashboard() {
         const entries = sortedCount(data,'rival',15);
         const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
         const maxVal2 = entries[0]?.[1] || 1;
+        const entriesTotalRival = entriesTotal(entries);
         const hBarPlugin2 = {
           id:'hbar_rival',
           afterDatasetsDraw(chart) {
             const c2 = chart.ctx;
-            const _tot = _dashCtx.total;
+            const _tot = entriesTotalRival;
             const _dark = _dashCtx.isDark;
             chart.data.datasets[0].data.forEach((val, i) => {
               if (!val) return;
@@ -3738,7 +3754,7 @@ function renderDashboard() {
             responsive:true, maintainAspectRatio:true,
             layout:{padding:{right:80, top:4, bottom:4}},
             indexAxis:'y',
-            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,total)}%)`}}},
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,entriesTotalRival)}%)`}}},
             scales:{
               x:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1},max:maxVal2*1.25},
               y:{grid:{display:false},ticks:{color:tickColor,font:{size:11}}}
@@ -3766,7 +3782,7 @@ function renderDashboard() {
         const wrap = document.getElementById('estiloWrap');
         if (wrap) wrap.style.height = Math.max(entries.length * 26 + 24, 140) + 'px';
         const maxValE = Math.max(...entries.map(e=>e[1]), 1);
-        const _totE  = _dashCtx.total;
+        const _totE  = entriesTotal(entries);
         const _darkE = _dashCtx.isDark;
         const estiloLblPlugin = {
           id:'hbar_estilo',
@@ -3829,6 +3845,7 @@ function renderDashboard() {
         const cmZ = count(data,'zonaRemate');
         const e = FIELD_OPTIONS.zonaRemate.map(z => [z, cmZ[z]||0]);
         const colors = e.map((x,i) => fieldColor(x[0], i));
+        const totalZonaRemate = entriesTotal(e);
         const plugin = coloredBarLabelPlugin('cbz_'+id);
         const ctx = document.getElementById(id)?.getContext('2d'); if(!ctx) break;
         // Etiquetas del eje X abreviadas para que no se solapen
@@ -3846,7 +3863,7 @@ function renderDashboard() {
             layout:{padding:{top:22, left:4, right:4}},
             plugins:{
               legend:{display:false},
-              tooltip:{callbacks:{label:c=>` ${e[c.dataIndex]?.[0]||''}: ${c.parsed.y} (${pct(c.parsed.y,total)}%)`}}
+              tooltip:{callbacks:{label:c=>` ${e[c.dataIndex]?.[0]||''}: ${c.parsed.y} (${pct(c.parsed.y,totalZonaRemate)}%)`}}
             },
             scales:{
               x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:9},maxRotation:35,minRotation:0}},
@@ -3903,6 +3920,8 @@ function renderComp() {
 
   const cA=buildCompData(dataA,metric);
   const cB=buildCompData(dataB,metric);
+  const totalCompA = Object.values(cA).reduce((a,b)=>a+(Number(b)||0),0)||1;
+  const totalCompB = Object.values(cB).reduce((a,b)=>a+(Number(b)||0),0)||1;
   const allKeys=[...new Set([...Object.keys(cA),...Object.keys(cB)])].sort((a,b)=>(cB[b]||0)-(cA[a]||0)+(cA[a]||0)-(cB[b]||0));
 
   function mkCompChart(id,data,color,total){
@@ -3938,11 +3957,11 @@ function renderComp() {
     </div>
   `;
 
-  mkCompChart('compChartA',cA,'#2563eb',dataA.length);
-  mkCompChart('compChartB',cB,'#dc2626',dataB.length);
+  mkCompChart('compChartA',cA,'#2563eb',totalCompA);
+  mkCompChart('compChartB',cB,'#dc2626',totalCompB);
 
   // Tabla comparativa
-  const tA=dataA.length||1, tB=dataB.length||1;
+  const tA=totalCompA, tB=totalCompB;
   let tableHTML=`<div class="comp-chart-wrap" style="grid-column:1/-1">
     <div class="comp-chart-head"><span class="comp-chart-label">📋 Tabla comparativa — ${metric}</span></div>
     <div style="padding:0 2px;overflow-x:auto">

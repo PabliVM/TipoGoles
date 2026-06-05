@@ -718,7 +718,7 @@ tr:hover .btn-edit{opacity:1}
 </style>
 </head>
 <body>
-<div id="buildBadge" style="position:fixed;bottom:5px;right:8px;font-size:11px;font-weight:700;color:#fff;background:#16a34a;padding:2px 8px;border-radius:8px;z-index:99999;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.25)">PDF v6 ✅</div>
+<div id="buildBadge" style="position:fixed;bottom:5px;right:8px;font-size:11px;font-weight:700;color:#fff;background:#16a34a;padding:2px 8px;border-radius:8px;z-index:99999;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.25)">PDF v7 ✅</div>
 
 <!-- PANTALLA DE INICIO -->
 <div class="welcome-screen" id="welcomeScreen">
@@ -2014,10 +2014,10 @@ document.addEventListener('DOMContentLoaded', () => {
       c.style.width = ''; c.style.height = '';
     });
     for (const chart of Object.values(charts)) {
-      try { chart.options.animation = false; chart.resize(); chart.update('none'); } catch(e) {}
+      try { chart.options.responsive = true; chart.options.animation = false; chart.resize(); chart.update('none'); } catch(e) {}
     }
     for (const chart of Object.values(compCharts)) {
-      try { chart.options.animation = false; chart.resize(); chart.update('none'); } catch(e) {}
+      try { chart.options.responsive = true; chart.options.animation = false; chart.resize(); chart.update('none'); } catch(e) {}
     }
     document.querySelectorAll('.print-page-num').forEach(el => el.remove());
   });
@@ -3860,7 +3860,7 @@ function renderDashboard() {
     }
     } catch(err){ console.error('Error al dibujar gráfico', id, err); }
   }
-  console.log('%c[TipoGoles] informe dibujado — build PDF-fix-6 — gráficos:', 'color:#2563eb;font-weight:bold', visibleIds.length);
+  console.log('%c[TipoGoles] informe dibujado — build PDF-fix-7 — gráficos:', 'color:#2563eb;font-weight:bold', visibleIds.length);
 }
 
 /* =====================================================
@@ -4123,6 +4123,7 @@ async function prepareChartsForPrint(chartMap, layout) {
 
       canvas.style.width  = targetW + 'px';
       canvas.style.height = targetH + 'px';
+      chart.options.responsive = false;   // evita que Chart.js lo reajuste a su contenedor
       chart.options.animation = false;
       chart.resize(targetW, targetH);
       chart.update('none');   // re-render (las etiquetas de afterRender se pintan tras el wait)

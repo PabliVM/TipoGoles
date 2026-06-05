@@ -718,7 +718,7 @@ tr:hover .btn-edit{opacity:1}
 </style>
 </head>
 <body>
-<div id="buildBadge" style="position:fixed;bottom:5px;right:8px;font-size:11px;font-weight:700;color:#fff;background:#16a34a;padding:2px 8px;border-radius:8px;z-index:99999;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.25)">PDF v7 ✅</div>
+<div id="buildBadge" style="position:fixed;bottom:5px;right:8px;font-size:11px;font-weight:700;color:#fff;background:#16a34a;padding:2px 8px;border-radius:8px;z-index:99999;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.25)">PDF v9 ✅</div>
 
 <!-- PANTALLA DE INICIO -->
 <div class="welcome-screen" id="welcomeScreen">
@@ -2936,6 +2936,14 @@ function count(data,field){const a={};data.forEach(g=>{const v=(g[field]??'').to
 function sortedCount(data,field,limit=999){return Object.entries(count(data,field)).sort((a,b)=>b[1]-a[1]).slice(0,limit);}
 function pct(n,t){return t?((n/t)*100).toFixed(1):'0';}
 
+// Total de registros con el campo relleno = suma de todos los valores del gráfico.
+// Se usa como denominador del % para que, p.ej., 1 de 1 relleno salga 100% y no 6,7%.
+function chartFilledTotal(chart){
+  let s = 0;
+  (chart?.data?.datasets || []).forEach(ds => (ds?.data || []).forEach(v => { s += (Number(v) || 0); }));
+  return s || 1;
+}
+
 function renderDashboard() {
   const data = getDashData();
   const isDark = document.body.classList.contains('dark');
@@ -3113,7 +3121,7 @@ function renderDashboard() {
             position: opts.legendPos || 'top',
             labels:{color:_tc, font:{size:10}, padding:12, boxWidth:12, boxHeight:12}
           },
-          tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed?.r??c.parsed} (${pct(c.parsed?.y??c.parsed?.r??c.parsed,_total)}%)`}}
+          tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed?.r??c.parsed} (${pct(c.parsed?.y??c.parsed?.r??c.parsed,chartFilledTotal(c.chart))}%)`}}
         },
         scales: isCircular ? {} : {
           x:{grid:{color:_gc},ticks:{color:_tc,font:{size:10}}},
@@ -3163,7 +3171,7 @@ function renderDashboard() {
     }], isDonut ? {
       legend: true,
       legendPos: 'right',
-      plugins:{tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,_total)}%)`}}}
+      plugins:{tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,chartFilledTotal(c.chart))}%)`}}}
     } : {});
   }
 
@@ -3175,7 +3183,7 @@ function renderDashboard() {
       afterRender(chart) {
         if (!getShowLabels(id)) return;
         const c2 = chart.ctx;
-        const _tot = _dashCtx.total;
+        const _tot = chartFilledTotal(chart);
         const _dark = _dashCtx.isDark;
         chart.data.datasets.forEach((ds, di) => {
           const meta = chart.getDatasetMeta(di);
@@ -3213,7 +3221,7 @@ function renderDashboard() {
       id: pluginId,
       afterDatasetsDraw(chart) {
         const c2 = chart.ctx;
-        const _tot = _dashCtx.total || 1;
+        const _tot = chartFilledTotal(chart);
         const drk = _dashCtx.isDark;
         const meta = chart.getDatasetMeta(0);
         (chart.data.datasets[0]?.data || []).forEach((val, i) => {
@@ -3285,10 +3293,10 @@ function renderDashboard() {
         layout:{padding:{top: isDonut ? 4 : 20}},
         plugins: isDonut ? {
           legend:{display:true,position:'right',labels:{color:tickColor,font:{size:13},padding:10,boxWidth:14,boxHeight:14}},
-          tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,_total)}%)`}}
+          tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${pct(c.parsed,chartFilledTotal(c.chart))}%)`}}
         } : {
           legend:{display:false},
-          tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed} (${pct(c.parsed?.y??c.parsed,_total)}%)`}}
+          tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed} (${pct(c.parsed?.y??c.parsed,chartFilledTotal(c.chart))}%)`}}
         },
         scales: isDonut ? {} : {
           x:{grid:{color:_dashCtx.gridColor},ticks:{color:_dashCtx.tickColor,font:{size:10}}},
@@ -3322,7 +3330,7 @@ function renderDashboard() {
       id: pluginId,
       afterDatasetsDraw(chart) {
         const c2 = chart.ctx;
-        const _tot = _dashCtx.total || 1;
+        const _tot = chartFilledTotal(chart);
         const drk = _dashCtx.isDark;
         chart.data.datasets.forEach((ds, di) => {
           const meta = chart.getDatasetMeta(di);
@@ -3378,7 +3386,7 @@ function renderDashboard() {
       id: pluginId,
       afterDatasetsDraw(chart) {
         const c2 = chart.ctx;
-        const _tot = _dashCtx.total || 1;
+        const _tot = chartFilledTotal(chart);
         const meta = chart.getDatasetMeta(0);
         if (!meta) return;
         (chart.data.datasets[0]?.data || []).forEach((val, i) => {
@@ -3446,7 +3454,7 @@ function renderDashboard() {
   function drawBarLabels(chartInst) {
     if (!chartInst || !chartInst.ctx) return;
     const c2  = chartInst.ctx;
-    const tot = _dashCtx.total || 1;
+    const tot = chartFilledTotal(chartInst);
     const drk = _dashCtx.isDark;
     const isH = chartInst.options.indexAxis === 'y';
 
@@ -3601,7 +3609,7 @@ function renderDashboard() {
           options:{
             responsive:true, maintainAspectRatio:true,
             layout:{padding:{top:26, left:8, right:8}},
-            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,total)}%)`}}},
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,chartFilledTotal(c.chart))}%)`}}},
             scales:{
               x:{grid:{color:gridColor},ticks:{color:tickColor}},
               y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1}}
@@ -3637,7 +3645,7 @@ function renderDashboard() {
           id:'hbar_goleador',
           afterDatasetsDraw(chart) {
             const c2 = chart.ctx;
-            const _tot = _dashCtx.total;
+            const _tot = chartFilledTotal(chart);
             const _dark = _dashCtx.isDark;
             chart.data.datasets[0].data.forEach((val, i) => {
               if (!val) return;
@@ -3680,7 +3688,7 @@ function renderDashboard() {
             responsive:true, maintainAspectRatio:true,
             layout:{padding:{right:80, top:4, bottom:4}},
             indexAxis:'y',
-            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,total)}%)`}}},
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,chartFilledTotal(c.chart))}%)`}}},
             scales:{
               x:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1},max:maxVal*1.25},
               y:{grid:{display:false},ticks:{color:tickColor,font:{size:11}}}
@@ -3697,7 +3705,7 @@ function renderDashboard() {
           id:'hbar_rival',
           afterDatasetsDraw(chart) {
             const c2 = chart.ctx;
-            const _tot = _dashCtx.total;
+            const _tot = chartFilledTotal(chart);
             const _dark = _dashCtx.isDark;
             chart.data.datasets[0].data.forEach((val, i) => {
               if (!val) return;
@@ -3738,7 +3746,7 @@ function renderDashboard() {
             responsive:true, maintainAspectRatio:true,
             layout:{padding:{right:80, top:4, bottom:4}},
             indexAxis:'y',
-            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,total)}%)`}}},
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed} (${pct(c.parsed,chartFilledTotal(c.chart))}%)`}}},
             scales:{
               x:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,stepSize:1},max:maxVal2*1.25},
               y:{grid:{display:false},ticks:{color:tickColor,font:{size:11}}}
@@ -3766,7 +3774,7 @@ function renderDashboard() {
         const wrap = document.getElementById('estiloWrap');
         if (wrap) wrap.style.height = Math.max(entries.length * 26 + 24, 140) + 'px';
         const maxValE = Math.max(...entries.map(e=>e[1]), 1);
-        const _totE  = _dashCtx.total;
+        const _totE  = chartFilledTotal(chart);
         const _darkE = _dashCtx.isDark;
         const estiloLblPlugin = {
           id:'hbar_estilo',
@@ -3846,7 +3854,7 @@ function renderDashboard() {
             layout:{padding:{top:22, left:4, right:4}},
             plugins:{
               legend:{display:false},
-              tooltip:{callbacks:{label:c=>` ${e[c.dataIndex]?.[0]||''}: ${c.parsed.y} (${pct(c.parsed.y,total)}%)`}}
+              tooltip:{callbacks:{label:c=>` ${e[c.dataIndex]?.[0]||''}: ${c.parsed.y} (${pct(c.parsed.y,chartFilledTotal(c.chart))}%)`}}
             },
             scales:{
               x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:9},maxRotation:35,minRotation:0}},
@@ -3860,7 +3868,7 @@ function renderDashboard() {
     }
     } catch(err){ console.error('Error al dibujar gráfico', id, err); }
   }
-  console.log('%c[TipoGoles] informe dibujado — build PDF-fix-7 — gráficos:', 'color:#2563eb;font-weight:bold', visibleIds.length);
+  console.log('%c[TipoGoles] informe dibujado — build PDF-fix-9 — gráficos:', 'color:#2563eb;font-weight:bold', visibleIds.length);
 }
 
 /* =====================================================
@@ -3918,7 +3926,7 @@ function renderComp() {
       }]
     },options:{
       responsive:true,maintainAspectRatio:true,indexAxis:isH?'y':'x',
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed?.r??c.parsed} (${pct(c.parsed?.y??c.parsed?.r??c.parsed,total)}%)`}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed?.y??c.parsed?.r??c.parsed} (${pct(c.parsed?.y??c.parsed?.r??c.parsed,chartFilledTotal(c.chart))}%)`}}},
       scales:isDonut?{}:{
         x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}},
         y:{beginAtZero:true,grid:{color:gridColor},ticks:{color:tickColor,font:{size:10},stepSize:1}}
@@ -4063,12 +4071,22 @@ function buildPrintPages() {
   const kpiClone = kpis.cloneNode(true);
   page.appendChild(kpiClone);
 
-  cards.forEach((card, index) => {
-    if (index > 0 && index % 2 === 0) {
-      page = createPage();
-    }
+  // Pesos verticales: cada gráfico ocupa 1, salvo Ranking de estilos que ocupa 2.
+  // Cada hoja admite 3 unidades. Las KPIs de la primera hoja ocupan 1.
+  const PAGE_CAP = 3;
+  const weightOf = cid => (cid === 'chartEstilo' ? 2 : 1);
+  let used = 1; // KPIs en la primera hoja
 
+  cards.forEach(card => {
+    const inner = card.querySelector('canvas, .svg-chart-wrap');
+    const cid = inner ? inner.id : '';
+    const w = weightOf(cid);
+    if (used + w > PAGE_CAP) {
+      page = createPage();
+      used = 0;
+    }
     page.appendChild(cloneCard(card));
+    used += w;
   });
 
   document.body.appendChild(printArea);
@@ -4108,18 +4126,24 @@ function exportCompPDF() {
  */
 async function prepareChartsForPrint(chartMap, layout) {
   _printImages = {};
-  const fullSet = new Set(CHART_CATALOG.filter(c => c.full).map(c => c.id));
 
   for (const [id, chart] of Object.entries(chartMap)) {
     const canvas = chart.canvas;
     if (!canvas) continue;
     try {
-      const isEstilo = id === 'chartEstilo';
-      // TODOS los gráficos al mismo ancho de columna PDF → tamaño homogéneo
-      const targetW = PRINT_W_FULL;
-      const targetH = isEstilo
-        ? Math.max((chart.data.labels?.length || 12) * 26 + 24, 260)
-        : (fullSet.has(id) ? PRINT_H_TALL : PRINT_H_NORM);
+      const targetW = PRINT_W_FULL; // todos al ancho de columna PDF
+      const n = chart.data.labels?.length || 1;
+      let targetH;
+      if (id === 'chartEstilo') {
+        // Peso 2: alto proporcional al nº de estilos
+        targetH = Math.min(Math.max(n * 23 + 24, 300), 445);
+      } else if (id === 'chartGoleador' || id === 'chartRival') {
+        // Más grandes y proporcionales a cuántos datos haya (barras gruesas)
+        targetH = Math.min(Math.max(n * 26 + 38, 150), 275);
+      } else {
+        // Peso 1 estándar (3 por hoja)
+        targetH = 195;
+      }
 
       canvas.style.width  = targetW + 'px';
       canvas.style.height = targetH + 'px';

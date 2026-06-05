@@ -4066,40 +4066,27 @@ function buildPrintPages() {
     return page;
   }
 
-  // Índice tarjeta por id de gráfico
-  const cardById = {};
+  let page = createPage();
+
+  const kpiClone = kpis.cloneNode(true);
+  page.appendChild(kpiClone);
+
+  // Pesos verticales: cada gráfico ocupa 1, salvo Ranking de estilos que ocupa 2.
+  // Cada hoja admite 3 unidades. Las KPIs de la primera hoja ocupan 1.
+  const PAGE_CAP = 3;
+  const weightOf = cid => (cid === 'chartEstilo' ? 2 : 1);
+  let used = 1; // KPIs en la primera hoja
+
   cards.forEach(card => {
     const inner = card.querySelector('canvas, .svg-chart-wrap');
-    if (inner && inner.id) cardById[inner.id] = card;
-  });
-
-  // ¿Goleadores/Rival tienen muchos datos? → cada uno en su propia hoja (y más grandes)
-  const nGol = charts['chartGoleador']?.data?.labels?.length || 0;
-  const nRiv = charts['chartRival']?.data?.labels?.length || 0;
-  const splitFinal = (nGol > 8 || nRiv > 8);
-
-  // Reparto FIJO de gráficos por hoja (en este orden exacto)
-  const PAGES = [
-    ['chartTramo', 'chartLV', 'chartTipologia'],   // Hoja 1
-    ['chartEstilo', 'chartZonaRobo'],              // Hoja 2
-    ['chartPosicRobo', 'chartPrimerPase'],         // Hoja 3
-    ['chartSuperficie', 'chartZona', 'chartTipoPase'], // Hoja 4
-    ['chartContactos', 'chartDifMarcador'],        // Hoja 5
-  ];
-  if (splitFinal) {
-    PAGES.push(['chartGoleador']);   // Hoja 6
-    PAGES.push(['chartRival']);      // Hoja 7
-  } else {
-    PAGES.push(['chartGoleador', 'chartRival']);   // Hoja 6
-  }
-
-  PAGES.forEach((ids, pi) => {
-    const page = createPage();
-    if (pi === 0) page.appendChild(kpis.cloneNode(true)); // KPIs solo en la hoja 1
-    ids.forEach(id => {
-      const card = cardById[id];
-      if (card) page.appendChild(cloneCard(card));
-    });
+    const cid = inner ? inner.id : '';
+    const w = weightOf(cid);
+    if (used + w > PAGE_CAP) {
+      page = createPage();
+      used = 0;
+    }
+    page.appendChild(cloneCard(card));
+    used += w;
   });
 
   document.body.appendChild(printArea);

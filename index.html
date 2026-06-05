@@ -718,7 +718,7 @@ tr:hover .btn-edit{opacity:1}
 </style>
 </head>
 <body>
-<div id="buildBadge" style="position:fixed;bottom:5px;right:8px;font-size:11px;font-weight:700;color:#fff;background:#16a34a;padding:2px 8px;border-radius:8px;z-index:99999;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.25)">PDF v5 ✅</div>
+<div id="buildBadge" style="position:fixed;bottom:5px;right:8px;font-size:11px;font-weight:700;color:#fff;background:#16a34a;padding:2px 8px;border-radius:8px;z-index:99999;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.25)">PDF v6 ✅</div>
 
 <!-- PANTALLA DE INICIO -->
 <div class="welcome-screen" id="welcomeScreen">
@@ -1091,7 +1091,7 @@ tr:hover .btn-edit{opacity:1}
   <div class="pdf-header" id="pdfHeader">
     <div class="pdf-header-logo">
       <img src="https://raw.githubusercontent.com/PabliVM/Promociones/main/rm__.png"
-           crossorigin="anonymous" alt="RM" onerror="this.style.display='none'">
+           alt="RM" onerror="this.style.display='none'">
     </div>
     <div class="pdf-header-info">
       <div class="pdf-header-title" id="pdfTitle">Real Madrid Cantera — Tipología de Goles</div>
@@ -3860,7 +3860,7 @@ function renderDashboard() {
     }
     } catch(err){ console.error('Error al dibujar gráfico', id, err); }
   }
-  console.log('%c[TipoGoles] informe dibujado — build PDF-fix-5 — gráficos:', 'color:#2563eb;font-weight:bold', visibleIds.length);
+  console.log('%c[TipoGoles] informe dibujado — build PDF-fix-6 — gráficos:', 'color:#2563eb;font-weight:bold', visibleIds.length);
 }
 
 /* =====================================================
@@ -4037,14 +4037,9 @@ function buildPrintPages() {
     const clonedCanvas = clone.querySelector('canvas');
 
     if (originalCanvas && clonedCanvas) {
-      const id = canvasToId.get(originalCanvas);
-      let url = id ? _printImages[id] : null;
-      if (!url) {
-        // respaldo: redibujar y capturar al vuelo
-        const ch = id ? charts[id] : null;
-        if (ch) { try { ch.options.animation = false; ch.update('none'); ch.draw(); } catch(e){} }
-        try { url = originalCanvas.toDataURL('image/png'); } catch(e){}
-      }
+      // El canvas ya fue redimensionado y re-renderizado en prepareChartsForPrint
+      let url = '';
+      try { url = originalCanvas.toDataURL('image/png'); } catch(e){}
       const img = document.createElement('img');
       if (url) img.src = url;
       img.style.width = '100%';
@@ -4113,34 +4108,28 @@ function exportCompPDF() {
  */
 async function prepareChartsForPrint(chartMap, layout) {
   _printImages = {};
+  const fullSet = new Set(CHART_CATALOG.filter(c => c.full).map(c => c.id));
 
   for (const [id, chart] of Object.entries(chartMap)) {
     const canvas = chart.canvas;
     if (!canvas) continue;
+    try {
+      const isEstilo = id === 'chartEstilo';
+      // TODOS los gráficos al mismo ancho de columna PDF → tamaño homogéneo
+      const targetW = PRINT_W_FULL;
+      const targetH = isEstilo
+        ? Math.max((chart.data.labels?.length || 12) * 26 + 24, 260)
+        : (fullSet.has(id) ? PRINT_H_TALL : PRINT_H_NORM);
 
-    // Capturar el lienzo tal cual está pintado en pantalla (ya incluye las etiquetas).
-    // Es lo más fiable: si el gráfico se ve en pantalla, se verá en el PDF.
-    try { _printImages[id] = canvas.toDataURL('image/png'); } catch(e) {}
-
-    // El ranking de estilos en pantalla es ancho y bajo; al escalarlo al ancho del PDF
-    // se aplastaría. Solo para él, lo redibujamos a ancho de PDF con altura proporcional.
-    if (id === 'chartEstilo') {
-      try {
-        const h = Math.max((chart.data.labels?.length || 12) * 26 + 24, 260);
-        canvas.style.width  = PRINT_W_FULL + 'px';
-        canvas.style.height = h + 'px';
-        canvas.width  = PRINT_W_FULL;
-        canvas.height = h;
-        chart.options.animation = false;
-        chart.resize(PRINT_W_FULL, h);
-        chart.update('none');
-        const u = canvas.toDataURL('image/png');
-        if (u && u.length > 4000) _printImages[id] = u;
-      } catch(e) {}
-    }
+      canvas.style.width  = targetW + 'px';
+      canvas.style.height = targetH + 'px';
+      chart.options.animation = false;
+      chart.resize(targetW, targetH);
+      chart.update('none');   // re-render (las etiquetas de afterRender se pintan tras el wait)
+    } catch(e) {}
   }
 
-  // Esperar 2 frames para que el navegador asiente el layout antes de imprimir
+  // Esperar 2 frames para que el render diferido (incl. etiquetas) se complete antes de capturar
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 }
 

@@ -718,7 +718,7 @@ tr:hover .btn-edit{opacity:1}
 </style>
 </head>
 <body>
-<div id="buildBadge" style="position:fixed;bottom:5px;right:8px;font-size:11px;font-weight:700;color:#fff;background:#16a34a;padding:2px 8px;border-radius:8px;z-index:99999;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.25)">PDF v4 ✅</div>
+<div id="buildBadge" style="position:fixed;bottom:5px;right:8px;font-size:11px;font-weight:700;color:#fff;background:#16a34a;padding:2px 8px;border-radius:8px;z-index:99999;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.25)">PDF v5 ✅</div>
 
 <!-- PANTALLA DE INICIO -->
 <div class="welcome-screen" id="welcomeScreen">
@@ -3860,7 +3860,7 @@ function renderDashboard() {
     }
     } catch(err){ console.error('Error al dibujar gráfico', id, err); }
   }
-  console.log('%c[TipoGoles] informe dibujado — build PDF-fix-3 — gráficos:', 'color:#2563eb;font-weight:bold', visibleIds.length);
+  console.log('%c[TipoGoles] informe dibujado — build PDF-fix-5 — gráficos:', 'color:#2563eb;font-weight:bold', visibleIds.length);
 }
 
 /* =====================================================
@@ -3992,7 +3992,22 @@ function exportPDF() {
   document.getElementById('pdfMeta').innerHTML = `${new Date().toLocaleDateString('es-ES')}<br>Real Madrid Cantera CF`;
   prepareChartsForPrint(charts, layoutState).then(() => {
     buildPrintPages();
-    window.print();
+    waitPrintImagesThenPrint();
+  });
+}
+
+// Espera a que todas las imágenes (dataURL) del área de impresión estén decodificadas
+// antes de llamar a print(); si no, se imprimen aún vacías.
+function waitPrintImagesThenPrint() {
+  const imgs = [...document.querySelectorAll('#printArea img')];
+  const proms = imgs.map(img => {
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+    return new Promise(res => { img.onload = res; img.onerror = res; });
+  });
+  // Tope de seguridad por si alguna imagen no dispara onload
+  const safety = new Promise(res => setTimeout(res, 1200));
+  Promise.race([Promise.all(proms), safety]).then(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
   });
 }
 
@@ -4703,4 +4718,3 @@ function showToast(msg,type='green'){
 </script>
 </body>
 </html>
-  
